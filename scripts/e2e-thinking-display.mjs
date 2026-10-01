@@ -22,8 +22,18 @@ import { setSessionStoreDir } from '../src/proxy/sessionStore.ts'
 
 const say = console.log.bind(console)
 
+// Operator settings can force thinking off (a per-adapter `thinking: disabled`
+// feature or a beta policy that strips interleaved thinking), and then
+// `display` never reaches the subprocess and the gate passes vacuously.
 const WORKDIR = realpathSync(mkdtempSync(join(tmpdir(), 'mthinkdisp-')))
-process.env.MERIDIAN_WORKDIR = WORKDIR
+for (const key of Object.keys(process.env)) {
+  if (key.startsWith('MERIDIAN_') || key.startsWith('CLAUDE_PROXY_')) delete process.env[key]
+}
+Object.assign(process.env, {
+  MERIDIAN_CONFIG_DIR: join(WORKDIR, 'config'),
+  MERIDIAN_WORKDIR: WORKDIR,
+  MERIDIAN_TELEMETRY_PERSIST: '0',
+})
 setSessionStoreDir(join(WORKDIR, 'store'))
 
 const { startProxyServer } = await import('../src/proxy/server.ts')
@@ -58,9 +68,11 @@ async function ask(display, word) {
       metadata: { user_id: JSON.stringify({ session_id: randomUUID() }) },
     }),
   })
-  const text = await res.text()
-  const deltas = [...text.matchAll(/"text_delta","text":"([^"]*)"/g)].map(m => m[1]).join('')
-  return { status: res.status, answered: deltas.includes(word), errored: /event: error/.test(text), deltas }
+  const events = (await res.text()).split('\n')
+    .filter(l => l.startsWith('data: '))
+    .flatMap(l => { try { return [JSON.parse(l.slice(6))] } catch { return [] } })
+  const deltas = events.filter(e => e.delta?.type === 'text_delta').map(e => e.delta.text).join('')
+  return { status: res.status, answered: deltas.includes(word), errored: events.some(e => e.type === 'error'), deltas }
 }
 
 say(`\n=== thinking.display the bundled CLI does not know ===`)
@@ -75,6 +87,12 @@ const summarized = await ask('summarized', 'BRAVO')
 check(summarized.status === 200 && summarized.answered && !summarized.errored,
   'display "summarized" (a value the SDK accepts) still answers',
   `status=${summarized.status} answered=${summarized.answered} errorEvent=${summarized.errored}`)
+
+const forcedOff = proxyLog.filter(l => l.includes('thinking disabled'))
+check(forcedOff.length === 0, 'thinking reached the SDK (not forced off by config)',
+  forcedOff.length ? forcedOff[0].slice(0, 160) : 'no thinking-disabled line')
+const dropped = proxyLog.filter(l => /thinking display "updates" dropped/.test(l))
+check(dropped.length === 1, 'the dropped display was logged once', `${dropped.length} log line(s)`)
 
 say(`\n=== verdict ===`)
 if (failures.length) {

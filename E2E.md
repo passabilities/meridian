@@ -5884,9 +5884,9 @@ the Agent SDK, which passes `display` to its subprocess as
 `--thinking-display updates`; the bundled CLI accepts only
 `summarized|omitted|highlights` and exited 1 before the turn started
 (`sdk_termination reason=process_exit exit=1`), so every such turn failed.
-`buildQueryOptions` now forwards `display` only when it is a value the SDK
-types accept (`summarized`, `omitted`) and drops anything else; thinking itself
-is unchanged.
+`buildQueryOptions` now forwards `display` only when the bundled CLI accepts
+it (`summarized`, `omitted`, `highlights`) and drops anything else, logging
+`thinking display "<value>" dropped`; the CLI then uses its default display.
 
 ```bash
 bun scripts/e2e-thinking-display.mjs
@@ -5895,19 +5895,25 @@ bun scripts/e2e-thinking-display.mjs
 Real proxy, Agent SDK and bundled subprocess; model `sonnet` (`PROBE_MODEL`).
 The interactive client cannot be driven headlessly (`claude -p` sends
 `display: "omitted"`), so the gate posts that client's request shape directly:
-Claude Code User-Agent, `metadata.user_id`, streamed.
+Claude Code User-Agent, `metadata.user_id`, streamed. The gate clears
+`MERIDIAN_*` settings and uses its own config directory, because a per-adapter
+`thinking: disabled` feature or a thinking-stripping beta policy would keep
+`display` from reaching the subprocess and pass the gate vacuously.
 
 **Pass criteria** (asserted, non-zero exit on any):
 
 - `display: "updates"` returns 200, streams the requested word, and emits no
   `event: error`.
 - `display: "summarized"` still answers the same way.
+- No `thinking disabled` line: thinking actually reached the SDK.
+- The dropped `"updates"` display is logged exactly once.
 
 **Before/after (2026-10-01, Linux x86_64, Bun 1.3.11, Agent SDK 0.2.141,
-bundled CLI 2.1.284, `sonnet`).** Baseline `3cb65df`: FAIL — the `"updates"`
-request returned 200 with an `event: error` and no text (the subprocess had
-exited on `--thinking-display updates`); `"summarized"` answered. Branch: PASS,
-both answered. Live, the owner's interactive Claude Code 2.1.287 session failed
+bundled CLI 2.1.284, `sonnet`).** Baseline `3cb65df`: FAIL, 2 checks — the
+`"updates"` request returned 200 with an `event: error` and no text (the
+subprocess had exited on `--thinking-display updates`) and nothing logged a
+drop; `"summarized"` answered. Branch: PASS, 4 of 4: both answered, thinking
+was not forced off, and the drop was logged once. Live, the owner's interactive Claude Code 2.1.287 session failed
 10 of 10 turns through the proxy with this error before the fix.
 
 ## Concurrent transcript publication
