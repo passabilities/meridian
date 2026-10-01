@@ -997,6 +997,7 @@ curl -s -X PUT -H 'Content-Type: application/json' -d '{"checkForUpdates":false}
 | E66 | [Interrupted turn after a settled checkpoint](#e66-interrupted-turn-after-a-settled-checkpoint) | **Automated, real proxy + SDK + Claude Max**: `bun scripts/e2e-checkpoint-interrupted-turn.mjs`. An OpenCode-keyed tool round whose complete result is followed by a partial assistant turn (what a dropped stream leaves) must resume the stored session; a result for an unknown call is the negative control and must still take the fresh replay. **Run before releases touching the passthrough early-stop checkpoint or checkpoint replay** | 2026-09-26 |
 | E67 | [OpenCode V2 interrupted tool turn](#e67-opencode-v2-interrupted-tool-turn) | **Actual OpenCode 2.0.16 client and Meridian V2 plugin, real SDK/model**: `E2E_OPENCODE_BIN=/path/to/opencode E2E_PLUGIN_PATH=/path/to/opencode-scrub/dist/index.js bun scripts/e2e-opencode-checkpoint-fault.mjs`. Inject one partial SSE failure after the real client tool call; require the client's exact retry shape and SDK resume, plus a same-session recovery. **Run before releases touching keyed checkpoint recovery** | 2026-09-26 |
 | E68 | [OpenCode V2 user-invoked skill](#e68-opencode-v2-user-invoked-skill) | **Actual OpenCode V2 server, real SDK/model**: `E2E_OPENCODE_BIN=/path/to/opencode E2E_PLUGIN_PATH=/path/to/opencode-scrub/dist/index.js bun scripts/e2e-opencode-skill-content.mjs`. A skill invoked with no typed text must reach the SDK prompt inside `<skill_content>` and drive the reply. **Run before releases touching user-text sanitization** | 2026-09-27 |
+| E73 | [Unknown thinking display values](#e73-unknown-thinking-display-values) | **Automated**: `bun scripts/e2e-thinking-display.mjs` — real proxy + SDK + bundled subprocess. Asserts a Claude Code request with `thinking.display: "updates"` answers instead of the subprocess exiting on `--thinking-display`, and a supported display still answers. **Run before releases touching thinking passthrough or the SDK/CLI version** | 2026-10-01 |
 
 | P1 | [Profile: List & Auth Status](#p1-profile-list--auth-status) | `/profiles/list` returns profiles with emails, login status, auth timestamps | - |
 | P2 | [Profile: Switch via API](#p2-profile-switch-via-api) | `POST /profiles/active` switches profile; health endpoint reflects new email | - |
@@ -5871,6 +5872,43 @@ trimmed 12 messages (~3114 estimated tokens) and answered from the kept tail.
 **Not covered.** The original 400 (`context_overflow` on an oversized replay) was
 not reproduced live, and neither was the reactive retry, which needs a real
 overflow from the model. Those remain covered only by the mocked envelope tests.
+
+## E73: Unknown thinking display values
+
+**What it proves:** a request whose `thinking.display` the bundled Claude Code
+CLI does not know still runs, instead of killing the SDK subprocess.
+
+Interactive Claude Code in connector-text mode (seen on 2.1.287) sends
+`thinking: { type: "adaptive", display: "updates" }`. Meridian forwarded it to
+the Agent SDK, which passes `display` to its subprocess as
+`--thinking-display updates`; the bundled CLI accepts only
+`summarized|omitted|highlights` and exited 1 before the turn started
+(`sdk_termination reason=process_exit exit=1`), so every such turn failed.
+`buildQueryOptions` now forwards `display` only when it is a value the SDK
+types accept (`summarized`, `omitted`) and drops anything else; thinking itself
+is unchanged.
+
+```bash
+bun scripts/e2e-thinking-display.mjs
+```
+
+Real proxy, Agent SDK and bundled subprocess; model `sonnet` (`PROBE_MODEL`).
+The interactive client cannot be driven headlessly (`claude -p` sends
+`display: "omitted"`), so the gate posts that client's request shape directly:
+Claude Code User-Agent, `metadata.user_id`, streamed.
+
+**Pass criteria** (asserted, non-zero exit on any):
+
+- `display: "updates"` returns 200, streams the requested word, and emits no
+  `event: error`.
+- `display: "summarized"` still answers the same way.
+
+**Before/after (2026-10-01, Linux x86_64, Bun 1.3.11, Agent SDK 0.2.141,
+bundled CLI 2.1.284, `sonnet`).** Baseline `3cb65df`: FAIL — the `"updates"`
+request returned 200 with an `event: error` and no text (the subprocess had
+exited on `--thinking-display updates`); `"summarized"` answered. Branch: PASS,
+both answered. Live, the owner's interactive Claude Code 2.1.287 session failed
+10 of 10 turns through the proxy with this error before the fix.
 
 ## Concurrent transcript publication
 
