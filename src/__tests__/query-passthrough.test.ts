@@ -99,6 +99,23 @@ describe("buildQueryOptions — SDK parameter passthrough", () => {
     expect(enabled.options.thinking).toEqual({ type: "enabled", budgetTokens: 2048 })
   })
 
+  it("keeps the highlights display the bundled CLI accepts", () => {
+    const result = buildQueryOptions(makeContext({ thinking: { type: "adaptive", display: "highlights" } }))
+    expect(result.options.thinking as unknown).toEqual({ type: "adaptive", display: "highlights" })
+  })
+
+  it("drops a display that is not a string or names no known value", () => {
+    const nonString = { type: "adaptive", display: 5 } as unknown as QueryContext["thinking"]
+    expect(buildQueryOptions(makeContext({ thinking: nonString })).options.thinking).toEqual({ type: "adaptive" })
+    const unknownType = { type: "future", display: "updates" } as unknown as QueryContext["thinking"]
+    expect(buildQueryOptions(makeContext({ thinking: unknownType })).options.thinking as unknown).toEqual({ type: "future" })
+  })
+
+  it("leaves disabled thinking untouched", () => {
+    const disabled = { type: "disabled", display: "updates" } as unknown as QueryContext["thinking"]
+    expect(buildQueryOptions(makeContext({ thinking: disabled })).options.thinking as unknown).toEqual(disabled)
+  })
+
   it("thinking disabled config is passed through", () => {
     const thinking = { type: "disabled" as const }
     const result = buildQueryOptions(makeContext({ thinking }))
