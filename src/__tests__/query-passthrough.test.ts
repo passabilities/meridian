@@ -83,6 +83,22 @@ describe("buildQueryOptions — SDK parameter passthrough", () => {
     }
   })
 
+  it("keeps a thinking display value the SDK accepts", () => {
+    const thinking = { type: "adaptive" as const, display: "summarized" }
+    const result = buildQueryOptions(makeContext({ thinking }))
+    expect(result.options.thinking).toEqual({ type: "adaptive", display: "summarized" })
+  })
+
+  it("drops a thinking display value the SDK subprocess would reject", () => {
+    // Claude Code's API body can carry display values (e.g. "updates") that
+    // the SDK turns into `--thinking-display`, which the bundled CLI rejects
+    // by exiting before the turn starts.
+    const adaptive = buildQueryOptions(makeContext({ thinking: { type: "adaptive", display: "updates" } }))
+    expect(adaptive.options.thinking).toEqual({ type: "adaptive" })
+    const enabled = buildQueryOptions(makeContext({ thinking: { type: "enabled", budgetTokens: 2048, display: "updates" } }))
+    expect(enabled.options.thinking).toEqual({ type: "enabled", budgetTokens: 2048 })
+  })
+
   it("thinking disabled config is passed through", () => {
     const thinking = { type: "disabled" as const }
     const result = buildQueryOptions(makeContext({ thinking }))

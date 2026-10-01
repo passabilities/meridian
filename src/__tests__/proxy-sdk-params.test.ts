@@ -104,6 +104,20 @@ describe("SDK param passthrough — body fields", () => {
     expect(capturedOptions.thinking).toEqual(thinking)
   })
 
+  it("drops a body thinking display the SDK subprocess would reject", async () => {
+    const app = createTestApp()
+    await post(app, { ...BASE_BODY, thinking: { type: "adaptive", display: "updates" } })
+    expect(capturedOptions.thinking).toEqual({ type: "adaptive" })
+  })
+
+  it("drops a header thinking display the SDK subprocess would reject", async () => {
+    const app = createTestApp()
+    await post(app, BASE_BODY, {
+      "x-opencode-thinking": JSON.stringify({ type: "adaptive", display: "updates" }),
+    })
+    expect(capturedOptions.thinking).toEqual({ type: "adaptive" })
+  })
+
   it("forwards task_budget from body as taskBudget object", async () => {
     const app = createTestApp()
     await post(app, { ...BASE_BODY, task_budget: { total: 5000 } })

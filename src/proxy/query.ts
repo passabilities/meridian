@@ -7,7 +7,7 @@
 
 import { homedir } from "node:os"
 import { isAbsolute, join, posix, resolve, win32 } from "node:path"
-import type { Options, OutputFormat, SdkBeta, SettingSource } from "@anthropic-ai/claude-agent-sdk"
+import type { Options, OutputFormat, SdkBeta, SettingSource, ThinkingConfig } from "@anthropic-ai/claude-agent-sdk"
 import { createOpencodeMcpServer } from "../mcpTools"
 import { createPassthroughMcpServer, PASSTHROUGH_MCP_NAME } from "./passthroughTools"
 import { env, envInt } from "../env"
@@ -155,8 +155,14 @@ export interface QueryContext {
   onStderr?: (line: string) => void
   /** Effort level — controls thinking depth (low/medium/high/xhigh/max) */
   effort?: Effort
-  /** Thinking configuration — adaptive, enabled with budget, or disabled */
-  thinking?: { type: 'adaptive' } | { type: 'enabled'; budgetTokens?: number } | { type: 'disabled' }
+  /**
+   * Thinking configuration — adaptive, enabled with budget, or disabled.
+   * `display` is client-supplied and unvalidated; see `sdkThinking`.
+   */
+  thinking?:
+    | { type: 'adaptive'; display?: string }
+    | { type: 'enabled'; budgetTokens?: number; display?: string }
+    | { type: 'disabled' }
   /** API-side task budget in tokens — model paces tool use within this limit */
   taskBudget?: { total: number }
   /** Native JSON-schema output contract for the Claude Agent SDK */
@@ -456,6 +462,21 @@ export const REPLAY_PROVENANCE_NOTE =
   `</meridian-note>`
 
 /**
+ * The thinking option as the SDK accepts it.
+ *
+ * The SDK hands `display` to the Claude Code subprocess as
+ * `--thinking-display`, and the subprocess exits before the turn starts on a
+ * value it does not know. Clients add API-side values ahead of the bundled CLI
+ * (Claude Code sends `"updates"`), so an unknown value is dropped rather than
+ * failing the turn; thinking itself is unchanged.
+ */
+export function sdkThinking(thinking: NonNullable<QueryContext["thinking"]>): ThinkingConfig {
+  if (thinking.type === "disabled") return thinking
+  const { display, ...rest } = thinking
+  return display === "summarized" || display === "omitted" ? { ...rest, display } : rest
+}
+
+/**
  * Prompt-level counter-instruction to suppress writes to the CLI's proxy-host
  * scratchpad directory in passthrough mode (#627, #1049).
  * Avoids setting CLAUDE_CODE_SESSION_KIND=bg which causes CLI 2.1.274+ to
@@ -687,7 +708,7 @@ export function buildQueryOptions(ctx: QueryContext, abortController?: AbortCont
       ...(resumeSessionAtUuid ? { resumeSessionAt: resumeSessionAtUuid } : {}),
       ...(sdkHooks ? { hooks: sdkHooks } : {}),
       ...(effort ? { effort } : {}),
-      ...(thinking ? { thinking } : {}),
+      ...(thinking ? { thinking: sdkThinking(thinking) } : {}),
       ...(taskBudget ? { taskBudget } : {}),
       ...(outputFormat ? { outputFormat } : {}),
       ...(betas && betas.length > 0 ? { betas: betas as SdkBeta[] } : {}),
