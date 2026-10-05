@@ -10,6 +10,7 @@ import { isAbsolute, join, posix, resolve, win32 } from "node:path"
 import type { Options, OutputFormat, SdkBeta, SettingSource, ThinkingConfig } from "@anthropic-ai/claude-agent-sdk"
 import { createOpencodeMcpServer } from "../mcpTools"
 import { createPassthroughMcpServer, PASSTHROUGH_MCP_NAME } from "./passthroughTools"
+import { TOOL_SEARCH_TOOL_NAME, TOOL_SEARCH_TURN_BUDGET, deferredToolsNote } from "./passthroughToolSearch"
 import { env, envInt } from "../env"
 import type { Effort } from "./effort"
 
@@ -117,6 +118,13 @@ export interface QueryContext {
   ownsCacheBreakpoints?: boolean
   /** Whether any passthrough tools use deferred loading */
   hasDeferredTools: boolean
+  /**
+   * Whether those tools are deferred for real in this query: ToolSearch is in
+   * the request, the system prompt names what it can load, and the PreToolUse
+   * deny ends the query. Decided by `resolveToolSearch`; without it a session
+   * with deferred tools sends every one of them loaded.
+   */
+  toolSearch?: boolean
   /**
    * Whether passthrough early stop is active (MERIDIAN_PASSTHROUGH_EARLY_STOP
    * != "0"). Gates the single-turn maxTurns cap: the cap is only safe when the
@@ -250,27 +258,35 @@ export interface BuildQueryResult {
  *   - Early-stop kill switch off: MERIDIAN_PASSTHROUGH_EARLY_STOP=0 restores
  *     the pre-cap wire behavior wholesale, so the budget must come back too.
  *
- * Deferred tools are NOT one of them, though they were until 2026-10. The cap
- * was lifted to leave a turn for ToolSearch discovery (#547), but ToolSearch
- * is one of the SDK's built-in tools and passthrough strips those from the
- * request (`tools: []` below), so the CLI never offers it and sends every
- * client tool loaded (checked on CLI 2.1.141, 2.1.284 and 2.1.289). With no
- * discovery turn to make room for, the lifted cap bought the digest turn and
+ * Deferred tools are their own case, and `toolSearch` says which side of it a
+ * query is on.
+ *
+ * With ToolSearch on offer, a tool turn can be more than one Messages call: a
+ * ToolSearch round, then the call to the tool it loaded. The cap cannot tell
+ * that round from a digest, so it does not apply; the PreToolUse deny ends the
+ * query at the tool call instead (`endTurnAtDeny` in passthroughToolSearch.ts)
+ * and `TOOL_SEARCH_TURN_BUDGET` only bounds how long the model may go on
+ * searching before it. An operator's pin still wins.
+ *
+ * Without it the cap applies as to any other session, and that was not always
+ * so. Until 2026-10 deferred tools lifted the cap, to leave a turn for
+ * ToolSearch discovery (#547), while ToolSearch itself was stripped from the
+ * request with the rest of the SDK's built-in tools (`tools: []`, #490). The
+ * CLI offered no ToolSearch and sent every client tool loaded (checked on CLI
+ * 2.1.141, 2.1.284 and 2.1.289), so the lifted cap bought the digest turn and
  * the model's retries of the denied call after it: on two live Claude Code
  * sessions with 199 and 215 tools, 42 of 45 tool turns made 2-8 Messages calls
  * at a median 403K tokens of prompt each, and the 323 tool calls in that
  * proxy's SDK transcripts included no ToolSearch.
  *
- * The extra turns did also give the model a second attempt after the CLI
- * rejected a call it could not dispatch: a bare client-tool name, or a
- * ToolSearch that is not on offer. A streamed bare name is handed to the
- * client from the capped turn itself (#1192). The others end the turn, as they
- * always have on a session without deferred tools; E2E.md E75 lists them.
+ * Under the cap, a call the CLI rejects before any hook (a bare client-tool
+ * name) ends the turn. A streamed one is handed to the client from the capped
+ * turn itself (#1192); E2E.md E75 lists the rest. Under deferral the SDK goes
+ * on to the next Messages call after such a rejection, since no hook ran to
+ * stop it, and the proxy discards that call as it does any digest.
  *
- * `scripts/e2e-deferred-tool-turn.mjs` holds both halves against the real CLI,
- * and CI runs it: one Messages call per tool turn, and no ToolSearch on offer.
- * If deferral is ever made real, that gate fails and the discovery turn has to
- * come back here with it.
+ * `scripts/e2e-deferred-tool-turn.mjs` holds this against the real CLI, and CI
+ * runs it.
  *
  * Deferred tools still add their turn (+1) to the uncapped budget, so the kill
  * switch and the reissue keep the numbers they had.
@@ -283,11 +299,24 @@ export interface BuildQueryResult {
  * fresh (non-resume) requests. Resume adds nothing: rehydration completes
  * inline within turn 1.
  */
+/**
+ * The turn budget an operator pinned with MERIDIAN_PASSTHROUGH_MAX_TURNS, when
+ * it reads as one. Deferral asks: a budget of one has no room for a ToolSearch
+ * round. (computePassthroughMaxTurns also counts a value that does not parse
+ * as a pin, of the default budget; that is not a budget of one either.)
+ */
+export function pinnedPassthroughTurnBudget(): number | undefined {
+  if (env("PASSTHROUGH_MAX_TURNS") === undefined) return undefined
+  const configured = envInt("PASSTHROUGH_MAX_TURNS", 0)
+  return configured > 0 ? configured : undefined
+}
+
 function computePassthroughMaxTurns(
   hasDeferredTools: boolean,
   advisorModel: string | undefined,
   singleTurnHandoff: boolean,
   liftSingleTurnCap: boolean,
+  toolSearch: boolean = false,
 ): number {
   const deferredBump = hasDeferredTools ? 1 : 0
   const defaultBase = 3 + deferredBump
@@ -304,6 +333,7 @@ function computePassthroughMaxTurns(
   // silently override a value someone set to work around a client quirk.
   const operatorPinned = env("PASSTHROUGH_MAX_TURNS") !== undefined && configured > 0
   const advisorBump = advisorModel ? 3 : 0
+  if (toolSearch && !operatorPinned) return TOOL_SEARCH_TURN_BUDGET
   if (singleTurnHandoff && !liftSingleTurnCap && !operatorPinned) return 1
   const base = configured > 0 ? configured : defaultBase
   return base + advisorBump
@@ -537,6 +567,9 @@ function resolveSystemPrompt(
   codeSystemPrompt: boolean | undefined,
   clientSystemPrompt: boolean | undefined,
   cwdNote: string,
+  /** The deferred tools' names, when ToolSearch is on offer; else empty. Last
+   *  in every branch: it is the one part that follows the client's tool set. */
+  deferredNote: string,
 ): { systemPrompt?: string | { type: "preset"; preset: "claude_code"; append?: string } } {
   const hasSettings = settingSources != null && settingSources.length > 0
   const usePreset = codeSystemPrompt ?? (hasSettings || (!passthrough && !!systemContext))
@@ -548,18 +581,18 @@ function resolveSystemPrompt(
   if (usePreset) {
     // Always non-empty: the gitStatus correction applies to every preset
     // request, whether or not the client sent a system prompt.
-    const append = [clientContext, cwdNote, GIT_STATUS_PROVENANCE_NOTE, REPLAY_PROVENANCE_NOTE, scratchpadNote].filter(Boolean).join("")
+    const append = [clientContext, cwdNote, GIT_STATUS_PROVENANCE_NOTE, REPLAY_PROVENANCE_NOTE, scratchpadNote, deferredNote].filter(Boolean).join("")
     return { systemPrompt: { type: "preset" as const, preset: "claude_code" as const, append } }
   }
   const append = [clientContext, cwdNote].filter(Boolean).join("") || undefined
-  if (append) return { systemPrompt: append + REPLAY_PROVENANCE_NOTE + scratchpadNote }
+  if (append) return { systemPrompt: append + REPLAY_PROVENANCE_NOTE + scratchpadNote + deferredNote }
   // Transport provenance is separate from the optional client prompt and
   // Claude Code persona. A plain string keeps an explicitly disabled preset
   // disabled, rather than letting an omitted option restore the SDK default.
-  if (codeSystemPrompt === false) return { systemPrompt: REPLAY_PROVENANCE_NOTE + scratchpadNote }
+  if (codeSystemPrompt === false) return { systemPrompt: REPLAY_PROVENANCE_NOTE + scratchpadNote + deferredNote }
   // An omitted systemPrompt previously selected the SDK's default preset.
   // Preserve that choice while attaching the same transport note.
-  return { systemPrompt: { type: "preset", preset: "claude_code", append: REPLAY_PROVENANCE_NOTE + scratchpadNote } }
+  return { systemPrompt: { type: "preset", preset: "claude_code", append: REPLAY_PROVENANCE_NOTE + scratchpadNote + deferredNote } }
 }
 
 export function buildQueryOptions(ctx: QueryContext, abortController?: AbortController): BuildQueryResult {
@@ -577,6 +610,9 @@ export function buildQueryOptions(ctx: QueryContext, abortController?: AbortCont
   })
 
   const allBlockedTools = [...blockedTools, ...incompatibleTools]
+  // Deferral is a passthrough matter: elsewhere the SDK runs its own tools.
+  const toolSearch = passthrough && ctx.toolSearch === true
+  const deferredNote = toolSearch ? deferredToolsNote(passthroughMcp?.deferredToolNames ?? []) : ""
 
   return {
     prompt,
@@ -591,10 +627,11 @@ export function buildQueryOptions(ctx: QueryContext, abortController?: AbortCont
             hasDeferredTools,
             ctx.advisorModel,
             // Every condition here is one that needs the SDK to keep going
-            // past the tool boundary; see computePassthroughMaxTurns for why
-            // deferred tools are not among them.
+            // past the tool boundary; see computePassthroughMaxTurns for where
+            // deferred tools stand.
             ctx.earlyStop !== false && !ctx.advisorModel && !outputFormat,
             ctx.liftSingleTurnCap === true,
+            toolSearch,
           )
         : 200,
       cwd: workingDirectory,
@@ -610,7 +647,7 @@ export function buildQueryOptions(ctx: QueryContext, abortController?: AbortCont
       ...(stream || passthrough ? { includePartialMessages: true } : {}),
       permissionMode: "bypassPermissions" as const,
       allowDangerouslySkipPermissions: true,
-      ...resolveSystemPrompt(systemContext, passthrough, settingSources, codeSystemPrompt, clientSystemPrompt, cwdNote),
+      ...resolveSystemPrompt(systemContext, passthrough, settingSources, codeSystemPrompt, clientSystemPrompt, cwdNote, deferredNote),
       ...(passthrough
         ? {
             // Strip the SDK's ~25k-token built-in tool catalog from the
@@ -621,7 +658,10 @@ export function buildQueryOptions(ctx: QueryContext, abortController?: AbortCont
             // from the upstream payload. Setting `tools: []` elides the
             // catalog from the request body. Closes #489 (diagnosis by
             // @albe-jj).
-            tools: [],
+            //
+            // ToolSearch is the one built-in passthrough has a use for: the
+            // CLI defers no tool without it (passthroughToolSearch.ts).
+            tools: toolSearch ? [TOOL_SEARCH_TOOL_NAME] : [],
             disallowedTools: [...allBlockedTools],
             ...(passthroughMcp ? {
               allowedTools: [...passthroughMcp.toolNames],
@@ -678,7 +718,7 @@ export function buildQueryOptions(ctx: QueryContext, abortController?: AbortCont
         // the "share memory with Claude Code" intent without poisoning
         // Keychain auth.
         ...(sharedMemory ? stripConfigDir(cleanEnv) : cleanEnv),
-        ENABLE_TOOL_SEARCH: hasDeferredTools ? "true" : "false",
+        ENABLE_TOOL_SEARCH: toolSearch ? "true" : "false",
         // `max_tokens` is required on /v1/messages and is a hard cap on output,
         // but the SDK's Options expose no output cap — this env var is the only
         // lever the CLI offers (#874). Set it only when the client gave a

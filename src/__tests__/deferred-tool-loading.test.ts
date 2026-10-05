@@ -23,6 +23,7 @@ import {
   withMockSdkSessionId,
 } from "./helpers"
 import type { SDKMessage } from "@anthropic-ai/claude-agent-sdk"
+import { TOOL_SEARCH_TURN_BUDGET } from "../proxy/passthroughToolSearch"
 
 // ─── SDK mock ────────────────────────────────────────────────────────────────
 let mockMessages: SDKMessage[] = []
@@ -201,11 +202,35 @@ describe("deferred tool loading — ToolSearch filtering", () => {
 })
 
 describe("auto-defer — threshold-based deferral via HTTP", () => {
-  it("enables ENABLE_TOOL_SEARCH when tool count exceeds threshold", async () => {
+  it("enables ENABLE_TOOL_SEARCH when more tools than the threshold would be deferred", async () => {
     process.env.MERIDIAN_DEFER_TOOL_THRESHOLD = "5"
     mockMessages = [assistantMessage([{ type: "text", text: "Hello" }])]
 
-    // 6 core tools + 4 generic = 10 tools, above threshold of 5
+    // 6 core tools stay loaded; the 6 generic ones are above the threshold of 5
+    const tools = [
+      { name: "read", description: "Read", input_schema: { type: "object", properties: { path: { type: "string" } } } },
+      { name: "write", description: "Write", input_schema: { type: "object", properties: { path: { type: "string" } } } },
+      { name: "edit", description: "Edit", input_schema: { type: "object", properties: { path: { type: "string" } } } },
+      { name: "bash", description: "Bash", input_schema: { type: "object", properties: { cmd: { type: "string" } } } },
+      { name: "glob", description: "Glob", input_schema: { type: "object", properties: { pat: { type: "string" } } } },
+      { name: "grep", description: "Grep", input_schema: { type: "object", properties: { pat: { type: "string" } } } },
+      ...makeTools(6),
+    ]
+
+    await app().fetch(new Request("http://localhost/v1/messages", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(makeRequest({ stream: false, tools, messages: [{ role: "user", content: "hi" }] })),
+    }))
+
+    expect(capturedQueryParams.options.env.ENABLE_TOOL_SEARCH).toBe("true")
+  })
+
+  it("does not enable ENABLE_TOOL_SEARCH for a large set that is mostly core tools", async () => {
+    process.env.MERIDIAN_DEFER_TOOL_THRESHOLD = "5"
+    mockMessages = [assistantMessage([{ type: "text", text: "Hello" }])]
+
+    // 10 tools, but only the 4 generic ones would be deferred: not above 5
     const tools = [
       { name: "read", description: "Read", input_schema: { type: "object", properties: { path: { type: "string" } } } },
       { name: "write", description: "Write", input_schema: { type: "object", properties: { path: { type: "string" } } } },
@@ -222,7 +247,7 @@ describe("auto-defer — threshold-based deferral via HTTP", () => {
       body: JSON.stringify(makeRequest({ stream: false, tools, messages: [{ role: "user", content: "hi" }] })),
     }))
 
-    expect(capturedQueryParams.options.env.ENABLE_TOOL_SEARCH).toBe("true")
+    expect(capturedQueryParams.options.env.ENABLE_TOOL_SEARCH).toBe("false")
   })
 
   it("does not enable ENABLE_TOOL_SEARCH when tool count is at or below threshold", async () => {
@@ -248,7 +273,7 @@ describe("auto-defer — threshold-based deferral via HTTP", () => {
     expect(capturedQueryParams.options.env.ENABLE_TOOL_SEARCH).toBe("false")
   })
 
-  it("caps maxTurns at 1 when deferred tools are present — ToolSearch is stripped with the SDK's built-in tools, so no discovery turn can follow the handoff", async () => {
+  it("gives a session with deferred tools ToolSearch and the turns for a discovery round", async () => {
     mockMessages = [assistantMessage([{ type: "text", text: "Hello" }])]
 
     await app().fetch(new Request("http://localhost/v1/messages", {
@@ -261,7 +286,8 @@ describe("auto-defer — threshold-based deferral via HTTP", () => {
       })),
     }))
 
-    expect(capturedQueryParams.options.maxTurns).toBe(1)
+    expect(capturedQueryParams.options.tools).toEqual(["ToolSearch"])
+    expect(capturedQueryParams.options.maxTurns).toBe(TOOL_SEARCH_TURN_BUDGET)
   })
 
   it("caps maxTurns at 1 when no deferred tools — nothing needs a turn past the tool handoff", async () => {

@@ -55,7 +55,8 @@ import { exec as execCallback } from "child_process"
 import { promisify } from "util"
 import { randomUUID } from "crypto"
 import { withClaudeLogContext } from "../logger"
-import { createPassthroughMcpServer, createPassthroughReplayToolNameRenderer, resolveClientToolName, normalizeToolInput, hasRepairableToolInput, computeToolSetKey, toolUseSignature, PASSTHROUGH_MCP_NAME, PASSTHROUGH_MCP_PREFIX, passthroughMcpPrefix, autoDeferDecision, getAutoDeferThreshold } from "./passthroughTools"
+import { createPassthroughMcpServer, createPassthroughReplayToolNameRenderer, resolveClientToolName, normalizeToolInput, hasRepairableToolInput, computeToolSetKey, toolUseSignature, PASSTHROUGH_MCP_NAME, PASSTHROUGH_MCP_PREFIX, passthroughMcpPrefix, autoDeferDecision, autoDeferrableToolNames, getAutoDeferThreshold } from "./passthroughTools"
+import { createInternalToolResults, createStopWatch, endTurnAtDeny, internalToolResultsAt, noteCliIgnoredStop, noteInternalToolMessage, noteStopAsked, recallInternalToolResults, rememberInternalToolResults, resolveToolSearch, stopWasIgnored, toolSearchUpstream } from "./passthroughToolSearch"
 import { describeLocalBootIdentity } from "./session/processIncarnation"
 import { detectServerTools, serverToolErrorMessage } from "./tools"
 import { clientAbortDisposition, coalesceCompleteToolResultContinuation, createEarlyStopTracker, isClientForwardedToolUse, noteAssistantMessage, noteUserContent, settledToolCallAssistantUuid, settlesCheckpointThenContinues, shouldEarlyStop, trackerCoversStreamedCalls } from "./passthroughEarlyStop"
@@ -101,7 +102,7 @@ import { layoutGrowingPrompt } from "./promptCacheLayout"
 import { requireAuth, authEnabled } from "./auth"
 import { detectAdapter } from "./adapters/detect"
 import { rootSessionIdOf } from "./adapter"
-import { buildQueryOptions, isCliThinkingDisplay, resolveQueryConfigDir, singleTurnCapLiftRaisesBudget, type QueryContext } from "./query"
+import { buildQueryOptions, isCliThinkingDisplay, pinnedPassthroughTurnBudget, resolveQueryConfigDir, singleTurnCapLiftRaisesBudget, type QueryContext } from "./query"
 import { normalizeEffort } from "./effort"
 import { parseOutputFormat, structuredOutputText } from "./structuredOutput"
 import { runTransformHook, buildPipeline, createRequestContext } from "./transform"
@@ -3135,7 +3136,14 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
           trailingSystemReminderOptions,
         )
         if (checkpointContinuation) {
-          messagesToConvert = checkpointContinuation
+          // A ToolSearch called in the same message as the forwarded calls
+          // was answered after the resume point. Put its result back ahead
+          // of the client's, or the CLI fills the gap with a placeholder and
+          // the tool it loaded is unloaded again (passthroughToolSearch.ts).
+          const internalResults = recallInternalToolResults(passthroughToolCallAssistantUuid)
+          messagesToConvert = internalResults.length > 0
+            ? [{ role: "user", content: [...internalResults, ...checkpointContinuation[0]!.content] }]
+            : checkpointContinuation
         } else if (carriesSynthesizedSessionKey || settledThenContinued) {
           // The checkpoint is Meridian's own inference, not a client contract.
           // A synthesized key means the client sent no session header and never
@@ -3688,13 +3696,18 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
         const mcpSessionKey = independentCause === "auxiliary-request" ? undefined : profileSessionId
         const cachedMcp = mcpSessionKey ? sessionMcpCache.get(mcpSessionKey) : undefined
         const coreNamesForDefer = pipelineCtx.coreToolNames ? [...pipelineCtx.coreToolNames] : undefined
+        const deferrablePrefixes = pipelineCtx.deferrableToolPrefixes
         // Consulted even when the MCP server is rebuilt: a changed tool set
         // already costs one cache miss, and re-deciding on top of it would ALSO
         // flip maxTurns mid-session. The suppressed flip is logged whenever the
         // live count would decide differently, which is the observability the
         // issue asked for regardless of which fix landed.
         const pinnedDefer = profileSessionId ? sessionDeferPin.get(profileSessionId) : undefined
-        const liveDefer = autoDeferDecision(getAutoDeferThreshold(), coreNamesForDefer, requestTools.length)
+        const liveDefer = autoDeferDecision(
+          getAutoDeferThreshold(),
+          coreNamesForDefer,
+          autoDeferrableToolNames(requestTools, coreNamesForDefer, deferrablePrefixes).length,
+        )
         if (pinnedDefer !== undefined && pinnedDefer !== liveDefer) {
           plog(`[PROXY] ${requestMeta.requestId} defer_flip suppressed: session pinned autoDefer=${pinnedDefer}, live tool count ${requestTools.length} would give ${liveDefer}`)
           claudeLog("passthrough.defer_flip_suppressed", { pinned: pinnedDefer, live: liveDefer, toolCount: requestTools.length })
@@ -3702,7 +3715,7 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
         if (cachedMcp && cachedMcp.key === toolSetKey) {
           passthroughMcp = cachedMcp.mcp
         } else {
-          passthroughMcp = createPassthroughMcpServer(requestTools, coreNamesForDefer, passthroughMcpName, pinnedDefer)
+          passthroughMcp = createPassthroughMcpServer(requestTools, coreNamesForDefer, passthroughMcpName, pinnedDefer, deferrablePrefixes)
           if (mcpSessionKey) {
             sessionMcpCache.set(mcpSessionKey, { key: toolSetKey, mcp: passthroughMcp })
             if (cachedMcp) {
@@ -3710,20 +3723,65 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
             }
           }
         }
-        // First request in the session decides; later ones inherit.
+        // First request in the session decides; later ones inherit. The pin
+        // is of auto-defer's decision alone: a tool the client marked itself
+        // is deferred either way, and pinning "something is deferred" turned
+        // one such tool into auto-defer for every other on the next change.
         if (mcpSessionKey && !sessionDeferPin.has(mcpSessionKey)) {
-          sessionDeferPin.set(mcpSessionKey, passthroughMcp.hasDeferredTools)
+          sessionDeferPin.set(mcpSessionKey, passthroughMcp.autoDefer)
         }
       }
       const hasDeferredTools = passthroughMcp?.hasDeferredTools ?? false
-      // Count deferred tools: when auto-defer is active, non-core tools are deferred
-      const coreNames = pipelineCtx.coreToolNames ? [...pipelineCtx.coreToolNames] : undefined
-      const coreSet = coreNames ? new Set(coreNames.map(n => n.toLowerCase())) : undefined
-      const deferredToolCount = hasDeferredTools && requestTools.length > 0
-        ? requestTools.filter((t: any) => t.defer_loading === true || (coreSet && !coreSet.has(String(t.name).toLowerCase()))).length
-        : 0
+      // The tools marked for deferral, under the names the client declared.
+      const deferredClientToolNames = new Set((passthroughMcp?.deferredToolNames ?? []).map(name =>
+        resolveClientToolName(name, passthroughMcp?.clientNameByAlias, passthroughMcpName)))
+      const deferredToolCount = deferredClientToolNames.size
+      // Whether they are deferred for real (passthroughToolSearch.ts). Settled
+      // once per request: the hook below and every SDK attempt must agree.
+      const toolSearch = resolveToolSearch({
+        // The count, not the session's pin: a pinned session whose deferrable
+        // tools have all gone has nothing for ToolSearch to load.
+        hasDeferredTools: deferredToolCount > 0,
+        disabled: env("PASSTHROUGH_TOOL_SEARCH") === "0",
+        // The profile's environment is what the SDK child gets.
+        ...toolSearchUpstream(profileEnv),
+        upstreamVouchedFor: env("PASSTHROUGH_TOOL_SEARCH") === "force",
+        stopsAtToolBoundary: earlyStopEnabled && !advisorModel && !outputFormat,
+        pinnedTurnBudget: pinnedPassthroughTurnBudget(),
+        model,
+        clientToolNames: requestTools.flatMap((tool: { name?: unknown }) => typeof tool?.name === "string" ? [tool.name] : []),
+        claudeExecutable,
+      })
       if (hasDeferredTools) {
-        plog(`[PROXY] ${requestMeta.requestId} deferred=${deferredToolCount}/${toolCount} tools (core: ${coreNames?.join(",") ?? "none"})`)
+        plog(`[PROXY] ${requestMeta.requestId} deferred=${deferredToolCount}/${toolCount} tools ${toolSearch.active ? "via ToolSearch" : `marked, all loaded (${toolSearch.reason})`}`)
+      }
+      // Which calls the hook answered with the stop, and what the queries
+      // went on to do: a model turn after one of them belongs to a CLI that
+      // ignored it.
+      const stopWatch = createStopWatch()
+      const internalToolResults = createInternalToolResults()
+      const observeToolSearch = (message: unknown): void => {
+        if (!toolSearch.active) return
+        noteInternalToolMessage(internalToolResults, message)
+        if (!stopWasIgnored(stopWatch, message)) return
+        if (!noteCliIgnoredStop(claudeExecutable)) return
+        claudeLog("passthrough.tool_search_stop_ignored", { claudeExecutable })
+        plog(`[PROXY] ${requestMeta.requestId} this Claude Code CLI calls the model again after a hook asks it to stop — tool deferral is off until restart (${claudeExecutable})`)
+        diagnosticLog.session(
+          `${requestMeta.requestId} tool_search_stop_ignored: deferral off until restart for ${claudeExecutable}`,
+          requestMeta.requestId,
+        )
+      }
+      /** Keep the checkpoint message's ToolSearch results for the request that resumes at it. */
+      const carryInternalToolResults = (assistantUuid: string | null | undefined): void => {
+        if (assistantUuid) rememberInternalToolResults(assistantUuid, internalToolResultsAt(internalToolResults, assistantUuid))
+      }
+      /** The deny as the hook returns it: with the stop, when tools are deferred. */
+      const denyToolCall = (toolUseId: string | undefined, reason: string) => {
+        const deny = { decision: "block" as const, reason }
+        if (!toolSearch.active) return deny
+        noteStopAsked(stopWatch, toolUseId)
+        return endTurnAtDeny(deny)
       }
 
       // In passthrough mode: block ALL tools, capture them for forwarding (agent-agnostic).
@@ -3759,9 +3817,9 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
               hooks: [async (input: any) => {
                 // Let the SDK handle ToolSearch internally for deferred tool loading.
                 // ToolSearch is filtered from the response stream below.
-                // Not reached today: passthrough strips the SDK's built-in
-                // tools (`tools: []` in query.ts), ToolSearch with them, so the
-                // CLI rejects a `ToolSearch` call before any hook (E2E.md E75).
+                // Reached only while deferral is on: otherwise ToolSearch is
+                // stripped with the SDK's other built-in tools and the CLI
+                // rejects a call to it before any hook (E2E.md E75).
                 // Return {} — NOT undefined. SDK validates hook returns with Zod and
                 // rejects undefined ("expected object, received undefined"), which also
                 // cascades into "Reached maximum number of turns (2)". {} is the no-op.
@@ -3782,7 +3840,7 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
                 markPriorityAttemptExposure("tool_use")
                 // Track deferred tools that were discovered via ToolSearch
                 const toolName = resolveClientToolName(input.tool_name, passthroughMcp?.clientNameByAlias, passthroughMcpName)
-                if (hasDeferredTools && coreSet && !coreSet.has(toolName.toLowerCase())) {
+                if (deferredClientToolNames.has(toolName)) {
                   discoveredTools.add(toolName)
                 }
                 // Normalize parameter names: the SDK system prompt references
@@ -3864,12 +3922,12 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
                   // model is now looping against blocked tools — kill the nested
                   // SDK session immediately instead of letting it generate denied
                   // retries until the turn budget runs out (#570). Hook-level
-                  // `interrupt: true` / `continue: false` cannot do this: neither
-                  // key exists in the CLI's hook-output schema, so both are
-                  // stripped before the deny is processed (verified against the
-                  // real SDK at the time; CLI 2.1.284 does honour `continue:
-                  // false` beside a deny, see E2E.md E75, and this path has not
-                  // been moved onto it). Aborting the query's controller SIGTERMs the
+                  // `interrupt: true` / `continue: false` could not do this when
+                  // the path was written: the CLI of the time stripped both keys
+                  // before the deny was processed, and 2.1.141 still ignores
+                  // `continue: false`. 2.1.284 honours it, and deferral relies on
+                  // that (passthroughToolSearch.ts); this path has not been moved
+                  // onto it. Aborting the query's controller SIGTERMs the
                   // subprocess; the abort-shaped termination is converted into a
                   // clean stop_reason:"tool_use" response by the recovery paths.
                   requestAbort.setCause("passthrough_single_step")
@@ -3912,27 +3970,22 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
                   await holdDenyUntilTurnEnd()
                 }
                 if (isExactDuplicate || isPostCheckpointCall) {
-                  return {
-                    decision: "block" as const,
-                    reason:
-                      "This tool call has already been handled by the client-facing turn — do not repeat it. " +
-                      "Do not call additional tools and do not generate further text — end your turn now.",
-                  }
+                  return denyToolCall(
+                    input.tool_use_id,
+                    "This tool call has already been handled by the client-facing turn — do not repeat it. " +
+                    "Do not call additional tools and do not generate further text — end your turn now.",
+                  )
                 }
                 if (isSameToolRepeat || exceedsForcedSingle) {
-                  return {
-                    decision: "block" as const,
-                    reason:
-                      "This tool call was NOT executed and was not forwarded. Your earlier tool call(s) " +
-                      "are being returned to the client now; their results arrive next turn. Re-issue this " +
-                      "call after that if it is still needed. Do not call additional tools and do not " +
-                      "generate further text — end your turn now.",
-                  }
+                  return denyToolCall(
+                    input.tool_use_id,
+                    "This tool call was NOT executed and was not forwarded. Your earlier tool call(s) " +
+                    "are being returned to the client now; their results arrive next turn. Re-issue this " +
+                    "call after that if it is still needed. Do not call additional tools and do not " +
+                    "generate further text — end your turn now.",
+                  )
                 }
-                return {
-                  decision: "block" as const,
-                  reason: PASSTHROUGH_DENY_REASON,
-                }
+                return denyToolCall(input.tool_use_id, PASSTHROUGH_DENY_REASON)
               }],
             }],
           }
@@ -3987,6 +4040,10 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
           claudeLog("upstream.start", { mode: "non_stream", model })
           let lastUsage: TokenUsage | undefined
           let lastStopReason: string | undefined
+          // The turn called ToolSearch and its answer holds no call for the
+          // client: what running out of budget while searching looks like.
+          const searchedWithoutCalling = (): boolean =>
+            internalToolResults.calls.size > 0 && !contentBlocks.some((b) => b.type === "tool_use")
           // Completeness oracle, the non-stream twin of the streaming path's
           // `streamedToolUseIds`. Built from content_block_start, so it names
           // every tool_use the turn actually produced — including calls whose
@@ -4084,7 +4141,7 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
                   if (resumeSessionId) resumedMappingMayBeAdvanced = true
                   const attemptQuery = buildQueryOptions({
                     prompt: makePrompt(), ownsCacheBreakpoints: promptCacheLayout !== undefined, model, workingDirectory, clientWorkingDirectory: promptClientWorkingDirectory, clientEnvironmentMayDifferFromProxy, systemContext, claudeExecutable,
-                    passthrough, stream: false, sdkAgents, passthroughMcp, cleanEnv: profileEnv, envOverrides, hasDeferredTools, earlyStop: earlyStopEnabled, liftSingleTurnCap: singleTurnCapLifted,
+                    passthrough, stream: false, sdkAgents, passthroughMcp, cleanEnv: profileEnv, envOverrides, hasDeferredTools, toolSearch: toolSearch.active, earlyStop: earlyStopEnabled, liftSingleTurnCap: singleTurnCapLifted,
                     resumeSessionId, isUndo: sdkUndo, resumeSessionAtUuid: undoRollbackUuid ?? passthroughToolCallAssistantUuid, forkSession: busySessionFork || undefined, forkSessionId: managedForkTarget?.sessionId, sdkHooks, blockedTools: pipelineCtx.blockedTools, incompatibleTools: pipelineCtx.incompatibleTools, mcpServerName: adapter.getMcpServerName(), allowedMcpTools: pipelineCtx.allowedMcpTools, onStderr,
                     effort, thinking, taskBudget, outputFormat, betas, settingSources,
                     codeSystemPrompt: sdkFeatures.codeSystemPrompt, clientSystemPrompt: sdkFeatures.clientSystemPrompt === false ? false : undefined,
@@ -4191,7 +4248,7 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
                     yield* runSdkQueryAttempt(buildQueryOptions({
                       prompt: buildFreshPrompt(allMessages, sanitizeOpts, renderReplayToolName, replayBudgetFor(model), "non_stream_resume_replay"),
                       model, workingDirectory, clientWorkingDirectory: promptClientWorkingDirectory, clientEnvironmentMayDifferFromProxy, systemContext, claudeExecutable,
-                      passthrough, stream: false, sdkAgents, passthroughMcp, cleanEnv: profileEnv, envOverrides, hasDeferredTools, earlyStop: earlyStopEnabled,
+                      passthrough, stream: false, sdkAgents, passthroughMcp, cleanEnv: profileEnv, envOverrides, hasDeferredTools, toolSearch: toolSearch.active, earlyStop: earlyStopEnabled,
                       resumeSessionId: undefined, isUndo: false, resumeSessionAtUuid: undefined, forkSessionId: managedForkTarget?.sessionId, sdkHooks, blockedTools: pipelineCtx.blockedTools, incompatibleTools: pipelineCtx.incompatibleTools, mcpServerName: adapter.getMcpServerName(), allowedMcpTools: pipelineCtx.allowedMcpTools, onStderr,
                       effort, thinking, taskBudget, outputFormat, betas, settingSources,
                       codeSystemPrompt: sdkFeatures.codeSystemPrompt, clientSystemPrompt: sdkFeatures.clientSystemPrompt === false ? false : undefined,
@@ -4252,7 +4309,7 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
                     yield* runSdkQueryAttempt(buildQueryOptions({
                       prompt: buildFreshPrompt(allMessages, sanitizeOpts, renderReplayToolName, replayBudgetFor(model), "non_stream_model_fallback"),
                       model, workingDirectory, clientWorkingDirectory: promptClientWorkingDirectory, clientEnvironmentMayDifferFromProxy, systemContext, claudeExecutable,
-                      passthrough, stream: false, sdkAgents, passthroughMcp, cleanEnv: profileEnv, envOverrides, hasDeferredTools, earlyStop: earlyStopEnabled,
+                      passthrough, stream: false, sdkAgents, passthroughMcp, cleanEnv: profileEnv, envOverrides, hasDeferredTools, toolSearch: toolSearch.active, earlyStop: earlyStopEnabled,
                       resumeSessionId: undefined, isUndo: false, resumeSessionAtUuid: undefined, forkSessionId: managedForkTarget?.sessionId, sdkHooks, blockedTools: pipelineCtx.blockedTools, incompatibleTools: pipelineCtx.incompatibleTools, mcpServerName: adapter.getMcpServerName(), allowedMcpTools: pipelineCtx.allowedMcpTools, onStderr,
                       effort, thinking, taskBudget, outputFormat, betas, settingSources,
                       codeSystemPrompt: sdkFeatures.codeSystemPrompt, clientSystemPrompt: sdkFeatures.clientSystemPrompt === false ? false : undefined,
@@ -4360,6 +4417,7 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
 
             for await (const message of response) {
               observePriorityAttemptMessage(message)
+              observeToolSearch(message)
               // Capture session ID from SDK messages
               const observedSessionId = (message as { session_id?: unknown }).session_id
               if (typeof observedSessionId === "string" && observedSessionId) {
@@ -4403,7 +4461,14 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
               if (
                 passthrough &&
                 !earlyStopFired &&
-                (message.type === "assistant" || message.type === "user")
+                // Under deferral the SDK goes on after a call the CLI rejected
+                // before any hook, and the CLI rejects while the message is
+                // still generating: its tool_result arrives ahead of the
+                // message_delta, when nothing can settle yet. Look again on
+                // the stream events that follow, or the model's retry of the
+                // call is captured as a second one for a client that already
+                // holds the first.
+                (message.type === "assistant" || message.type === "user" || (toolSearch.active && message.type === "stream_event"))
               ) {
                 // The completeness gate the streaming path already applies:
                 // generation has ended AND the tracker has caught up with every
@@ -4689,7 +4754,7 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
               })
               plog(`[PROXY] ${requestMeta.requestId} output capped at client max_tokens=${clientMaxOutputTokens} — reporting stop_reason=max_tokens`)
               if (lastUsage) logUsage(requestMeta.requestId, lastUsage)
-            } else if (passthrough && sdkTerm.reason === "max_turns" && hasTruncatableText(contentBlocks)) {
+            } else if (passthrough && sdkTerm.reason === "max_turns" && (hasTruncatableText(contentBlocks) || searchedWithoutCalling())) {
               // The turn hit its budget without producing a forwardable tool
               // call, but it did produce visible text. Throwing here would answer a
               // 200-able turn with a 500 — and the streaming path already does
@@ -4702,6 +4767,17 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
               // captured), just rarer while the budget was 3. The single-turn
               // cap makes max_turns the ordinary terminal state, so the
               // degradation has to be honest rather than incidental.
+              //
+              // A turn that spent its whole budget on ToolSearch is the same
+              // shape with or without text: it loaded tools, the session
+              // stored below holds them, and the client can carry on from
+              // there. Not so with a call in the answer that nothing
+              // captured (one the CLI rejected on the budget's last turn):
+              // `max_tokens` would hand the client a call it is told neither
+              // to run nor to discard, so here that stays the error it is
+              // under the one-turn cap. The streaming path hands such a call
+              // to the client instead, through its uncaptured-call recovery
+              // (#1192), which this path has never had.
               lastStopReason = "max_tokens"
               claudeLog("passthrough.capped_turn_truncated", {
                 mode: "non_stream",
@@ -4801,8 +4877,10 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
             }
           }
 
-          // If no content at all, add a fallback text block
-          if (contentBlocks.length === 0) {
+          // If no content at all, add a fallback text block. Not for a turn
+          // cut off while it searched: that one is reported as truncated, and
+          // a client continues a truncated reply from whatever text it holds.
+          if (contentBlocks.length === 0 && !(stopReason === "max_tokens" && searchedWithoutCalling())) {
             contentBlocks.push({
               type: "text",
               text: "I can help with that. Could you provide more details about what you'd like me to do?"
@@ -4907,6 +4985,7 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
                   }
                   claudeLog("passthrough.noncanonical_session_evicted", { mode: "non_stream" })
                 } else {
+                  if (earlyStopFired) carryInternalToolResults(nextPassthroughToolCallAssistantUuid)
                   validateManagedForkResult(currentSessionId)
                   await commitManagedFork()
                   let mappingStored: false | StoredSessionGeneration
@@ -5275,7 +5354,7 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
                     if (resumeSessionId) resumedMappingMayBeAdvanced = true
                     const attemptQuery = buildQueryOptions({
                       prompt: makePrompt(), ownsCacheBreakpoints: promptCacheLayout !== undefined, model, workingDirectory, clientWorkingDirectory: promptClientWorkingDirectory, clientEnvironmentMayDifferFromProxy, systemContext, claudeExecutable,
-                      passthrough, stream: true, sdkAgents, passthroughMcp, cleanEnv: profileEnv, envOverrides, hasDeferredTools, earlyStop: earlyStopEnabled, liftSingleTurnCap: singleTurnCapLifted,
+                      passthrough, stream: true, sdkAgents, passthroughMcp, cleanEnv: profileEnv, envOverrides, hasDeferredTools, toolSearch: toolSearch.active, earlyStop: earlyStopEnabled, liftSingleTurnCap: singleTurnCapLifted,
                       resumeSessionId, isUndo: sdkUndo, resumeSessionAtUuid: undoRollbackUuid ?? passthroughToolCallAssistantUuid, forkSession: busySessionFork || undefined, forkSessionId: managedForkTarget?.sessionId, sdkHooks, blockedTools: pipelineCtx.blockedTools, incompatibleTools: pipelineCtx.incompatibleTools, mcpServerName: adapter.getMcpServerName(), allowedMcpTools: pipelineCtx.allowedMcpTools, onStderr,
                       effort, thinking, taskBudget, outputFormat, betas, settingSources,
                       codeSystemPrompt: sdkFeatures.codeSystemPrompt, clientSystemPrompt: sdkFeatures.clientSystemPrompt === false ? false : undefined,
@@ -5362,7 +5441,7 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
                       yield* runSdkQueryAttempt(buildQueryOptions({
                         prompt: buildFreshPrompt(allMessages, sanitizeOpts, renderReplayToolName, replayBudgetFor(model), "stream_resume_replay"),
                         model, workingDirectory, clientWorkingDirectory: promptClientWorkingDirectory, clientEnvironmentMayDifferFromProxy, systemContext, claudeExecutable,
-                        passthrough, stream: true, sdkAgents, passthroughMcp, cleanEnv: profileEnv, envOverrides, hasDeferredTools, earlyStop: earlyStopEnabled,
+                        passthrough, stream: true, sdkAgents, passthroughMcp, cleanEnv: profileEnv, envOverrides, hasDeferredTools, toolSearch: toolSearch.active, earlyStop: earlyStopEnabled,
                         resumeSessionId: undefined, isUndo: false, resumeSessionAtUuid: undefined, forkSessionId: managedForkTarget?.sessionId, sdkHooks, blockedTools: pipelineCtx.blockedTools, incompatibleTools: pipelineCtx.incompatibleTools, mcpServerName: adapter.getMcpServerName(), allowedMcpTools: pipelineCtx.allowedMcpTools, onStderr,
                         effort, thinking, taskBudget, outputFormat, betas, settingSources,
                         codeSystemPrompt: sdkFeatures.codeSystemPrompt, clientSystemPrompt: sdkFeatures.clientSystemPrompt === false ? false : undefined,
@@ -5419,7 +5498,7 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
                       yield* runSdkQueryAttempt(buildQueryOptions({
                         prompt: buildFreshPrompt(allMessages, sanitizeOpts, renderReplayToolName, replayBudgetFor(model), "stream_model_fallback"),
                         model, workingDirectory, clientWorkingDirectory: promptClientWorkingDirectory, clientEnvironmentMayDifferFromProxy, systemContext, claudeExecutable,
-                        passthrough, stream: true, sdkAgents, passthroughMcp, cleanEnv: profileEnv, envOverrides, hasDeferredTools, earlyStop: earlyStopEnabled,
+                        passthrough, stream: true, sdkAgents, passthroughMcp, cleanEnv: profileEnv, envOverrides, hasDeferredTools, toolSearch: toolSearch.active, earlyStop: earlyStopEnabled,
                         resumeSessionId: undefined, isUndo: false, resumeSessionAtUuid: undefined, forkSessionId: managedForkTarget?.sessionId, sdkHooks, blockedTools: pipelineCtx.blockedTools, incompatibleTools: pipelineCtx.incompatibleTools, mcpServerName: adapter.getMcpServerName(), allowedMcpTools: pipelineCtx.allowedMcpTools, onStderr,
                         effort, thinking, taskBudget, outputFormat, betas, settingSources,
                         codeSystemPrompt: sdkFeatures.codeSystemPrompt, clientSystemPrompt: sdkFeatures.clientSystemPrompt === false ? false : undefined,
@@ -5582,6 +5661,7 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
               try {
                 for await (const message of guardedResponse) {
                   observePriorityAttemptMessage(message)
+                  observeToolSearch(message)
                   if (streamClosed && !awaitingEarlyStopDrain) {
                     exitedBeforeCanonicalTerminal = true
                     break
@@ -5796,8 +5876,8 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
                       if (block?.type === "tool_use" && typeof block.name === "string") {
                         // Filter out ToolSearch — handled internally by the SDK
                         // for deferred tool loading, not visible to the client.
-                        // (Never on offer in passthrough today, so what lands
-                        // here is a call the CLI rejected: E2E.md E75.)
+                        // (On offer only while deferral is on; without it what
+                        // lands here is a call the CLI rejected: E2E.md E75.)
                         if (block.name === "ToolSearch") {
                           if (eventIndex !== undefined) skipBlockIndices.add(eventIndex)
                           continue
@@ -6133,6 +6213,7 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
                   }
                   claudeLog("passthrough.noncanonical_session_evicted", { mode: "stream" })
                 } else {
+                  if (earlyStopFired) carryInternalToolResults(nextPassthroughToolCallAssistantUuid)
                   validateManagedForkResult(currentSessionId)
                   await commitManagedFork()
                   assertDurableWritesAllowed()
@@ -6337,7 +6418,7 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
                     // The nudge asks for prose, but a tool call is an equally
                     // valid answer — so the tool surface has to stay identical.
                     passthrough, stream: true, sdkAgents, passthroughMcp,
-                    cleanEnv: profileEnv, envOverrides, hasDeferredTools, earlyStop: earlyStopEnabled,
+                    cleanEnv: profileEnv, envOverrides, hasDeferredTools, toolSearch: toolSearch.active, earlyStop: earlyStopEnabled,
                     resumeSessionId: currentSessionId || resumeSessionId,
                     isUndo: false,
                     // Fork rather than extend: the silent turn is now this
@@ -6370,6 +6451,9 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
                   ])) {
                     const recoveryMessage = event as any
                     observePriorityAttemptMessage(recoveryMessage)
+                    // The recovery turn runs under the same hook, and may
+                    // search and call as any other turn does.
+                    observeToolSearch(recoveryMessage)
                     if (recoveryMessage.session_id) {
                       if (recoveryMessage.session_id !== recoveryForkTarget.sessionId) {
                         if (recoveryMessage.session_id !== recoveryForkSource?.sessionId) {
@@ -6468,6 +6552,7 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
                   !isIndependentSession && !sawDuplicateToolUse
                 ) {
                   const recoverySdkUuidMap = allMessages.map(() => null)
+                  carryInternalToolResults(recoveryToolCallAssistantUuid)
                   await commitFork(recoveryForkTarget, admissionLifecycleOptions)
                   assertDurableWritesAllowed()
                   const recoveryMappingStored = await publishPinnedTranscript(
@@ -7436,8 +7521,14 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
                 // for that — the client asked for 16 tokens and thinking spent
                 // them. For `max_turns` the same emptiness means something went
                 // wrong and stays on the error path, which is why the text
-                // requirement survives only for that case.
-                (outputCapTruncated || textCharsForwarded > 0)
+                // requirement survives only for that case. Unless the turn
+                // went on ToolSearch: then it did what it was asked for until
+                // the budget ran out. Nothing is published for it, as for
+                // any capped turn here, so the next request resumes from
+                // before the searches and the model loads what it needs
+                // again; the non-streaming path stores the session and keeps
+                // what was loaded.
+                (outputCapTruncated || textCharsForwarded > 0 || internalToolResults.calls.size > 0)
               ) {
                 flushOpenClientBlocks("capped_turn")
                 diagnosticLog.session(

@@ -212,6 +212,7 @@ describe("Integration: passthrough early stop", () => {
   let savedEarlyStop: string | undefined
   let savedUncapturedRecovery: string | undefined
   let savedTurnBudget: string | undefined
+  let savedToolSearch: string | undefined
 
   beforeAll(() => {
     setSessionStoreDir(TEST_SESSION_DIR)
@@ -229,6 +230,7 @@ describe("Integration: passthrough early stop", () => {
     savedEarlyStop = process.env.MERIDIAN_PASSTHROUGH_EARLY_STOP
     savedUncapturedRecovery = process.env.MERIDIAN_PASSTHROUGH_UNCAPTURED_TOOL_RECOVERY
     savedTurnBudget = process.env.MERIDIAN_PASSTHROUGH_MAX_TURNS
+    savedToolSearch = process.env.MERIDIAN_PASSTHROUGH_TOOL_SEARCH
     process.env.MERIDIAN_PASSTHROUGH = "1"
     delete process.env.MERIDIAN_PASSTHROUGH_EARLY_STOP
     mockMessages = []
@@ -255,6 +257,8 @@ describe("Integration: passthrough early stop", () => {
     else delete process.env.MERIDIAN_PASSTHROUGH_UNCAPTURED_TOOL_RECOVERY
     if (savedTurnBudget !== undefined) process.env.MERIDIAN_PASSTHROUGH_MAX_TURNS = savedTurnBudget
     else delete process.env.MERIDIAN_PASSTHROUGH_MAX_TURNS
+    if (savedToolSearch !== undefined) process.env.MERIDIAN_PASSTHROUGH_TOOL_SEARCH = savedToolSearch
+    else delete process.env.MERIDIAN_PASSTHROUGH_TOOL_SEARCH
   })
 
   it("replays and replaces a legacy user-denial boundary without a false conflict", async () => {
@@ -2294,13 +2298,16 @@ describe("Integration: passthrough early stop", () => {
     expect(capturedQueryParamsAll[1].options.resumeSessionAt).toBe(toolTurn.uuid)
   })
 
-  // Deferred tools do not lift the cap: passthrough strips ToolSearch along
-  // with the SDK's other built-in tools, so no discovery turn exists and every
-  // client tool arrives loaded. A deferred session's tool turn is therefore the
-  // same capped stop as any other, including a call to the very tool the
-  // client declared deferred. Lifted, each such turn was followed by a billed
-  // digest of the deny at the session's full context.
-  it("stream: a deferred-tools session stops at the tool boundary and resumes there", async () => {
+  // A deferred-tools session whose deferral is not in effect (here the kill
+  // switch; a CLI that ignores the hook's stop lands in the same place) has no
+  // ToolSearch and every tool loaded, so its tool turn is the capped stop of
+  // any other session, including a call to the very tool the client declared
+  // deferred. It was not always: until 2026-10 the cap was lifted for these
+  // sessions and each tool turn was followed by a billed digest of the deny at
+  // the session's full context. passthrough-tool-search-integration.test.ts
+  // has the turn with deferral on.
+  it("stream: a deferred-tools session without ToolSearch stops at the tool boundary and resumes there", async () => {
+    process.env.MERIDIAN_PASSTHROUGH_TOOL_SEARCH = "0"
     const deferredTool = { name: "lsp_diagnostics", defer_loading: true, input_schema: { type: "object", properties: { file: { type: "string" } } } }
     const tools = [READ_TOOL, deferredTool]
     const toolTurn = assistantMessage([
@@ -2900,12 +2907,12 @@ describe("Integration: passthrough early stop", () => {
     expect(capturedQueryParamsAll[4]?.options.allowedTools ?? []).not.toContain("mcp__oc__glob")
   })
 
-  // The same rejection on a deferred-tools session, which is held to one turn
-  // like any other. The rejected call is then the turn's only Messages call
-  // and the handoff has to work from that alone: no registered-name retry
-  // follows it. scripts/e2e-opencode-deferred-refusal.mjs drives this shape
-  // with the real OpenCode client and its 90-tool roster.
+  // The same rejection on a deferred-tools session held to one turn, as it is
+  // whenever its deferral is not in effect. The rejected call is then the
+  // turn's only Messages call and the handoff has to work from that alone: no
+  // registered-name retry follows it.
   it("stream: a CLI-rejected call on a deferred-tools session is handed off at the one-turn cap", async () => {
+    process.env.MERIDIAN_PASSTHROUGH_TOOL_SEARCH = "0"
     delete process.env.MERIDIAN_PASSTHROUGH_UNCAPTURED_TOOL_RECOVERY
     const sessionHeader = "es-deferred-rejected-capped"
     const tools = [

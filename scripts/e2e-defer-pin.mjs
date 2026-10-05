@@ -11,10 +11,11 @@
 // plugin toggling a tool all trigger it.
 //
 // Two conversations, three turns each, same prompts. Only one crosses the
-// threshold on its third turn:
+// threshold on its third turn. The threshold counts the tools that would be
+// deferred, so each set is the six core tools and that many more:
 //
-//   A (control)  15 -> 15 -> 15 tools
-//   B (crossing) 15 -> 15 -> 16 tools
+//   A (control)  15 -> 15 -> 15 tools outside the core set
+//   B (crossing) 15 -> 15 -> 16
 //
 // What the pin does and does NOT do, because an earlier draft of this gate
 // asserted the wrong thing and failed honestly:
@@ -29,9 +30,10 @@
 // re-enabling the billed digest turn. Those are what the pin removes, and what
 // this gate asserts. Cache numbers are reported as context, not asserted.
 //
-// Since 2026-10-05 deferred tools no longer lift the turn cap (E2E.md E75), so
-// a flip would no longer move `maxTurns`. The `alwaysLoad` re-marking is what
-// the pin still prevents, and the deferral-state claim below is unchanged.
+// Since 2026-10-05 deferral is real (E2E.md E76), so a flip would move more
+// than it did: ToolSearch, the tool block and the system prompt's list of
+// deferred names as well as `alwaysLoad` and `maxTurns`. The pin holds all of
+// it steady, and the deferral-state claim below is unchanged.
 //
 // Costs a few cents of real tokens and needs Claude Max. Run before releases
 // touching auto-defer, tool registration, or prompt assembly.
@@ -66,8 +68,9 @@ const check = (ok, label, detail) => {
 }
 
 const CORE = ['read', 'write', 'edit', 'bash', 'glob', 'grep']
-// Descriptions carry real mass so the tool block is worth caching.
-const mkTools = (n) => Array.from({ length: n }, (_, i) => ({
+// Descriptions carry real mass so the tool block is worth caching. `n` is
+// the number of tools outside the core set, which is what the threshold counts.
+const mkTools = (n) => Array.from({ length: CORE.length + n }, (_, i) => ({
   name: i < CORE.length ? CORE[i] : `bridge_tool_${i}`,
   description: `Tool ${i}. ` + 'Filler so the tool block has enough mass that re-rendering it is visible in the token counts rather than lost in noise. '.repeat(4),
   input_schema: { type: 'object', properties: { arg: { type: 'string' } }, required: [] },

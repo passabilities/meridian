@@ -85,6 +85,7 @@ installMcpToolsMock(() => ({
 
 const { createProxyServer } = await import("../proxy/server")
 const { diagnosticLog, telemetryStore } = await import("../telemetry")
+const { cliIgnoresStop, resetToolSearchState } = await import("../proxy/passthroughToolSearch")
 
 const ev = (event: any) => ({
   type: "stream_event", event, parent_tool_use_id: null,
@@ -312,6 +313,98 @@ describe("silent-turn recovery", () => {
     expect(stored?.claudeSessionId).toBe(queryCalls[1].options.sessionId)
     expect(stored?.passthroughToolCallAssistantUuid).toBe(assistantUuid)
     expect(stored?.passthroughToolCallIds?.toSorted()).toEqual([...toolIds].sort())
+  })
+
+  // Tool deferral. A ToolSearch called beside the client's tool is answered
+  // after the point the session resumes at, in a recovery turn as in any
+  // other, so its result has to come back with the client's or the tool it
+  // loaded is unloaded again (passthroughToolSearch.ts).
+  it("carries the result of a ToolSearch called beside the recovery turn's tool call", async () => {
+    resetToolSearchState()
+    const session = "silent-recovery-tool-search"
+    const lint = {
+      name: "custom_lint", description: "Run the linter", defer_loading: true,
+      input_schema: { type: "object", properties: { file: { type: "string" } }, required: ["file"] },
+    }
+    const request = { ...REQUEST, tools: [...REQUEST.tools, lint] }
+    const searchInput = { query: "select:mcp__oc__custom_lint" }
+    const readInput = { file_path: "a.txt" }
+    const reference = [{ type: "tool_reference", tool_name: "mcp__oc__custom_lint" }]
+    const readUuid = crypto.randomUUID()
+    const fragment = (uuid: string, block: Record<string, unknown>) => ({
+      type: "assistant", uuid, message: { id: "m2", role: "assistant", content: [block] },
+    })
+    const terminal = forkMsgEnd()
+    scripted = [
+      [msgStart(), ...thinkingBlock(), ...emptyTextBlock(1), ...msgEnd()],
+      [forkEv({ type: "message_start", message: { id: "m2", type: "message", role: "assistant", content: [], model: "claude-sonnet-4-5-20250929", stop_reason: null, usage: { input_tokens: 5, output_tokens: 0 } } }),
+       forkEv({ type: "content_block_start", index: 0, content_block: { type: "tool_use", id: "recovery-search", name: "ToolSearch", input: {} } }),
+       forkEv({ type: "content_block_delta", index: 0, delta: { type: "input_json_delta", partial_json: JSON.stringify(searchInput) } }),
+       forkEv({ type: "content_block_stop", index: 0 }),
+       { __preTool: true, id: "recovery-search", name: "ToolSearch", input: searchInput },
+       ...recoveryToolBlock(1, "recovery-read", "a.txt"),
+       { __preTool: true, id: "recovery-read", name: "read", input: readInput },
+       terminal[0], terminal[1],
+       fragment(crypto.randomUUID(), { type: "tool_use", id: "recovery-search", name: "ToolSearch", input: searchInput }),
+       fragment(readUuid, { type: "tool_use", id: "recovery-read", name: "read", input: readInput }),
+       { type: "user", message: { role: "user", content: [{ type: "tool_result", tool_use_id: "recovery-search", content: reference }] } },
+       recoveryDeny(["recovery-read"]),
+       terminal[2]],
+      [msgStart(), ...textBlock(0, "Second turn."), ...msgEnd()],
+    ]
+
+    const first = await read(await post(app, request, session))
+    expect(queryCalls[1].options.tools).toEqual(["ToolSearch"])
+    expect(first).toContain("recovery-read")
+    expect(lookupSharedSession(session)?.passthroughToolCallAssistantUuid).toBe(readUuid)
+
+    await read(await post(app, { ...request, messages: [
+      ...request.messages,
+      { role: "assistant", content: [{ type: "tool_use", id: "recovery-read", name: "read", input: readInput }] },
+      { role: "user", content: [{ type: "tool_result", tool_use_id: "recovery-read", content: "A" }] },
+    ] }, session))
+
+    expect(queryCalls[2].options.resumeSessionAt).toBe(readUuid)
+    const continuation: Array<{ message: { content: unknown[] } }> = []
+    for await (const message of queryCalls[2].prompt) continuation.push(message)
+    expect(continuation).toHaveLength(1)
+    expect(continuation[0]!.message.content).toEqual([
+      { type: "tool_result", tool_use_id: "recovery-search", content: reference },
+      { type: "tool_result", tool_use_id: "recovery-read", content: "A" },
+    ])
+    resetToolSearchState()
+  })
+
+  // The recovery turn runs under the same hook as any other, so a CLI that
+  // calls the model again after the stop gives itself away there as well.
+  it("notices a CLI that ignores the hook's stop during the recovery turn", async () => {
+    resetToolSearchState()
+    const lint = {
+      name: "custom_lint", description: "Run the linter", defer_loading: true,
+      input_schema: { type: "object", properties: { file: { type: "string" } }, required: ["file"] },
+    }
+    const readInput = { file_path: "a.txt" }
+    const started = (id: string) => forkEv({ type: "message_start", message: { id, type: "message", role: "assistant", content: [], model: "claude-sonnet-4-5-20250929", stop_reason: null, usage: { input_tokens: 5, output_tokens: 0 } } })
+    const terminal = forkMsgEnd()
+    scripted = [
+      [msgStart(), ...thinkingBlock(), ...emptyTextBlock(1), ...msgEnd()],
+      [started("m2"),
+       ...recoveryToolBlock(0, "recovery-read", "a.txt"),
+       { __preTool: true, id: "recovery-read", name: "read", input: readInput },
+       terminal[0], terminal[1],
+       { type: "assistant", uuid: crypto.randomUUID(), message: { id: "m2", role: "assistant", content: [{ type: "tool_use", id: "recovery-read", name: "read", input: readInput }] } },
+       recoveryDeny(["recovery-read"]),
+       // What the stop was meant to prevent: the model digesting the deny.
+       started("m3"),
+       ...forkTextBlock(0, "The call was forwarded."),
+       ...forkMsgEnd()],
+    ]
+
+    await read(await post(app, { ...REQUEST, tools: [...REQUEST.tools, lint] }, "silent-recovery-stop-ignored"))
+
+    expect(queryCalls[1].options.tools).toEqual(["ToolSearch"])
+    expect(cliIgnoresStop(queryCalls[1].options.pathToClaudeCodeExecutable)).toBe(true)
+    resetToolSearchState()
   })
 
   it("does not emit or publish recovery tool calls when the recovery throws", async () => {

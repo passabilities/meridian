@@ -45,6 +45,14 @@ export const claudeCodeTransforms: Transform[] = [
         incompatibleTools: CLAUDE_CODE_ONLY_TOOLS,
         allowedMcpTools: ALLOWED_MCP_TOOLS,
         coreToolNames: ["Read", "Write", "Edit", "Bash", "Glob", "Grep"],
+        // Only the tools of the client's MCP servers are deferred, which is
+        // what Claude Code defers itself when its tool search is on. Its own
+        // tools stay loaded: the set changes from release to release, and on
+        // one live roster of 215 tools the 180 from MCP servers were 73% of
+        // the definitions by size while all 323 calls in that proxy's SDK
+        // transcripts went to the client's own, 14 of them to tools outside
+        // the core list above (E2E.md E76).
+        deferrableToolPrefixes: ["mcp__"],
         // Claude Code owns tool execution client-side. Mirrors
         // claudeCodeAdapter.usesPassthrough().
         passthrough: resolvePassthrough(true),

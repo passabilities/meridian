@@ -61,6 +61,13 @@ export interface RequestContext {
   incompatibleTools: readonly string[]
   allowedMcpTools: readonly string[]
   coreToolNames?: readonly string[]
+  /**
+   * Limits auto-defer to tools whose names start with one of these. For a
+   * client whose own tool set cannot be listed in `coreToolNames` ahead of
+   * time but whose deferrable tools share a prefix. Unset: every tool outside
+   * `coreToolNames` may be deferred.
+   */
+  deferrableToolPrefixes?: readonly string[]
   sdkAgents: Record<string, any>
   sdkHooks?: any
   passthrough?: boolean

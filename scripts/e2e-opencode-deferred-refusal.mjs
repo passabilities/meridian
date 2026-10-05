@@ -2,12 +2,19 @@
 // Actual OpenCode + real SDK/CLI, controlled local API (not a live model).
 // E2E_OPENCODE_BIN=opencode [E2E_EXPECT_ERROR=1] bun this-file
 //
-// OpenCode's roster is past the auto-defer threshold. Until 2026-10-05 that
-// lifted the turn cap to 4 and this harness asserted the four-turn shape: the
-// bare call rejected, a registered-name retry reaching the hook, more
-// rejections, error_max_turns. Deferred tools are held to one turn now (E2E.md
-// E75), so the rejected call is the only Messages call of the turn and the
-// handoff has to work from that alone.
+// OpenCode's roster is past the auto-defer threshold, and its tools are
+// deferred for real now (E2E.md E76): ToolSearch on offer, a discovery budget
+// of turns, the query ended at the PreToolUse deny. The CLI still rejects a
+// bare client-tool name before any hook, so after that rejection the SDK goes
+// on to one more Messages call. Here it is the model repeating the call under
+// the registered name: the hook drops it, since the client already holds the
+// first, and ends the query. Two calls where the four-turn budget of before
+// 2026-10-05 made four; the client outcome is the one #1192 fixed.
+//
+// Needs a CLI that honours the hook's stop (2.1.284 or later). E2E_CLAUDE_PATH
+// picks it; otherwise the proxy resolves one as it does in service. The local
+// API is a base URL that is not Anthropic's own, where deferral waits for the
+// operator's word: MERIDIAN_PASSTHROUGH_TOOL_SEARCH=force below.
 import assert from 'node:assert/strict'
 import {mkdtempSync,mkdirSync,writeFileSync} from 'node:fs'
 import {tmpdir} from 'node:os'
@@ -26,7 +33,8 @@ writeFileSync(file,receipt)
 const bin=process.env.E2E_OPENCODE_BIN||'opencode',expectError=process.env.E2E_EXPECT_ERROR==='1'
 const version=spawnSync(bin,['--version'],{encoding:'utf8'});assert.equal(version.status,0)
 for(const key of Object.keys(process.env))if(/^(MERIDIAN_|CLAUDE_PROXY_)/.test(key))delete process.env[key]
-Object.assign(process.env,{MERIDIAN_CONFIG_DIR:proxyConfig,MERIDIAN_SESSION_DIR:join(root,'sessions'),MERIDIAN_PASSTHROUGH:'1',MERIDIAN_TELEMETRY_PERSIST:'0',MERIDIAN_NO_UPDATE_CHECK:'1'})
+const claudePath=process.env.E2E_CLAUDE_PATH?resolve(process.env.E2E_CLAUDE_PATH):undefined
+Object.assign(process.env,{MERIDIAN_CONFIG_DIR:proxyConfig,MERIDIAN_SESSION_DIR:join(root,'sessions'),MERIDIAN_PASSTHROUGH:'1',MERIDIAN_PASSTHROUGH_TOOL_SEARCH:'force',MERIDIAN_TELEMETRY_PERSIST:'0',MERIDIAN_NO_UPDATE_CHECK:'1',...(claudePath?{MERIDIAN_CLAUDE_PATH:claudePath}:{})})
 const mcp=join(root,'roster.cjs')
 writeUnusedToolRoster(mcp)
 let phase='cap',calls=0;const requests=[],queries=[],rejections=[],hooks=[],results=[]
@@ -45,7 +53,7 @@ const upstream=Bun.serve({hostname:'127.0.0.1',port:0,async fetch(req){
 }})
 const real=sdk.query
 const spy=spyOn(sdk,'query').mockImplementation(input=>{
- const current=phase;queries.push({phase:current,maxTurns:input.options?.maxTurns,resume:!!input.options?.resume,tools:input.options?.allowedTools?.length||0,deferred:input.options?.env?.ENABLE_TOOL_SEARCH==='true'})
+ const current=phase;queries.push({phase:current,maxTurns:input.options?.maxTurns,resume:!!input.options?.resume,tools:input.options?.allowedTools?.length||0,deferred:input.options?.env?.ENABLE_TOOL_SEARCH==='true',sdkTools:input.options?.tools})
  const actualHooks=input.options?.hooks
  const actual=real({...input,options:{...input.options,hooks:{...actualHooks,PreToolUse:actualHooks?.PreToolUse?.map(m=>({...m,hooks:m.hooks.map(h=>async(...args)=>{hooks.push({phase:current,id:args[0].tool_use_id});return h(...args)})}))}}})
  return new Proxy(actual,{get(target,key){if(key===Symbol.asyncIterator)return async function*(){for await(const m of actual){
@@ -58,6 +66,7 @@ globalThis.__refusalObserve=ctx=>{const receiptSeen=JSON.stringify((ctx.messages
 const plugin=join(root,'observer.js');writeFileSync(plugin,"export default {name:'refusal-observer',onRequest(ctx){return globalThis.__refusalObserve(ctx)}}")
 const pluginConfigPath=join(root,'plugins.json');writeFileSync(pluginConfigPath,JSON.stringify({plugins:[{path:plugin,enabled:true}]}))
 const {startProxyServer}=await import('../src/proxy/server.ts')
+const {TOOL_SEARCH_TURN_BUDGET}=await import('../src/proxy/passthroughToolSearch.ts')
 let proxy
 try{
  proxy=await startProxyServer({port:0,host:'127.0.0.1',silent:true,pluginConfigPath,profiles:[{id:'fixture',type:'api',apiKey:'local-fixture',baseUrl:`http://127.0.0.1:${upstream.port}`}]})
@@ -77,11 +86,12 @@ try{
  assert(requests.some(r=>r.adapter==='opencode'&&r.tools>80),'Real client did not declare a large tool roster')
  console.log(JSON.stringify({stage:'observed',queries,requests,results,errors:errors.length,toolEnds:toolEnds.length}))
  const roster=queries.filter(q=>q.phase==='cap'&&q.tools>80)
- assert.equal(roster.length,1,'Expected one SDK query for the roster request');assert(roster[0].deferred,'Roster request was not counted as deferred')
- assert.equal(roster[0].maxTurns,1,'Deferred roster request was not held to one turn');assert(results.some(r=>r.phase==='cap'&&r.subtype==='error_max_turns'))
+ assert.equal(roster.length,1,'Expected one SDK query for the roster request');assert(roster[0].deferred,'Roster request does not defer its tools')
+ assert.deepEqual(roster[0].sdkTools,['ToolSearch'],'Roster request does not offer ToolSearch');assert.equal(roster[0].maxTurns,TOOL_SEARCH_TURN_BUDGET,'Roster request was not given the discovery budget')
  assert(rejections.includes('toolu_refusal_1'));assert(!hooks.some(h=>h.id==='toolu_refusal_1'),'Rejected call ran in SDK')
- assert.equal(calls,1,'The capped turn asked the model again after the rejection');assert.equal(hooks.filter(h=>h.phase==='cap').length,0,'A digest retry reached the hook')
+ assert.equal(calls,2,'Expected the rejected call and one retry of it');assert.deepEqual(hooks.filter(h=>h.phase==='cap').map(h=>h.id),['toolu_refusal_2'],'The registered-name retry did not reach the hook alone')
+ assert(results.some(r=>r.phase==='cap'&&r.subtype==='success'),'The query did not end at the retry\'s deny')
  if(expectError){assert(errors.length>0,'Baseline did not expose max-turn error');assert(!requests.some(r=>r.receipt),'Baseline unexpectedly completed result handoff')}
- else{assert.equal(exit,0);assert.equal(errors.length,0);assert.equal(toolEnds.length,1);assert(requests.some(r=>r.receipt));assert(queries.some(q=>q.phase==='followup'&&!q.resume),'Rejected SDK session reused')}
+ else{assert.equal(exit,0);assert.equal(errors.length,0);assert.equal(toolEnds.length,1,'The client did not run the call exactly once');assert(requests.some(r=>r.receipt));assert(queries.some(q=>q.phase==='followup'&&q.resume),'The follow-up did not resume the session at the call')}
  console.log(JSON.stringify({result:'PASS',expectError,platform:`${process.platform}/${process.arch}`,opencode:version.stdout.trim(),exit,errors:errors.length,toolEnds:toolEnds.length,queries,requests,results,rejections,hooks,privateArtifacts:root,upstream:'controlled-local-API-not-live-model'}))
 }finally{await proxy?.close();upstream.stop(true);spy.mockRestore()}

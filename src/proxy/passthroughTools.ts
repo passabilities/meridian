@@ -243,34 +243,74 @@ export function getAutoDeferThreshold(): number {
 }
 
 /**
- * Whether auto-defer applies to a tool set of this size.
+ * The tools auto-defer would take out of the prompt: everything outside the
+ * adapter's core set, narrowed to `deferrablePrefixes` when the adapter gives
+ * any. Names are the client's.
+ *
+ * The prefixes exist for a client whose own tools cannot be listed ahead of
+ * time. Claude Code's built-in set changes from release to release, but its
+ * MCP tools are always `mcp__<server>__<tool>`, and those are what the client
+ * itself defers.
+ */
+export function autoDeferrableToolNames(
+  tools: ReadonlyArray<{ name: string }>,
+  coreToolNames: readonly string[] | undefined,
+  deferrablePrefixes?: readonly string[],
+): string[] {
+  if (!coreToolNames || coreToolNames.length === 0) return []
+  const isDeferrable = autoDeferrable(coreToolNames, deferrablePrefixes)
+  return tools.map(tool => tool.name).filter(isDeferrable)
+}
+
+function autoDeferrable(
+  coreToolNames: readonly string[],
+  deferrablePrefixes: readonly string[] | undefined,
+): (name: string) => boolean {
+  const core = new Set(coreToolNames.map(name => name.toLowerCase()))
+  return name =>
+    !core.has(name.toLowerCase()) &&
+    (!deferrablePrefixes || deferrablePrefixes.some(prefix => name.startsWith(prefix)))
+}
+
+/**
+ * Whether auto-defer applies, given how many tools it would take out of the
+ * prompt (`autoDeferrableToolNames`).
  *
  * Pure, and exported so the caller can pin the answer for a session.
  *
- * The decision was taken from the LIVE tool count, so a client crossing the
- * threshold mid-conversation — one tool added or removed — flipped deferral for
- * every non-core tool at once. That moves the `anthropic/alwaysLoad` marker on
- * each definition, and tools render at position 0 of the prompt, so it
- * invalidates the tools, system AND message cache tiers. It also flips
- * `ENABLE_TOOL_SEARCH` and, from #860 until deferred tools stopped lifting the
- * turn cap (2026-10, see computePassthroughMaxTurns), `maxTurns` — silently
- * re-enabling the billed digest turn for that request (#861).
+ * The count is of the tools to defer, not of the whole set. A deferred tool
+ * costs a ToolSearch round the first time it is used, which only pays when
+ * enough definitions leave the prompt; counting everything deferred the
+ * handful of everyday tools of a stock client that had crossed the threshold
+ * by one.
+ *
+ * The answer is pinned because it used to be taken from the LIVE tool count,
+ * so a client crossing the threshold mid-conversation — one tool added or
+ * removed — flipped deferral for every such tool at once (#861). Tools render
+ * at position 0 of the prompt, so a flip invalidates the tools, system AND
+ * message cache tiers. With deferral real it moves more than the
+ * `anthropic/alwaysLoad` marker: the deferred definitions enter or leave the
+ * request, ToolSearch and the note that names them come or go, and the turn
+ * budget changes with them (computePassthroughMaxTurns).
  */
 export function autoDeferDecision(
   threshold: number,
   coreToolNames: readonly string[] | undefined,
-  toolCount: number,
+  deferrableCount: number,
 ): boolean {
-  return !!(threshold > 0 && coreToolNames && coreToolNames.length > 0 && toolCount > threshold)
+  return !!(threshold > 0 && coreToolNames && coreToolNames.length > 0 && deferrableCount > threshold)
 }
 
 /**
  * Create an MCP server with tool definitions matching OpenCode's request.
  *
- * Auto-defer: when the tool count exceeds the threshold and coreToolNames
- * is provided, non-core tools are registered without alwaysLoad so the SDK
- * defers them. Core tools are marked alwaysLoad to stay in the prompt.
+ * Auto-defer: when more tools than the threshold would be deferred and
+ * coreToolNames is provided, those tools are registered without alwaysLoad so
+ * the SDK defers them. The rest are marked alwaysLoad to stay in the prompt.
  * Client-provided defer_loading: true also triggers deferral for specific tools.
+ *
+ * Whether the SDK then defers anything is not decided here: it needs
+ * ToolSearch in the request, which passthroughToolSearch.ts settles per query.
  */
 export function createPassthroughMcpServer(
   tools: Array<{ name: string; description?: string; input_schema?: JsonSchemaNode; defer_loading?: boolean }>,
@@ -278,11 +318,14 @@ export function createPassthroughMcpServer(
   serverName: string = PASSTHROUGH_MCP_NAME,
   /** Pinned auto-defer decision for this session, when one has been made (#861). */
   pinnedAutoDefer?: boolean,
+  /** Limits auto-defer to tools whose names start with one of these. */
+  deferrablePrefixes?: readonly string[],
 ) {
-  // Auto-defer: if tool count exceeds threshold and adapter provides core tools
+  // Auto-defer: if enough tools would be deferred and adapter provides core tools
   const threshold = getAutoDeferThreshold()
-  const autoDefer = pinnedAutoDefer ?? autoDeferDecision(threshold, coreToolNames, tools.length)
-  const coreSet = autoDefer && coreToolNames ? new Set(coreToolNames.map(n => n.toLowerCase())) : undefined
+  const autoDefer = pinnedAutoDefer
+    ?? autoDeferDecision(threshold, coreToolNames, autoDeferrableToolNames(tools, coreToolNames, deferrablePrefixes).length)
+  const isAutoDeferrable = autoDefer && coreToolNames ? autoDeferrable(coreToolNames, deferrablePrefixes) : undefined
 
   // hasDeferredTools is true when: client explicitly defers any tool, OR auto-defer kicks in
   const hasDeferredTools = tools.some(t => t.defer_loading === true) || autoDefer
@@ -294,8 +337,13 @@ export function createPassthroughMcpServer(
   // Register under collision-free aliases; alwaysLoad and the deferral decision
   // still key off the CLIENT's name, which is what coreToolNames describes.
   const aliases = buildPassthroughToolAliases(sortedTools.map(tool => tool.name), serverName)
+  const prefix = passthroughMcpPrefix(serverName)
+  const deferredToolNames: string[] = []
   const definitions = sortedTools.map((passthroughTool) => {
-    const alwaysLoad = hasDeferredTools && shouldAlwaysLoad(passthroughTool, coreSet)
+    const alwaysLoad = hasDeferredTools && shouldAlwaysLoad(passthroughTool, isAutoDeferrable)
+    if (hasDeferredTools && !alwaysLoad) {
+      deferredToolNames.push(`${prefix}${aliases.aliasByClientName.get(passthroughTool.name) ?? passthroughTool.name}`)
+    }
     const defineTool = (shape: Record<string, z.ZodType>): SdkMcpToolDefinition<Record<string, z.ZodType>> => ({
       name: aliases.aliasByClientName.get(passthroughTool.name) ?? passthroughTool.name,
       description: passthroughTool.description || passthroughTool.name,
@@ -322,13 +370,18 @@ export function createPassthroughMcpServer(
   })
 
   const server = createSdkMcpServer({ name: serverName, tools: definitions })
-  const prefix = passthroughMcpPrefix(serverName)
   return {
     server,
     serverName,
     prefix,
     toolNames: definitions.map(definition => `${prefix}${definition.name}`),
     hasDeferredTools,
+    /** Auto-defer's own decision, which is what a session pins. Apart from
+     *  `hasDeferredTools`: a tool the client marked itself decides nothing
+     *  for the rest. */
+    autoDefer,
+    /** The tools left out of the prompt, under the names the SDK registered. */
+    deferredToolNames,
     clientNameByAlias: aliases.clientNameByAlias,
   }
 }
@@ -337,17 +390,17 @@ export function createPassthroughMcpServer(
  * Determine if a tool should be marked alwaysLoad (kept in prompt, not deferred).
  * A tool is always-loaded when:
  * - Client explicitly did NOT set defer_loading on it AND no auto-defer, OR
- * - Auto-defer is active and the tool name is in the core set, OR
+ * - Auto-defer is active and the tool is not one it defers, OR
  * - Client explicitly set defer_loading: false (opt out of deferral)
  */
 function shouldAlwaysLoad(
   tool: { name: string; defer_loading?: boolean },
-  coreSet: Set<string> | undefined
+  isAutoDeferrable: ((name: string) => boolean) | undefined
 ): boolean {
   // Client explicitly deferred this tool — never alwaysLoad
   if (tool.defer_loading === true) return false
-  // Auto-defer active: only core tools get alwaysLoad
-  if (coreSet) return coreSet.has(tool.name.toLowerCase())
+  // Auto-defer active: everything it does not defer gets alwaysLoad
+  if (isAutoDeferrable) return !isAutoDeferrable(tool.name)
   // No auto-defer: client-triggered deferral — non-deferred tools get alwaysLoad
   return true
 }

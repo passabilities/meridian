@@ -110,3 +110,37 @@ one tool completion, receipt delivered).
 
 Not re-run: the Linux container, and the live Opus flow
 (`e2e-opencode-lifecycle-admission.mjs`).
+
+## 2026-10-05, later: the roster's tools are deferred for real
+
+Tool deferral works now (E2E.md E76): a roster past the threshold is offered
+ToolSearch, its deferred tools are out of the request, and the query is ended
+by the PreToolUse deny rather than by the turn cap. The section above
+describes the one-turn shape that stood for a few hours between the two
+changes and is left as written. What changes for this record:
+
+- The roster request is asked with `tools: ["ToolSearch"]` and `maxTurns` 6.
+  The CLI still rejects the bare call before any hook, and with no hook to end
+  the query the SDK goes on to one more Messages call. In the harness that is
+  the model repeating the call under its registered name: the hook drops it,
+  since the client already holds the first, and ends the query in `success`.
+  Two Messages calls where the cap made one and the four-turn budget four.
+- The client-side outcome is the one this record is about and has not moved:
+  one tool completion, no client error, the client-only receipt in the next
+  request.
+- The follow-up now resumes the SDK session at the rejected call instead of
+  starting a fresh query for it. The SDK ended cleanly, so the transcript is
+  committed and there is nothing to evict; a resume costs the delta where a
+  fresh query costs the conversation.
+- `scripts/e2e-opencode-deferred-refusal.mjs` asserts that shape, and needs a
+  CLI that honours the hook's stop (2.1.284 or later; `E2E_CLAUDE_PATH`). It
+  runs under `MERIDIAN_PASSTHROUGH_TOOL_SEARCH=force`: its local API is a base
+  URL that is not Anthropic's own, where deferral otherwise stays off (E76).
+
+macOS arm64, OpenCode 1.18.33, SDK 0.2.141, SDK child Claude Code 2.1.284, Bun
+1.3.14, controlled local API: pass (roster query `maxTurns` 6 with ToolSearch
+on offer and 90 tools, results `success`, exit 0, no client error, one tool
+completion, receipt delivered, follow-up resumed).
+
+Not re-run: the Linux container, and the live Opus flow
+(`e2e-opencode-lifecycle-admission.mjs`).

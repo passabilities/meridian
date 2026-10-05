@@ -32,7 +32,7 @@ installSdkMock(() => ({
   },
 }), "passthrough-tool-sort.test.ts")
 
-import { createPassthroughMcpServer, getAutoDeferThreshold } from "../proxy/passthroughTools"
+import { autoDeferrableToolNames, createPassthroughMcpServer, getAutoDeferThreshold } from "../proxy/passthroughTools"
 
 // Generate N tools for threshold testing
 function makeTools(count: number) {
@@ -144,11 +144,20 @@ describe("auto-defer: threshold-based tool deferral", () => {
     process.env.MERIDIAN_DEFER_TOOL_THRESHOLD = "5"
     const tools = [
       ...CORE_TOOLS.slice(0, 3).map(name => ({ name, description: `${name} tool` })),
-      ...makeTools(4),
+      ...makeTools(6),
     ]
-    // 7 tools > threshold of 5
+    // 6 tools to defer > threshold of 5
     const result = createPassthroughMcpServer(tools, CORE_TOOLS)
     expect(result.hasDeferredTools).toBe(true)
+  })
+
+  // Deferring is worth a ToolSearch round only when it takes enough out of
+  // the prompt, so the threshold counts what would leave it. Counting the
+  // whole set deferred a stock client's handful of everyday tools.
+  it("counts the tools it would defer, not the whole set", () => {
+    const core = CORE_TOOLS.map(name => ({ name, description: `${name} tool` }))
+    expect(createPassthroughMcpServer([...core, ...makeTools(15)], CORE_TOOLS).hasDeferredTools).toBe(false)
+    expect(createPassthroughMcpServer([...core, ...makeTools(16)], CORE_TOOLS).hasDeferredTools).toBe(true)
   })
 
   it("disables auto-defer when threshold is 0", () => {
@@ -183,6 +192,80 @@ describe("auto-defer: threshold-based tool deferral", () => {
     const readReg = registeredTools.find(t => t.name === "read")
     // defer_loading=true should override core status — NOT alwaysLoad
     expect(readReg!.config._meta?.["anthropic/alwaysLoad"]).toBeUndefined()
+  })
+})
+
+describe("auto-defer limited to a name prefix", () => {
+  const own = (count: number) => Array.from({ length: count }, (_, i) => ({ name: `Own${i}`, description: "client tool" }))
+  const mcp = (count: number) => Array.from({ length: count }, (_, i) => ({ name: `mcp__srv__tool_${String(i).padStart(2, "0")}`, description: "server tool" }))
+  const CORE = ["Read", "Write", "Edit", "Bash"]
+
+  it("leaves a large set alone when few of its tools carry the prefix", () => {
+    const result = createPassthroughMcpServer([...own(30), ...mcp(3)], CORE, undefined, undefined, ["mcp__"])
+    expect(result.hasDeferredTools).toBe(false)
+    expect(result.deferredToolNames).toEqual([])
+  })
+
+  it("defers the tools with the prefix and keeps every other tool loaded", () => {
+    const result = createPassthroughMcpServer([...own(5), ...mcp(16)], CORE, undefined, undefined, ["mcp__"])
+    expect(result.hasDeferredTools).toBe(true)
+    for (const reg of registeredTools) {
+      const loaded = reg.config._meta?.["anthropic/alwaysLoad"] === true
+      expect(loaded).toBe(!reg.name.startsWith("mcp__srv__"))
+    }
+  })
+
+  it("names the deferred tools as the SDK registers them", () => {
+    const result = createPassthroughMcpServer([...own(2), ...mcp(16)], CORE, undefined, undefined, ["mcp__"])
+    expect(result.deferredToolNames).toHaveLength(16)
+    expect(result.deferredToolNames[0]).toBe("mcp__oc__mcp__srv__tool_00")
+    expect(result.deferredToolNames.every(name => result.toolNames.includes(name))).toBe(true)
+  })
+
+  it("defers a tool the client flagged whatever its name", () => {
+    const result = createPassthroughMcpServer(
+      [...own(2), { name: "Flagged", description: "client says defer", defer_loading: true }],
+      CORE, undefined, undefined, ["mcp__"],
+    )
+    expect(result.hasDeferredTools).toBe(true)
+    expect(result.deferredToolNames).toEqual(["mcp__oc__Flagged"])
+  })
+})
+
+describe("deferredToolNames", () => {
+  it("is every tool outside the core set when no prefix narrows it", () => {
+    const tools = [
+      ...CORE_TOOLS.map(name => ({ name, description: `${name} tool` })),
+      ...makeTools(16),
+    ]
+    const result = createPassthroughMcpServer(tools, CORE_TOOLS)
+    expect(result.deferredToolNames).toHaveLength(16)
+    expect(result.deferredToolNames).not.toContain("mcp__oc__read")
+  })
+
+  it("is empty when nothing is deferred", () => {
+    expect(createPassthroughMcpServer(makeTools(3), CORE_TOOLS).deferredToolNames).toEqual([])
+  })
+})
+
+describe("autoDeferrableToolNames", () => {
+  const tools = [{ name: "Read" }, { name: "Agent" }, { name: "mcp__a__x" }, { name: "mcp__b__y" }]
+
+  it("is every tool outside the core set", () => {
+    expect(autoDeferrableToolNames(tools, ["read"])).toEqual(["Agent", "mcp__a__x", "mcp__b__y"])
+  })
+
+  it("is narrowed to the prefixes when the adapter gives any", () => {
+    expect(autoDeferrableToolNames(tools, ["read"], ["mcp__"])).toEqual(["mcp__a__x", "mcp__b__y"])
+  })
+
+  it("never includes a core tool, prefix or not", () => {
+    expect(autoDeferrableToolNames(tools, ["mcp__a__x"], ["mcp__"])).toEqual(["mcp__b__y"])
+  })
+
+  it("is empty without a core set, which is how an adapter opts out", () => {
+    expect(autoDeferrableToolNames(tools, undefined)).toEqual([])
+    expect(autoDeferrableToolNames(tools, [])).toEqual([])
   })
 })
 

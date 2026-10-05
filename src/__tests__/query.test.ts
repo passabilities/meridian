@@ -5,6 +5,21 @@ import { describe, it, expect } from "bun:test"
 import { buildQueryOptions, GIT_STATUS_PROVENANCE_NOTE, REPLAY_PROVENANCE_NOTE, SCRATCHPAD_COUNTER_INSTRUCTION, resolveQueryConfigDir, singleTurnCapLiftRaisesBudget, type QueryContext } from "../proxy/query"
 import { BLOCKED_BUILTIN_TOOLS, CLAUDE_CODE_ONLY_TOOLS, MCP_SERVER_NAME, ALLOWED_MCP_TOOLS } from "../proxy/tools"
 import { CHERRY_BLOCKED_BUILTIN_TOOLS, CHERRY_INCOMPATIBLE_TOOLS, CHERRY_WEB_TOOLS } from "../proxy/adapters/cherry"
+import { TOOL_SEARCH_TURN_BUDGET, deferredToolsNote } from "../proxy/passthroughToolSearch"
+
+/** A passthrough tool server as query.ts reads it, with two tools deferred. */
+function deferringMcp(): NonNullable<QueryContext["passthroughMcp"]> {
+  return {
+    server: { type: "sdk", name: "oc", instance: {} } as unknown as NonNullable<QueryContext["passthroughMcp"]>["server"],
+    serverName: "oc",
+    prefix: "mcp__oc__",
+    toolNames: ["mcp__oc__read", "mcp__oc__mcp__jira__get", "mcp__oc__mcp__jira__search"],
+    hasDeferredTools: true,
+    autoDefer: true,
+    deferredToolNames: ["mcp__oc__mcp__jira__get", "mcp__oc__mcp__jira__search"],
+    clientNameByAlias: new Map(),
+  }
+}
 
 function makeContext(overrides: Partial<QueryContext> = {}): QueryContext {
   return {
@@ -256,6 +271,20 @@ describe("buildQueryOptions", () => {
     }
   })
 
+  it("still counts a PASSTHROUGH_MAX_TURNS that does not parse as a pin of the default budget", () => {
+    // Unchanged by tool deferral: before it, a value the proxy could not read
+    // as a number lifted the cap to the default budget, and it still does.
+    const prev = process.env.MERIDIAN_PASSTHROUGH_MAX_TURNS
+    process.env.MERIDIAN_PASSTHROUGH_MAX_TURNS = "three"
+    try {
+      expect(buildQueryOptions(makeContext({ passthrough: true })).options.maxTurns).toBe(3)
+      expect(buildQueryOptions(makeContext({ passthrough: true, hasDeferredTools: true })).options.maxTurns).toBe(4)
+    } finally {
+      if (prev === undefined) delete process.env.MERIDIAN_PASSTHROUGH_MAX_TURNS
+      else process.env.MERIDIAN_PASSTHROUGH_MAX_TURNS = prev
+    }
+  })
+
   it("lifts the single-turn cap when a reissue asks for it — the capped turn produced nothing to stop at", () => {
     const result = buildQueryOptions(makeContext({ passthrough: true, liftSingleTurnCap: true }))
     expect(result.options.maxTurns).toBe(3)
@@ -278,11 +307,42 @@ describe("buildQueryOptions", () => {
     }
   })
 
-  it("caps maxTurns at 1 with deferred tools — passthrough strips the SDK's built-in tools, ToolSearch with them, so there is no discovery turn to leave room for", () => {
+  it("caps maxTurns at 1 with deferred tools while ToolSearch is not on offer — there is no discovery turn to leave room for", () => {
     const result = buildQueryOptions(makeContext({ passthrough: true, hasDeferredTools: true }))
     expect(result.options.maxTurns).toBe(1)
     // The premise the cap rests on: nothing the SDK could run by itself is registered.
     expect(result.options.tools).toEqual([])
+  })
+
+  it("offers ToolSearch, and the turns to use it, when deferral is on", () => {
+    const result = buildQueryOptions(makeContext({ passthrough: true, hasDeferredTools: true, toolSearch: true }))
+    expect(result.options.tools).toEqual(["ToolSearch"])
+    expect(result.options.maxTurns).toBe(TOOL_SEARCH_TURN_BUDGET)
+  })
+
+  it("gives a resumed deferral session the same budget", () => {
+    const result = buildQueryOptions(makeContext({
+      passthrough: true, hasDeferredTools: true, toolSearch: true, resumeSessionId: "sess-123",
+    }))
+    expect(result.options.maxTurns).toBe(TOOL_SEARCH_TURN_BUDGET)
+  })
+
+  it("leaves an operator's turn budget alone under deferral", () => {
+    const prev = process.env.MERIDIAN_PASSTHROUGH_MAX_TURNS
+    process.env.MERIDIAN_PASSTHROUGH_MAX_TURNS = "3"
+    try {
+      const result = buildQueryOptions(makeContext({ passthrough: true, hasDeferredTools: true, toolSearch: true }))
+      expect(result.options.maxTurns).toBe(3)
+    } finally {
+      if (prev === undefined) delete process.env.MERIDIAN_PASSTHROUGH_MAX_TURNS
+      else process.env.MERIDIAN_PASSTHROUGH_MAX_TURNS = prev
+    }
+  })
+
+  it("never offers ToolSearch outside passthrough on the strength of the flag", () => {
+    const result = buildQueryOptions(makeContext({ passthrough: false, toolSearch: true }))
+    expect(result.options.tools).toBeUndefined()
+    expect(result.options.maxTurns).toBe(200)
   })
 
   it("caps maxTurns at 1 in passthrough mode when resume AND deferred tools are both active", () => {
@@ -420,6 +480,8 @@ describe("buildQueryOptions", () => {
       toolNames: ["mcp__passthrough__custom_tool"],
       server: {} as any,
       hasDeferredTools: false,
+      autoDefer: false,
+      deferredToolNames: [],
       clientNameByAlias: new Map([["custom_tool", "custom_tool"]]),
       serverName: "passthrough",
       prefix: "mcp__passthrough__",
@@ -452,6 +514,8 @@ describe("buildQueryOptions", () => {
       toolNames: ["mcp__passthrough__custom_tool"],
       server: {} as any,
       hasDeferredTools: false,
+      autoDefer: false,
+      deferredToolNames: [],
       clientNameByAlias: new Map([["custom_tool", "custom_tool"]]),
       serverName: "passthrough",
       prefix: "mcp__passthrough__",
@@ -580,10 +644,46 @@ describe("buildQueryOptions", () => {
     expect((result.options as any).hooks).toEqual(hooks)
   })
 
-  it("sets ENABLE_TOOL_SEARCH=true when hasDeferredTools is true", () => {
-    const result = buildQueryOptions(makeContext({ passthrough: true, hasDeferredTools: true }))
+  it("sets ENABLE_TOOL_SEARCH=true when deferral is on", () => {
+    const result = buildQueryOptions(makeContext({ passthrough: true, hasDeferredTools: true, toolSearch: true }))
     const env = (result.options as any).env
     expect(env.ENABLE_TOOL_SEARCH).toBe("true")
+  })
+
+  it("sets ENABLE_TOOL_SEARCH=false for deferred tools that ToolSearch is not on offer for", () => {
+    const result = buildQueryOptions(makeContext({ passthrough: true, hasDeferredTools: true }))
+    const env = (result.options as any).env
+    expect(env.ENABLE_TOOL_SEARCH).toBe("false")
+  })
+
+  describe("the deferred tools in the system prompt", () => {
+    const note = deferredToolsNote(deferringMcp().deferredToolNames)
+    const systemText = (overrides: Partial<QueryContext>): string => {
+      const { systemPrompt } = buildQueryOptions(makeContext({
+        passthrough: true, hasDeferredTools: true, toolSearch: true, passthroughMcp: deferringMcp(), ...overrides,
+      })).options
+      return typeof systemPrompt === "string" ? systemPrompt : (systemPrompt as { append?: string }).append ?? ""
+    }
+
+    it("are named after the client's own prompt", () => {
+      const text = systemText({ systemContext: "CLIENT PROMPT" })
+      expect(text).toContain(note)
+      expect(text.indexOf("CLIENT PROMPT")).toBeLessThan(text.indexOf(note))
+    })
+
+    it("are named under the Claude Code preset", () => {
+      expect(systemText({ codeSystemPrompt: true })).toContain(note)
+    })
+
+    it("are named when the client sent no system prompt", () => {
+      expect(systemText({})).toContain(note)
+      expect(systemText({ codeSystemPrompt: false })).toContain(note)
+    })
+
+    it("are not named while ToolSearch is not on offer", () => {
+      expect(systemText({ toolSearch: false, systemContext: "CLIENT PROMPT" })).not.toContain("available-deferred-tools")
+      expect(systemText({ toolSearch: false })).not.toContain("available-deferred-tools")
+    })
   })
 
   it("sets ENABLE_TOOL_SEARCH=false when hasDeferredTools is false", () => {

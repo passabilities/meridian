@@ -231,6 +231,7 @@ src/
 │   ├── agentDefs.ts           ← Subagent definition extraction from tool descriptions
 │   ├── agentMatch.ts          ← Fuzzy agent name matching
 │   ├── design.ts              ← Claude Design MCP proxy (token store/refresh, auth precedence, login flow)
+│   ├── passthroughToolSearch.ts ← Tool deferral in passthrough: when ToolSearch is offered, what ends the turn (leaf)
 │   └── passthroughTools.ts    ← Tool forwarding mode (agent handles execution)
 ├── fileChanges.ts             ← PostToolUse hook: tracks write/edit ops, formats summary
 ├── mcpTools.ts                ← MCP tool definitions (read, write, edit, bash, glob, grep)
@@ -269,7 +270,7 @@ server.ts (HTTP layer)
     │
     ├── adapter.ts (interface)
     ├── adapters/opencode.ts ──► messages.ts, session/fingerprint.ts, tools.ts
-    ├── query.ts ──► adapter.ts, mcpTools.ts, passthroughTools.ts
+    ├── query.ts ──► adapter.ts, mcpTools.ts, passthroughTools.ts, passthroughToolSearch.ts
     ├── errors.ts
     ├── retryAfter.ts
     ├── requestAbort.ts
@@ -286,6 +287,7 @@ server.ts (HTTP layer)
     ├── agentMatch.ts
     ├── fileChanges.ts
     ├── passthroughTools.ts
+    ├── passthroughToolSearch.ts
     ├── mcpTools.ts
     └── telemetry/
 ```

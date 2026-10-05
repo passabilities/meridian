@@ -49,6 +49,11 @@ describe("OpenCode transform parity", () => {
     expect([...ctx.coreToolNames!]).toEqual([...openCodeAdapter.getCoreToolNames!()])
   })
 
+  it("leaves auto-defer open to every tool outside the core set", () => {
+    const ctx = runTransformHook(openCodeTransforms, "onRequest", makeCtx("opencode"), "opencode")
+    expect(ctx.deferrableToolPrefixes).toBeUndefined()
+  })
+
   it("matches supportsThinking", () => {
     const ctx = runTransformHook(openCodeTransforms, "onRequest", makeCtx("opencode"), "opencode")
     expect(ctx.supportsThinking).toBe(openCodeAdapter.supportsThinking!())
@@ -310,6 +315,11 @@ describe("Claude Code transform parity", () => {
   it("matches coreToolNames (PascalCase, not OpenCode's lowercase)", () => {
     const ctx = runTransformHook(claudeCodeTransforms, "onRequest", makeCtx("claude-code"), "claude-code")
     expect([...ctx.coreToolNames!]).toEqual([...claudeCodeAdapter.getCoreToolNames!()])
+  })
+
+  it("limits auto-defer to the tools of the client's MCP servers", () => {
+    const ctx = runTransformHook(claudeCodeTransforms, "onRequest", makeCtx("claude-code"), "claude-code")
+    expect(ctx.deferrableToolPrefixes).toEqual(["mcp__"])
   })
 
   it("matches passthrough (default on)", () => {

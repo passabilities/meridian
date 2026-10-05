@@ -26,6 +26,8 @@ const tools = (n: number) => Array.from({ length: n }, (_, i) => ({
   description: "t",
   input_schema: { type: "object" as const, properties: {} },
 }))
+/** The core tools and `n` more: `n` is what auto-defer would take out. */
+const withDeferrable = (n: number) => tools(CORE.length + n)
 
 describe("autoDeferDecision", () => {
   it("is off at or below the threshold and on above it", () => {
@@ -54,8 +56,8 @@ describe("createPassthroughMcpServer with a pinned decision", () => {
   const t = getAutoDeferThreshold()
 
   it("defers by live count when unpinned", () => {
-    expect(createPassthroughMcpServer(tools(t), CORE).hasDeferredTools).toBe(false)
-    expect(createPassthroughMcpServer(tools(t + 1), CORE).hasDeferredTools).toBe(true)
+    expect(createPassthroughMcpServer(withDeferrable(t), CORE).hasDeferredTools).toBe(false)
+    expect(createPassthroughMcpServer(withDeferrable(t + 1), CORE).hasDeferredTools).toBe(true)
   })
 
   // A session that started under the threshold keeps its cheap prompt shape
@@ -79,6 +81,25 @@ describe("createPassthroughMcpServer with a pinned decision", () => {
       defer_loading: true,
     }]
     expect(createPassthroughMcpServer(explicit, CORE, undefined, false).hasDeferredTools).toBe(true)
+  })
+
+  // What a session pins is the auto-defer decision. A tool the client marked
+  // itself makes `hasDeferredTools` true without auto-defer having decided
+  // anything, and pinning that would defer every other tool from then on.
+  it("reports its own decision apart from what the client marked", () => {
+    const explicit = [...tools(CORE.length + 2), {
+      name: "deferred_one", description: "t",
+      input_schema: { type: "object" as const, properties: {} },
+      defer_loading: true,
+    }]
+    const marked = createPassthroughMcpServer(explicit, CORE)
+    expect(marked.hasDeferredTools).toBe(true)
+    expect(marked.autoDefer).toBe(false)
+    expect(marked.deferredToolNames).toEqual(["mcp__oc__deferred_one"])
+
+    expect(createPassthroughMcpServer(withDeferrable(t + 1), CORE).autoDefer).toBe(true)
+    expect(createPassthroughMcpServer(withDeferrable(t + 1), CORE, undefined, false).autoDefer).toBe(false)
+    expect(createPassthroughMcpServer(tools(3), CORE, undefined, true).autoDefer).toBe(true)
   })
 
   // The mechanism behind the cache invalidation: the alwaysLoad marker moving

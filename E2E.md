@@ -718,8 +718,8 @@ under the registered name that the hook drops as the hidden digest, until the
 real CLI reports `error_max_turns`. The client must still receive one clean
 `tool_use` handoff, not `Reached maximum number of turns (4)`. Until 2026-10-05
 this was `--deferred`: a deferred client tool lifted the cap to the same budget
-(the OpenCode shape, its ~100 tools auto-deferred). Deferred tools are capped
-at one turn now (E75), so an operator pin is what reaches a multi-turn budget.
+(the OpenCode shape, its ~100 tools auto-deferred). Deferred tools do not
+reach that budget now (E75, E76), so an operator pin is what does.
 
 The second command omits Pi's optional session-affinity header and metadata
 identity, exercising the default fingerprint-scoped, one-shot result handoff
@@ -1024,8 +1024,9 @@ curl -s -X PUT -H 'Content-Type: application/json' -d '{"checkForUpdates":false}
 | E72 | [Claude Code Agent-tool subagent session isolation](#e72-claude-code-agent-tool-subagent-session-isolation) | **Automated, needs the `claude` CLI** (skips cleanly without it): `bun scripts/e2e-claude-code-subagent-session.mjs` — real proxy + SDK, the REAL Claude Code CLI spawning two parallel Agent-tool subagents. Asserts each subagent resumes its own session, the parent keeps resuming across subagent activity, nothing collides, and no flow waits on another's session lease. **Run before releases touching session keys, the turn lease, account routing, or Claude Code detection** | 2026-10-01 |
 | E73 | [Unknown thinking display values](#e73-unknown-thinking-display-values) | **Automated**: `bun scripts/e2e-thinking-display-interactive.mjs` — actual Claude Code 2.1.287 TUI in a PTY, real proxy/SDK/bundled subprocess. Requires an answer rendered in the client, live-prompt framing, supported-display controls and joined cleanup. The separate HTTP-shaped gate remains a backend smoke test. **Run before releases touching thinking passthrough or the SDK/CLI version** | 2026-10-01 |
 | E74 | [Claude Code permission-check prompt cache](#e74-claude-code-permission-check-prompt-cache) | **Automated, needs the `claude` CLI** (skips cleanly without it), **no model calls**: `bun scripts/e2e-claude-code-permission-check-cache.mjs` — the REAL Claude Code CLI in `--permission-mode auto`, this checkout's proxy running in a git repository, the real SDK driving this checkout's CLI, and a scripted Messages API that keeps a prompt cache as the API documents it. Asserts each check goes upstream as text blocks carrying only Meridian's cache breakpoints, reads back what the check before it wrote — also after a file in the proxy's directory changes — carries the same prompt as with the layout off, and falls back to the plain prompt when the API refuses the breakpoints. **Run before releases touching auxiliary requests, replay framing or the SDK/CLI version** | 2026-10-05 |
-| E75 | [Deferred-tools tool turn](#e75-deferred-tools-tool-turn) | **Automated, no model calls, runs in CI**: `bun scripts/e2e-deferred-tool-turn.mjs` — real proxy + SDK + CLI against a scripted Messages API. Asserts a tool turn on a session counted as deferred is asked with `maxTurns` 1, costs ONE Messages call, ends on `error_max_turns` and resumes at the tool boundary with the client's real results (non-stream and stream; one call and two parallel calls), and that the CLI offers no ToolSearch and sends every tool loaded — the premise the cap rests on. **Live, needs the `claude` CLI and Claude Max**: `bun scripts/e2e-deferred-tool-turn-live.mjs` — the REAL Claude Code client and the real model. **Needs OpenCode**: `bun scripts/e2e-opencode-deferred-refusal.mjs` — #1192's harness, now asserting the one-turn shape. **Run before releases touching the passthrough turn cap, tool deferral, the SDK `tools` option, or the SDK/CLI version** | 2026-10-05 |
-| E77 | [Claude Code system turns across tool rounds](#e77-claude-code-system-turns-across-tool-rounds) | **Automated, no model calls, not in CI**: `bun scripts/e2e-claude-code-system-turns.mjs [model]` — the REAL Claude Code client through a real proxy, SDK and CLI against a scripted Messages API. Runs five tool rounds on `claude-fable-5-1` and asserts every request after the first is a `continuation` that resumes its SDK session, reaches the API as structured tool turns and not as a replay, and delivers the request's own reminder. **Run before releases touching lineage, the Claude Code adapter, or the client, SDK or CLI version** | 2026-10-05 |
+| E75 | [Deferred-tools tool turn](#e75-deferred-tools-tool-turn) | **Automated, no model calls, runs in CI**: `E2E_CLAUDE_PATH=sdk-bundled bun scripts/e2e-deferred-tool-turn.mjs` — real proxy + SDK + CLI against a scripted Messages API, on a CLI that ignores the hook's stop (the fallback mode of E76's gate). Asserts a tool turn on a session whose deferral is not in effect is asked with `maxTurns` 1, costs ONE Messages call, ends on `error_max_turns` and resumes at the tool boundary with the client's real results (non-stream and stream; one call and two parallel calls), with every tool loaded and no ToolSearch. **Run before releases touching the passthrough turn cap, the SDK `tools` option, or the SDK/CLI version** | 2026-10-05 |
+| E76 | [Tool deferral in passthrough](#e76-tool-deferral-in-passthrough) | **Automated, no model calls, runs in CI**: `E2E_EXPECT=deferral bun scripts/e2e-deferred-tool-turn.mjs` — real proxy + SDK + CLI against a scripted Messages API. Asserts ToolSearch is on offer, the deferred tools are absent from the request and named in the system prompt, a call to a loaded tool is ONE Messages call and a ToolSearch round plus its call is two, a ToolSearch beside a client call keeps its result across the resume, a CLI-rejected call reaches the client once, a search past the budget ends as `max_tokens`, and Haiku keeps every tool loaded. **Live, needs the `claude` CLI and Claude Max**: `bun scripts/e2e-deferred-tool-turn-live.mjs` — the REAL Claude Code client with a 61-tool MCP server: prompt size with and without deferral, and a deferred tool found and run. **Live, needs OpenCode**: `bun scripts/e2e-opencode-deferral-live.mjs`. **Needs OpenCode, no model**: `bun scripts/e2e-opencode-deferred-refusal.mjs` — #1192's harness. **Run before releases touching tool deferral, the PreToolUse hook's output, the SDK `tools` option, the adapters' core tool lists, or the SDK/CLI version** | 2026-10-05 |
+| E77 | [Claude Code system turns across tool rounds](#e77-claude-code-system-turns-across-tool-rounds) | **Automated, no model calls, not in CI**: `bun scripts/e2e-claude-code-system-turns.mjs [model]` — the REAL Claude Code client through a real proxy, SDK and CLI against a scripted Messages API. Runs five tool rounds on `claude-fable-5-1`, in the main thread or with `E2E_SUBAGENT=1` in an Agent-tool subagent, and asserts every request after the first is a `continuation` that resumes its SDK session, reaches the API as structured tool turns and not as a replay, and delivers the request's own reminder. **Run before releases touching lineage, the Claude Code adapter, or the client, SDK or CLI version** | 2026-10-05 |
 
 | P1 | [Profile: List & Auth Status](#p1-profile-list--auth-status) | `/profiles/list` returns profiles with emails, login status, auth timestamps | - |
 | P2 | [Profile: Switch via API](#p2-profile-switch-via-api) | `POST /profiles/active` switches profile; health endpoint reflects new email | - |
@@ -4834,7 +4835,8 @@ Deferral also has a second cost: `computePassthroughMaxTurns` only returns the
 single-turn cap when `singleTurnHandoff` holds, and that requires
 `!hasDeferredTools` — so turning deferral on lifted the cap from 1 to 4 and let
 the SDK's discarded digest turn generate on the full context. (True until
-2026-10-05: deferred tools no longer lift the cap, see E75.)
+2026-10-05: deferred tools no longer bring the digest turn with them, see E75
+and E76.)
 
 ```bash
 bun scripts/e2e-codex-auto-defer.mjs
@@ -5186,8 +5188,10 @@ instability.
 
 **What it proves:** crossing the auto-defer threshold mid-session no longer
 flips deferral, and therefore no longer flips `maxTurns`. (Since 2026-10-05
-deferral does not move `maxTurns` at all, see E75; what the pin still holds
-steady is the `alwaysLoad` marker and `ENABLE_TOOL_SEARCH`.)
+deferral is real, E76, so a flip would also move ToolSearch, the tool block
+and the system prompt's list of deferred names; the pin holds all of it
+steady. The threshold now counts the tools that would be deferred rather than
+the whole set.)
 
 The decision was taken from the LIVE tool count, so one tool added or removed
 flipped deferral for every non-core tool at once. That moves the
@@ -5204,9 +5208,12 @@ bun scripts/e2e-defer-pin.mjs
 Two three-turn conversations with identical prompts; only one crosses:
 
 ```
-A (control)   15 -> 15 -> 15 tools
-B (crossing)  15 -> 15 -> 16 tools
+A (control)   15 -> 15 -> 15 tools outside the core set
+B (crossing)  15 -> 15 -> 16
 ```
+
+(Re-run 2026-10-05 after E76 changed what the threshold counts: pass, the
+suppressed flip logged, `claude-haiku-4-5`.)
 
 **Pass criteria** (asserted, non-zero exit on any):
 
@@ -6446,6 +6453,15 @@ that check writes the system prompt again, once.
 **What it proves:** a tool turn on a session the proxy counts as having
 deferred tools costs one Messages call, where it cost two to eight.
 
+(2026-10-05, later the same day: the deferral was made real, E76. What this
+section describes is now the path of a session whose deferral is NOT in
+effect: the kill switch, Haiku, an upstream that is not Anthropic's own and
+has not been vouched for, or a CLI that ignores the hook's stop. The
+scripted gate was rewritten for E76 and holds these claims in its fallback
+mode, `E2E_CLAUDE_PATH=sdk-bundled bun scripts/e2e-deferred-tool-turn.mjs`;
+the live and OpenCode commands below now exercise E76. The measurements and
+the before/after record stand as written, at commit 2a5d972.)
+
 In passthrough the PreToolUse hook denies every client tool call and the SDK
 then asks the model to digest the deny. E40's cap (`maxTurns` 1) stops the SDK
 at the tool boundary instead, but `computePassthroughMaxTurns` lifted it for
@@ -6574,7 +6590,8 @@ tools always has:
   mentions ToolSearch (the premise check), and none of the 323 calls above
   was one.
 
-**Known limit.** The deferral itself is still not happening: a session counted
+**Known limit, since lifted (E76).** At this commit the deferral itself was
+still not happening: a session counted
 `deferred=195/199` sends all 199 definitions, 134K tokens here, on every
 request. Making it real means offering ToolSearch and then stopping at the
 client-tool boundary by something other than the turn cap, since a discovery
@@ -6596,7 +6613,291 @@ with the tool still loaded. The comment in the hook that says the CLI strips
 yet: which tools stay loaded per client, parallel calls under `continue:
 false`, what the rejection handoff does when the turn ends in `success`
 rather than `error_max_turns`, and what a discovery turn costs a short
-session are all open.
+session are all open. (E76 answers each.)
+
+## E76: Tool deferral in passthrough
+
+**What it proves:** on a session with a large tool set, the tools marked for
+deferral are out of the prompt, the model can still find and call one, and a
+tool turn costs one Messages call, or two when it has to load the tool first.
+
+E75 left a session counted `deferred=195/199` sending all 199 definitions on
+every call: passthrough passes `tools: []` to the SDK, that strips the
+built-in ToolSearch with the rest, and without ToolSearch the CLI defers
+nothing. `src/proxy/passthroughToolSearch.ts` puts ToolSearch back for those
+sessions, and four things had to change with it.
+
+- **What ends the tool turn.** A ToolSearch round and the call it leads to are
+  two Messages calls in one query, so E40's `maxTurns` 1 cannot apply. The
+  PreToolUse deny carries `continue: false` instead: the CLI answers the rest
+  of that message's tool calls and ends the query without calling the model
+  again. The result is `success` and commits the transcript as any result
+  does. `maxTurns` becomes a budget of 6 that only bounds a model which keeps
+  searching.
+- **How the model learns the names.** The CLI announces deferred tools in an
+  attachment, and passthrough runs with `CLAUDE_CODE_DISABLE_ATTACHMENTS=1`,
+  so on CLI 2.1.284 nothing in the request named them. The proxy lists them in
+  the system prompt, in the CLI's wording.
+- **What is deferred.** A deferred tool costs a ToolSearch round the first time
+  it is used, so the threshold counts the tools that would leave the prompt,
+  not the whole set, and for Claude Code only the tools of its MCP servers are
+  deferred (`deferrableToolPrefixes` in the transform). On the 215-tool roster
+  of E75 the 180 MCP tools were 73% of the definitions by size (398K of 545K
+  characters in the session's prompt snapshot) and the client's 31 tools
+  outside the old core list another 25%; all 323 client tool calls in that
+  proxy's transcripts went to the client's own tools (Bash 270, Write 21, Read
+  10, SubagentHandback 10, Edit 8, SendMessage 3, AskUserQuestion 1), so the
+  old list would have put a ToolSearch round in front of 14 of them and the
+  new rule in front of none.
+- **A ToolSearch beside a client call.** The next request resumes at that
+  message with the client's results only; the ToolSearch result sat after the
+  resume point, and the CLI fills the gap with `[Tool result missing due to
+  internal error]`, leaving the tool unloaded. The proxy keeps the result and
+  puts it back in the continuation, when the ToolSearch call came ahead of the
+  forwarded one. The CLI surfaces a message as one fragment per block and the
+  session resumes at the last forwarded call's fragment, so a ToolSearch
+  called after it is cut off together with its result; that result is not
+  sent, since alone it would answer no `tool_use`.
+
+It also depends on the CLI honouring `continue: false`, and not every one
+does. 2.1.284 and 2.1.289 do. 2.1.141, which Agent SDK 0.2.141 bundles, calls
+the model again. The proxy cannot tell from the binary, so it watches: a model
+turn that starts after a message whose call was answered with the stop marks
+that executable for the life of the process, and its sessions go back to E75's
+path (every tool loaded, `maxTurns` 1). A session that had already used
+ToolSearch survives the switch; the CLI replaces its references with `[Tool
+references removed - tool search not enabled]`.
+
+The watch goes by the order of the SDK iterator and the tool-call ids, not by
+when the hook answered. The SDK runs a hook as it reads the CLI's request for
+one, while messages the CLI wrote before that can still be waiting for the
+consumer, the turn's own `message_start` among them. A first version that
+compared times took that event for a new turn: one gate run in a few dozen,
+made while the test suite was loading the machine, switched deferral off for
+the rest of its process on a CLI that had stopped as asked.
+
+And it depends on the upstream. Deferral sets `ENABLE_TOOL_SEARCH=true` for
+the SDK child, which overrides a guard of the CLI's own: left alone, 2.1.284
+keeps tool search off when `ANTHROPIC_BASE_URL` names any host but
+`api.anthropic.com`, since a gateway that does not forward `tool_reference`
+blocks answers such a request with a 400 (read out of the binary: the mode is
+`tst` for any truthy `ENABLE_TOOL_SEARCH`, and the base-URL test applies only
+while the variable is unset). So the proxy holds that guard itself: a profile
+with such a `baseUrl` keeps every tool loaded unless
+`MERIDIAN_PASSTHROUGH_TOOL_SEARCH=force` vouches for it. The other way round,
+`CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS` in the child's environment puts the
+CLI in its standard mode whatever `ENABLE_TOOL_SEARCH` says, and the proxy
+then offers no ToolSearch that would not exist. The scripted gates' API is a
+local base URL, so they run under `force`.
+
+```bash
+E2E_EXPECT=deferral bun scripts/e2e-deferred-tool-turn.mjs       # scripted Messages API, no model calls; CI runs it
+E2E_CLAUDE_PATH=sdk-bundled bun scripts/e2e-deferred-tool-turn.mjs   # the same on the CLI the SDK bundles; CI runs it
+E2E_MCP_TOOLS=40 bun scripts/e2e-claude-code-system-turns.mjs [model]   # real Claude Code client, scripted API (E77), with tools deferred
+bun scripts/e2e-deferred-tool-turn-live.mjs                      # real Claude Code client, real model
+E2E_OPENCODE_BIN=opencode bun scripts/e2e-opencode-deferral-live.mjs       # real OpenCode, real model; after npm run build
+E2E_OPENCODE_BIN=opencode bun scripts/e2e-opencode-deferred-refusal.mjs    # real OpenCode, scripted API; after npm run build
+```
+
+The scripted gate runs the real proxy and the real SDK against a local
+Messages API. The client declares four tools, two of them `defer_loading`.
+The first tool turn tells the gate which CLI it is driving: one Messages call
+if it stopped when asked (deferral mode), more if it went on (fallback mode).
+`E2E_EXPECT` fails the run if that is not the mode named.
+
+**Pass criteria** (asserted, non-zero exit on any). The scripted API holds
+every request to the pairing the real one enforces with a 400: each
+`tool_result` answers a `tool_use` of the message before it, and each
+`tool_use` is answered. In deferral mode, every run: the SDK is asked for
+`tools: ["ToolSearch"]` and `maxTurns` 6; the CLI's request carries ToolSearch
+and the two loaded tools and neither deferred one; the system prompt names
+both deferred tools. Then, non-stream and stream:
+
+- **direct**, **parallel**: one Messages call, a `success` result, exactly the
+  forwarded calls under the client's names with `stop_reason: "tool_use"`;
+  the follow-up resumes at the call (`resumeSessionAt`), carries the client's
+  real results as `tool_result` blocks and no leftover deny, and is one call.
+- **search** (ToolSearch, then the loaded tool beside another): two Messages
+  calls; the second declares the loaded tool and not the other deferred one;
+  the client sees the text and the two calls and no ToolSearch; the tool is
+  still declared after the resume.
+- **mixed** (ToolSearch ahead of a client call in one message): one Messages
+  call; on resume the ToolSearch result is a `tool_reference` again and its
+  tool is declared, and it is the proxy's own continuation that carries it.
+- **mixedafter** (the same with ToolSearch after the client call): one Messages
+  call; the continuation the proxy hands the SDK holds the client's result and
+  no ToolSearch result, and the API is sent none. (CLI 2.1.284 drops such a
+  block when it is handed one, which is why the gate reads the proxy's prompt
+  and not only the API's request.)
+- **overrun** (a model that only searches): exactly 6 Messages calls, then
+  `stop_reason: "max_tokens"` with no tool call, no error and no content: the
+  proxy's stand-in sentence for an empty answer is not put in the model's
+  mouth.
+- **bare** (a client tool named without the SDK's namespace, which the CLI
+  rejects before any hook) and **retry** (the same, then the call again under
+  the registered name): the client receives the rejected call once; the turn
+  is two Messages calls; the executable is not marked as ignoring the stop;
+  the follow-up resumes at the call.
+- **haiku** (stream): every tool loaded, no ToolSearch, `maxTurns` 1, one call.
+- **unvouched** (stream, the same session with
+  `MERIDIAN_PASSTHROUGH_TOOL_SEARCH` unset): the scripted API is an upstream
+  nobody vouched for, so every tool is loaded, there is no ToolSearch,
+  `maxTurns` is 1 and the turn is one call ending in `error_max_turns`.
+
+In fallback mode: the first tool turn still reaches the client, and the proxy
+has marked the executable; after it, direct and parallel in both stream modes
+hold E75's claims (every tool loaded, no ToolSearch, `maxTurns` 1, one
+Messages call, `error_max_turns`, resume at the boundary).
+
+The live gate drives the real client (`claude -p`, its own
+`CLAUDE_CONFIG_DIR`, `--mcp-config` naming a fixture stdio server with one
+answering tool and 60 that only take up room) through this checkout's proxy to
+the real model, three times: every tool loaded (the kill switch), the same
+exchange deferred, and a question only the MCP tool can answer. It asserts the
+loaded run has no ToolSearch and the cap; the deferred run offers ToolSearch,
+names exactly the server's 61 tools, makes one Messages call for a `Bash`
+call, has a prompt under 80% of the loaded one and reads it back from the
+cache on resume; and the discovery run calls ToolSearch and then the tool in
+one query, the client's answer carries a value only the server knows, and the
+call after the ToolSearch round reads the prompt from the cache.
+
+The OpenCode live gate does the same for OpenCode with an 81-tool server: a
+`read` call (one of its six core tools) and the discovery. #1192's harness
+(real OpenCode, scripted model calling `read` by its bare name) now asserts
+the roster request offers ToolSearch with the budget of 6, the rejected call
+never reached the hook, the registered-name retry reached it alone and ended
+the query in `success` after two Messages calls, the client ran the call
+exactly once with no error, and the follow-up resumed the session.
+
+**Verified:** 2026-10-05, macOS arm64, SDK 0.2.141, Bun 1.3.14.
+
+Scripted gate: 188 checks pass in deferral mode on the checkout's CLI
+2.1.284 and on the 2.1.289 client binary; 42 pass in fallback mode on the
+SDK's bundled 2.1.141, where the first tool turn made 2 Messages calls. Before
+the change the gate that stood here asserted the opposite premise (no
+ToolSearch, every tool loaded) and passed on all three.
+
+The real client against the scripted API (`e2e-claude-code-system-turns.mjs`
+with `E2E_MCP_TOOLS=40`, client 2.1.289, SDK child CLI 2.1.284): of 61 client
+tools 23 are declared to the API, ToolSearch is on offer in every round, and
+all five tool rounds are one Messages call each and resume as `continuation`,
+on `claude-fable-5-1` (with its one-request reminder, E77) and on
+`claude-opus-5-5`. With `E2E_MCP_TOOLS=180`, the server size of E75's roster,
+the client sends 201 tools and the API is again declared 23.
+
+Those two, the six other gates CI runs, and #1192's harness further down
+were all run again on the final code. The live runs below were not: they were
+made earlier the same day, before ten corrections
+to this change. Four came from re-reading it: the stop watch above, the result
+of a ToolSearch called after the forwarded call, an unparseable turn-budget
+pin, and a session pinned to deferral with nothing left to defer. Six came
+from an independent review of the diff: the upstream rule above; the session
+pin, which recorded "something is deferred" where it meant auto-defer's
+decision, so one tool the client marked itself deferred every other tool
+after the next change of tool set; the non-stream overrun, which answered
+with the proxy's stand-in sentence and reported a turn ending on a rejected
+call as truncated; a ToolSearch result that reached the iterator ahead of the
+fragment carrying its call, and was dropped; and the silent-turn recovery
+query, whose messages were not watched and whose checkpoint carried no
+ToolSearch result. Each has a test that failed before its fix
+(`passthrough-tool-search.test.ts`,
+`passthrough-tool-search-integration.test.ts`, `defer-pin.test.ts`,
+`silent-turn-recovery.test.ts`). A second review, of those six fixes, found
+no defect in them. What it did find is in the limits below (the CLI's own
+configuration, which the upstream rule cannot see) and in one test it showed
+to be missing, for the recovery query's stop watch. The live runs have not
+been repeated on the final code: the accounts they would run on were at their
+weekly limits.
+
+Live gate, Claude Code 2.1.289 client, SDK child CLI 2.1.284, 82 tools (21 of
+the client's own, 61 of the server's), `sonnet` and then `opus[1m]` with the
+same figures to within two tokens:
+
+| Run | Proxy log | Prompt tokens per call | Messages calls |
+| --- | --- | --- | --- |
+| loaded | `deferred=61/82 tools marked, all loaded (disabled)` | 50,578 | 1 for the Bash call, 1 for the follow-up |
+| deferred | `deferred=61/82 tools via ToolSearch` | 26,947 | 1 and 1 |
+| discover | `deferred=61/82 tools via ToolSearch` | 26,925 then 27,174 | 2 (`ToolSearch`, then `mcp__oc__mcp__fixture__order_receipt`) and 1 |
+
+The deferred prompt is 23,631 tokens smaller (47%). The call after the
+ToolSearch round read 26,923 of its 27,174 prompt tokens from the cache, so
+loading a tool does not rewrite the prefix. Both discovery runs answered with
+the server's receipt.
+
+OpenCode live gate, OpenCode 1.18.33, `claude-sonnet-5-5`, SDK child CLI
+2.1.284: `deferred=85/91 tools via ToolSearch`; the `read` call was one
+Messages call at 20,754 prompt tokens; the discovery was `ToolSearch` then
+`mcp__oc__fixture_order_receipt` in one query of two calls; no client error.
+
+#1192's harness, OpenCode 1.18.33, SDK child CLI 2.1.284: pass with the
+assertions above. Its roster request was `maxTurns` 1 with one Messages call
+at E75 and is `maxTurns` 6 with two here.
+
+**Not covered.** No real model has been called through the final code, and no
+working proxy has run this build yet, so nothing here is measured on a session
+of the size E75 was. On one that does, a large
+Claude Code session should log `deferred=N/M tools via ToolSearch` and its
+progress-summary requests should read back a system-and-tools prefix well
+under E75's 134K tokens. Live runs used fixture MCP servers, not a user's
+real ones: whether a model reaches for a deferred tool as readily as for a
+loaded one, across a long session, is not something two discovery prompts
+show. The OpenCode gates were not run on Linux, and #1192's own live flow
+(`e2e-opencode-lifecycle-admission.mjs`) was not re-run. Windows was not run.
+
+**Known limits.**
+
+- What a session has loaded lives in its SDK transcript. A conversation
+  replayed into a fresh SDK session starts with nothing loaded and searches
+  again.
+- A ToolSearch result carried across a mixed message is held in memory. A
+  proxy restarted between the tool call and its results loses it, the model
+  sees the CLI's placeholder, and searches again.
+- A call the CLI rejects before any hook costs one extra, discarded Messages
+  call under deferral, where E75's cap made it one. Streamed and non-stream
+  alike, the client still receives the call.
+- A client that declares a `ToolSearch` of its own (Claude Code with its tool
+  search switched on) is left as it was, every tool loaded: two tools of that
+  name would reach the model and only the SDK's could load anything.
+- On a CLI that ignores the stop, the first deferred tool turn of each proxy
+  process pays the digest turn before the fallback takes over.
+- OpenCode's own tools outside its six core ones are deferred with the rest;
+  nothing in a tool's name tells them from a server's.
+- A ToolSearch the model calls after a client tool in the same message is
+  lost with its result, and the model searches again.
+- The upstream rule knows two cases, a custom base URL and
+  `CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS`, and reads both from the
+  environment the proxy hands the CLI. It does not see what the CLI takes from
+  its own configuration: an `env` block in Claude settings files (loaded when
+  the CLAUDE.md feature is `project` or `full`) or in managed policy can set
+  `ENABLE_TOOL_SEARCH` or `ANTHROPIC_BASE_URL` over it, and an organisation's
+  HIPAA flag switches experimental betas off as the variable does. Then the
+  proxy announces a ToolSearch the CLI does not offer, or forces tool search
+  on an upstream it was never told about. Read from the 2.1.284 binary by the
+  second review, not run. A provider the CLI reaches another way (Bedrock,
+  Vertex, Foundry, selected by variables in the proxy's environment) was not
+  examined either. The kill switch is the remedy for all of them.
+- A turn that runs out of budget while searching keeps what it loaded only on
+  a non-streaming request, which stores the session. A streaming one publishes
+  nothing, as for any turn cut off at its budget, so the next request starts
+  from before the searches.
+- A call the CLI rejects on the budget's last turn ends a non-streaming
+  request as an error, as it does under the one-turn cap (E75), whatever the
+  turn searched before it. Streamed, #1192's recovery hands it to the client.
+- A rejected call is handed to the client whether or not the client declared
+  a tool of that name; the capped stream recovery of #1192 checks, this path
+  does not. The client answers an unknown name with its own error result.
+- Two rejected calls in one non-streaming message reach the client as the
+  first alone while the checkpoint lists both, so the next request does not
+  match it and replays.
+- A non-streaming response reports the usage of the whole query (#449), so a
+  ToolSearch round counts its prompt twice there. The streaming path reports
+  per message.
+- The session's first request decides whether it defers (#861). A Claude Code
+  session whose first request arrives before its MCP servers have connected
+  carries too few tools to defer and stays that way while the proxy runs; the
+  log line `defer_flip suppressed` says so on every later request. Not seen in
+  the 403 request lines of E75's proxy, where every session kept the tool
+  count it started with.
 
 ## E77: Claude Code system turns across tool rounds
 
@@ -6663,6 +6964,8 @@ untouched: the reminder is still delivered with its round.
 ```bash
 bun scripts/e2e-claude-code-system-turns.mjs                    # claude-fable-5-1
 bun scripts/e2e-claude-code-system-turns.mjs claude-opus-5-5
+E2E_SUBAGENT=1 bun scripts/e2e-claude-code-system-turns.mjs     # the rounds in an Agent-tool subagent
+E2E_MCP_TOOLS=40 bun scripts/e2e-claude-code-system-turns.mjs   # with an MCP server whose tools are deferred (E76)
 E2E_CLAUDE_CLIENT=node_modules/.bin/claude bun scripts/e2e-claude-code-system-turns.mjs
 ```
 
@@ -6671,6 +6974,15 @@ token, and the proxy's one profile is an API key against the scripted API.
 `ROUNDS` sets the number of tool rounds (default 5), `E2E_CLAUDE_CLIENT` the
 client (default `claude` on PATH) and `E2E_CLAUDE_PATH` the CLI the SDK
 drives. Not in CI: it has not been run on Linux.
+
+`E2E_SUBAGENT=1` is the shape of the live failure. The scripted main thread
+calls the client's Agent tool, the client starts a real subagent, and the
+requests that carry `x-claude-code-agent-id` are the conversation held to the
+claims; the main thread has to resume too. A subagent's trailing system turn
+is the same two blocks. On its first tool round the first block also carries
+context the client announces late (the agent types, the MCP servers'
+instructions; 2,251 characters where later rounds have 49), and it comes back
+whole as history.
 
 ### Pass criteria
 
@@ -6685,6 +6997,9 @@ drives. Not in CI: it has not been run on Linux.
 - The gate prints whether the client sent a one-request reminder at all. If a
   client stops, the resume claims still have to hold, and the note says the
   case the fix is for was not exercised.
+- With `E2E_SUBAGENT=1`: the same for the subagent's requests, the main
+  thread is `new` and then `continuation`, and the subagent's answer is the
+  tool result the main thread reads.
 
 ### Verified
 
@@ -6697,6 +7012,8 @@ drives. Not in CI: it has not been run on Linux.
 | 2.1.284 | 2.1.289 | on | new, then five continuation | PASS |
 | 2.1.289, `claude-opus-5-5` | 2.1.284 | on | new, then five continuation (no reminder sent) | PASS |
 | 2.1.289, `claude-sonnet-5-5` | 2.1.284 | on | new, then five continuation (no reminder sent) | PASS |
+| 2.1.289, subagent | 2.1.284 | on | subagent: new, then five continuation; main thread: new, continuation, continuation | PASS |
+| 2.1.289, subagent, 40 MCP tools deferred | 2.1.284 | on | the same, 15 of the subagent's 53 tools declared to the API | PASS |
 
 "Fix off" is the same gate with the adapter hook removed, and it reproduces
 the live pattern: the first tool round resumes and every later one replays.
@@ -6707,8 +7024,10 @@ hook.
 
 ### Not covered
 
-- A subagent of a live session on the real model. The shapes are the client's
-  own, but no Fable call has been made through a proxy with the fix.
+- The real model. The requests are the real client's, main thread and
+  subagent, but no Fable call has been made through a proxy with the fix.
+- A background agent's progress-summary requests beside its rounds; the
+  scripted run produced none.
 - A system turn that is nothing but a one-request reminder. The client would
   then send one message fewer in the next request, and a canonicalizer cannot
   remove a message: resume indexes are by position. Not seen on 2.1.284 or
