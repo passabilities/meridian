@@ -1025,6 +1025,7 @@ curl -s -X PUT -H 'Content-Type: application/json' -d '{"checkForUpdates":false}
 | E73 | [Unknown thinking display values](#e73-unknown-thinking-display-values) | **Automated**: `bun scripts/e2e-thinking-display-interactive.mjs` — actual Claude Code 2.1.287 TUI in a PTY, real proxy/SDK/bundled subprocess. Requires an answer rendered in the client, live-prompt framing, supported-display controls and joined cleanup. The separate HTTP-shaped gate remains a backend smoke test. **Run before releases touching thinking passthrough or the SDK/CLI version** | 2026-10-01 |
 | E74 | [Claude Code permission-check prompt cache](#e74-claude-code-permission-check-prompt-cache) | **Automated, needs the `claude` CLI** (skips cleanly without it), **no model calls**: `bun scripts/e2e-claude-code-permission-check-cache.mjs` — the REAL Claude Code CLI in `--permission-mode auto`, this checkout's proxy running in a git repository, the real SDK driving this checkout's CLI, and a scripted Messages API that keeps a prompt cache as the API documents it. Asserts each check goes upstream as text blocks carrying only Meridian's cache breakpoints, reads back what the check before it wrote — also after a file in the proxy's directory changes — carries the same prompt as with the layout off, and falls back to the plain prompt when the API refuses the breakpoints. **Run before releases touching auxiliary requests, replay framing or the SDK/CLI version** | 2026-10-05 |
 | E75 | [Deferred-tools tool turn](#e75-deferred-tools-tool-turn) | **Automated, no model calls, runs in CI**: `bun scripts/e2e-deferred-tool-turn.mjs` — real proxy + SDK + CLI against a scripted Messages API. Asserts a tool turn on a session counted as deferred is asked with `maxTurns` 1, costs ONE Messages call, ends on `error_max_turns` and resumes at the tool boundary with the client's real results (non-stream and stream; one call and two parallel calls), and that the CLI offers no ToolSearch and sends every tool loaded — the premise the cap rests on. **Live, needs the `claude` CLI and Claude Max**: `bun scripts/e2e-deferred-tool-turn-live.mjs` — the REAL Claude Code client and the real model. **Needs OpenCode**: `bun scripts/e2e-opencode-deferred-refusal.mjs` — #1192's harness, now asserting the one-turn shape. **Run before releases touching the passthrough turn cap, tool deferral, the SDK `tools` option, or the SDK/CLI version** | 2026-10-05 |
+| E77 | [Claude Code system turns across tool rounds](#e77-claude-code-system-turns-across-tool-rounds) | **Automated, no model calls, not in CI**: `bun scripts/e2e-claude-code-system-turns.mjs [model]` — the REAL Claude Code client through a real proxy, SDK and CLI against a scripted Messages API. Runs five tool rounds on `claude-fable-5-1` and asserts every request after the first is a `continuation` that resumes its SDK session, reaches the API as structured tool turns and not as a replay, and delivers the request's own reminder. **Run before releases touching lineage, the Claude Code adapter, or the client, SDK or CLI version** | 2026-10-05 |
 
 | P1 | [Profile: List & Auth Status](#p1-profile-list--auth-status) | `/profiles/list` returns profiles with emails, login status, auth timestamps | - |
 | P2 | [Profile: Switch via API](#p2-profile-switch-via-api) | `POST /profiles/active` switches profile; health endpoint reflects new email | - |
@@ -6596,6 +6597,125 @@ yet: which tools stay loaded per client, parallel calls under `continue:
 false`, what the rejection handoff does when the turn ends in `success`
 rather than `error_max_turns`, and what a discovery turn costs a short
 session are all open.
+
+## E77: Claude Code system turns across tool rounds
+
+**What it proves:** every tool round of a Claude Code conversation resumes its
+SDK session, where on `claude-fable-5-1` every round after the first replayed
+the whole conversation into a new one.
+
+With its `mid-conversation-system` feature on, claude-cli ends a tool-result
+request with a `system` turn. For Fable 5.1 it appends a reminder to that turn
+which lives for the one request. Captured from claude-cli 2.1.289 against a
+scripted API, turn by turn:
+
+```
+request 2   … user[tool_result ×2]
+            system[ "<total_tokens>14994880 tokens left</total_tokens>" (cache_control),
+                    "First privately list what you need next; then request every item
+                     that doesn't depend on another's result in this one response." ]
+request 3   … user[tool_result ×2]
+            system "<total_tokens>14994880 tokens left</total_tokens>"
+            assistant[tool_use] user[tool_result]
+            system[ "<total_tokens>14989880 tokens left</total_tokens>" (cache_control),
+                    "First privately list what you need next; …" ]
+```
+
+The token notice stays, with the number it was sent with. The reminder is gone
+from the earlier turn and a new one trails the new results. Its transcript
+records it as a `batching_reminder_sent` attachment. `claude-opus-5-5` and
+`claude-sonnet-5-5` get the system turn and no reminder (same client, same
+gate).
+
+Meridian hashed the request as it arrived, reminder included, so the next
+request never matched the stored history: `lineage=new
+diverged=modified-history`, a fresh SDK session and the conversation sent
+again as a replay. The first tool round did resume, because the request
+before it has no such turn, and that is the one round the earlier real-client
+gate (`e2e-claude-code-client.mjs`, 2.1.259) runs.
+
+Measured on a working proxy, 2026-10-05 18:30–18:53Z (nine Fable 5.1
+subagents of four Claude Code sessions; that proxy's telemetry rows and
+session log, which are private and not in the repository):
+
+| Fable request, by what the proxy made of it | Requests | Cache written | Cache read | Output |
+|---|---|---|---|---|
+| Tool round, `modified-history` (replayed) | 32 | 5,375,755 (167,992 each) | 1,147,626 | 351,685 (10,990 each) |
+| Tool round, `continuation` (resumed) | 6 | 60,110 (10,018 each) | 348,063 | 10,283 (1,714 each) |
+| Progress summary (auxiliary request) | 82 | 788,256 | 2,942,308 | 4,927 |
+| First request of a subagent (`not-found`) | 6 | 133,440 | 214,623 | 1,761 |
+
+The replayed rounds wrote seventeen times the cache of a resumed one and, with
+none of the model's earlier reasoning in a replay, produced six times the
+output.
+
+The fix is `canonicalizeClaudeCodeMessagesForLineage`
+(`src/proxy/adapters/claudecode.ts`), the hook OpenCode already uses for
+text it sends with one request only. The lineage of a `system` turn stops at its last
+cache breakpoint: the client puts that on the last block it will send again,
+and anything it adds for one request has to follow it or it would rewrite the
+cached prefix. The known wording is matched as well, for a turn with no
+breakpoint. Message positions are kept, and the request the model reads is
+untouched: the reminder is still delivered with its round.
+
+### Run it
+
+```bash
+bun scripts/e2e-claude-code-system-turns.mjs                    # claude-fable-5-1
+bun scripts/e2e-claude-code-system-turns.mjs claude-opus-5-5
+E2E_CLAUDE_CLIENT=node_modules/.bin/claude bun scripts/e2e-claude-code-system-turns.mjs
+```
+
+No model calls and no credentials: the client talks to the proxy with a dummy
+token, and the proxy's one profile is an API key against the scripted API.
+`ROUNDS` sets the number of tool rounds (default 5), `E2E_CLAUDE_CLIENT` the
+client (default `claude` on PATH) and `E2E_CLAUDE_PATH` the CLI the SDK
+drives. Not in CI: it has not been run on Linux.
+
+### Pass criteria
+
+- The client finishes and makes one request per tool round plus one for the
+  answer.
+- Every request after the first is `lineageType: continuation` with
+  `isResume`, and its SDK query has `resume` and `resumeSessionAt`.
+- No query after the first is a `<conversation_history>` replay, and the last
+  Messages call carries every round as structured `tool_use` and
+  `tool_result` turns.
+- The request's own reminder is in the last user turn the model reads.
+- The gate prints whether the client sent a one-request reminder at all. If a
+  client stops, the resume claims still have to hold, and the note says the
+  case the fix is for was not exercised.
+
+### Verified
+
+2026-10-05, macOS arm64, five tool rounds, `claude-fable-5-1` unless noted.
+
+| Client | SDK child CLI | Fix | Lineage of the six requests | Result |
+|---|---|---|---|---|
+| 2.1.289 | 2.1.284 | off | new, continuation, new, new, new, new | FAIL (5 checks) |
+| 2.1.289 | 2.1.284 | on | new, then five continuation | PASS |
+| 2.1.284 | 2.1.289 | on | new, then five continuation | PASS |
+| 2.1.289, `claude-opus-5-5` | 2.1.284 | on | new, then five continuation (no reminder sent) | PASS |
+| 2.1.289, `claude-sonnet-5-5` | 2.1.284 | on | new, then five continuation (no reminder sent) | PASS |
+
+"Fix off" is the same gate with the adapter hook removed, and it reproduces
+the live pattern: the first tool round resumes and every later one replays.
+`src/__tests__/claude-code-system-turn-lineage.test.ts` holds the rule as a
+pure function and `passthrough-early-stop-integration.test.ts` ("one-request
+reminder") holds three requests through the mocked SDK; both fail without the
+hook.
+
+### Not covered
+
+- A subagent of a live session on the real model. The shapes are the client's
+  own, but no Fable call has been made through a proxy with the fix.
+- A system turn that is nothing but a one-request reminder. The client would
+  then send one message fewer in the next request, and a canonicalizer cannot
+  remove a message: resume indexes are by position. Not seen on 2.1.284 or
+  2.1.289, where the token notice is always there.
+- Sessions stored before the fix. Their lineage has the reminder in it, so
+  their next tool round replays once more and resumes from then on.
+- Linux and Windows.
 
 ## Concurrent transcript publication
 

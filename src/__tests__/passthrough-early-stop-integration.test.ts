@@ -1413,6 +1413,111 @@ describe("Integration: passthrough early stop", () => {
     })
   }
 
+  // NOTE: agent-specific (claude-code). On claude-fable-5-1, claude-cli 2.1.289
+  // appends a reminder to the trailing system turn that lives for that one
+  // request: the next request carries the turn without it. Hashed into the
+  // lineage, it made every tool round after the first replay the conversation
+  // (E2E.md E77). The shapes are the captured ones.
+  for (const stream of [false, true]) {
+    it(`resumes the tool round after a system turn that carried a one-request reminder (stream=${stream})`, async () => {
+      const sessionId = `cc-one-request-reminder-${stream}-${TEST_RUN_ID}`
+      const headers = { "x-meridian-agent": "claude-code", "x-opencode-session": sessionId }
+      const environment = "# Environment\nYou have been invoked in the following environment: ..."
+      const batching = "First privately list what you need next; then request every item that doesn't depend on another's result in this one response."
+      const tokensLeft = (count: number) => `<total_tokens>${count} tokens left</total_tokens>`
+      const trailing = (count: number) => ({ role: "system", content: [
+        { type: "text", text: tokensLeft(count), cache_control: { type: "ephemeral" } },
+        { type: "text", text: batching },
+      ] })
+      const call = (id: string) => ({ type: "tool_use", id, name: "read", input: { file_path: id } })
+      const toolTurnScript = (id: string, turn: ReturnType<typeof assistantMessage>) => [
+        messageStart(`msg_${id}`),
+        toolUseBlockStart(0, "read", id),
+        inputJsonDelta(0, JSON.stringify({ file_path: id })),
+        blockStop(0),
+        messageDelta("tool_use"),
+        turn,
+        userDenyMessage(id),
+        assistantMessage([{ type: "text", text: "ONE_REQUEST_REMINDER_DIGEST" }]),
+      ]
+      const checkpointAt = async (uuid: string) => {
+        let stored: any
+        for (let i = 0; i < 500 && stored?.passthroughToolCallAssistantUuid !== uuid; i++) {
+          stored = lookupSharedSession(sessionId)
+          if (stored?.passthroughToolCallAssistantUuid !== uuid) await new Promise((resolve) => setTimeout(resolve, 10))
+        }
+        expect(stored?.passthroughToolCallAssistantUuid).toBe(uuid)
+      }
+      const request = (messages: unknown[]) => postClaudeCode(app, {
+        model: "claude-fable-5-1", max_tokens: 400, stream, tools: [READ_TOOL], messages,
+      }, sessionId, headers)
+
+      // Round one: the first user turn and the environment as a system turn.
+      const firstTurn = assistantMessage([call("cc-orr-tu1")])
+      mockMessages = toolTurnScript("cc-orr-tu1", firstTurn)
+      const first = await request([
+        { role: "user", content: "read the fixtures" },
+        { role: "system", content: [{ type: "text", text: environment, cache_control: { type: "ephemeral" } }] },
+      ])
+      expect(first.status).toBe(200)
+      await first.text()
+      await checkpointAt(firstTurn.uuid)
+
+      // Round two: its results, and a system turn ending in the reminder.
+      const roundOne = [
+        { role: "user", content: "read the fixtures" },
+        { role: "system", content: environment },
+        { role: "assistant", content: [call("cc-orr-tu1")] },
+        { role: "user", content: [{ type: "tool_result", tool_use_id: "cc-orr-tu1", content: "one" }] },
+      ]
+      const secondTurn = assistantMessage([call("cc-orr-tu2")])
+      mockMessages = toolTurnScript("cc-orr-tu2", secondTurn)
+      const second = await request([...roundOne, trailing(14994880)])
+      expect(second.status).toBe(200)
+      await second.text()
+      await checkpointAt(secondTurn.uuid)
+      expect(capturedQueryParamsAll[1].options.resumeSessionAt).toBe(firstTurn.uuid)
+
+      // Round three: round two's system turn has come back without the
+      // reminder, as a plain string, and a new one trails the new results.
+      mockMessages = [
+        messageStart("msg_cc_orr_3"),
+        textBlockStart(0),
+        textDelta(0, "both fixtures read"),
+        blockStop(0),
+        messageDelta("end_turn"),
+        messageStop(),
+        assistantMessage([{ type: "text", text: "both fixtures read" }]),
+      ]
+      const third = await request([...roundOne,
+        { role: "system", content: tokensLeft(14994880) },
+        { role: "assistant", content: [call("cc-orr-tu2")] },
+        { role: "user", content: [{ type: "tool_result", tool_use_id: "cc-orr-tu2", content: "two" }] },
+        trailing(14989880),
+      ])
+      expect(third.status).toBe(200)
+      const thirdBody = await third.text()
+      expect(thirdBody).toContain("both fixtures read")
+      expect(thirdBody).not.toContain("conversation_history")
+
+      const resumed = capturedQueryParamsAll[2]
+      expect(resumed.options.resume).toBe(capturedQueryParamsAll[1].options.sessionId)
+      expect(resumed.options.resumeSessionAt).toBe(secondTurn.uuid)
+      // The SDK is handed round two's result and this request's own system
+      // turn as user text, reminder included: it is dropped from the lineage,
+      // not from what the model reads.
+      expect(typeof resumed.prompt).not.toBe("string")
+      const promptMessages: any[] = []
+      for await (const message of resumed.prompt) promptMessages.push(message)
+      expect(promptMessages).toHaveLength(1)
+      expect(promptMessages[0].message.content).toEqual([
+        { type: "tool_result", tool_use_id: "cc-orr-tu2", content: "two" },
+        { type: "text", text: tokensLeft(14989880) },
+        { type: "text", text: batching },
+      ])
+    })
+  }
+
   // NOTE: agent-specific (claude-code). The CLI forks a running subagent's
   // transcript for a progress label while the turn reporting the same tool
   // result is in flight. The fork's delta settles the stored checkpoint exactly
