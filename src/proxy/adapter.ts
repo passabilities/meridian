@@ -88,8 +88,11 @@ export interface AgentIdentity {
    *
    * Such a request skips lineage lookup and never publishes, evicts or
    * recovers the session mapping, and never takes the session turn lease: it
-   * has no turn to serialize. Undefined or false keeps normal session handling, which is
-   * what every client that separates its side calls by key already gets.
+   * has no turn to serialize. It therefore runs beside the conversation's own
+   * turn, so it is never bound to that conversation's pending tool-call
+   * checkpoint and never shares its cached tool server. Undefined or false
+   * keeps normal session handling, which is what every client that separates
+   * its side calls by key already gets.
    */
   isAuxiliaryRequest?(c: Context, body?: unknown): boolean
 

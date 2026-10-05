@@ -2713,7 +2713,12 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
         const trailingSystemReminderOptions = adapterBase === "claude-code" || adapterBase === "pi"
           ? { allowTrailingSystemReminder: true }
           : undefined
-        const durableCheckpointContinuation = durableCheckpointIds?.length
+        // A side call under the conversation's key is never a continuation of
+        // it, even when its delta settles the pending batch exactly as the
+        // turn carrying those results does. Rebound to the checkpoint, it
+        // resumed the session that turn was writing.
+        const durableCheckpointContinuation = independentCause !== "auxiliary-request"
+          && durableCheckpointIds?.length
           && durableMappingAtTurn.status === "found"
           && matchesStoredLineagePrefix(durableMappingAtTurn.session, lineageMessages)
           ? coalesceCompleteToolResultContinuation(
@@ -3579,7 +3584,12 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
       let passthroughMcp: ReturnType<typeof createPassthroughMcpServer> | undefined
       if (passthrough && requestTools.length > 0) {
         const toolSetKey = computeToolSetKey(requestTools)
-        const cachedMcp = profileSessionId ? sessionMcpCache.get(profileSessionId) : undefined
+        // A side call runs beside the conversation's turn under the same key.
+        // It follows the session's deferral pin but gets a server of its own
+        // and decides nothing for the session: sharing the cached instance
+        // put two SDK children on one server, and one started without tools.
+        const mcpSessionKey = independentCause === "auxiliary-request" ? undefined : profileSessionId
+        const cachedMcp = mcpSessionKey ? sessionMcpCache.get(mcpSessionKey) : undefined
         const coreNamesForDefer = pipelineCtx.coreToolNames ? [...pipelineCtx.coreToolNames] : undefined
         // Consulted even when the MCP server is rebuilt: a changed tool set
         // already costs one cache miss, and re-deciding on top of it would ALSO
@@ -3596,16 +3606,16 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
           passthroughMcp = cachedMcp.mcp
         } else {
           passthroughMcp = createPassthroughMcpServer(requestTools, coreNamesForDefer, passthroughMcpName, pinnedDefer)
-          if (profileSessionId) {
-            sessionMcpCache.set(profileSessionId, { key: toolSetKey, mcp: passthroughMcp })
+          if (mcpSessionKey) {
+            sessionMcpCache.set(mcpSessionKey, { key: toolSetKey, mcp: passthroughMcp })
             if (cachedMcp) {
               plog(`[PROXY] ${requestMeta.requestId} tools_changed: MCP server recreated (prompt cache likely invalidates)`)
             }
           }
         }
         // First request in the session decides; later ones inherit.
-        if (profileSessionId && !sessionDeferPin.has(profileSessionId)) {
-          sessionDeferPin.set(profileSessionId, passthroughMcp.hasDeferredTools)
+        if (mcpSessionKey && !sessionDeferPin.has(mcpSessionKey)) {
+          sessionDeferPin.set(mcpSessionKey, passthroughMcp.hasDeferredTools)
         }
       }
       const hasDeferredTools = passthroughMcp?.hasDeferredTools ?? false

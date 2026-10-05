@@ -1409,6 +1409,139 @@ describe("Integration: passthrough early stop", () => {
     })
   }
 
+  // NOTE: agent-specific (claude-code). The CLI forks a running subagent's
+  // transcript for a progress label while the turn reporting the same tool
+  // result is in flight. The fork's delta settles the stored checkpoint exactly
+  // as that turn's does. Rebound to the checkpoint, the fork resumed the
+  // subagent's own session beside the turn already writing it (observed live:
+  // HTTP 500 "already has an active SDK writer", retried by the CLI until the
+  // turn ended). A side call is never a continuation of the conversation.
+  for (const stream of [false, true]) {
+    it(`never resumes the conversation's checkpoint for a Claude Code progress summary (stream=${stream})`, async () => {
+      const sessionId = `cc-summary-checkpoint-${stream}-${TEST_RUN_ID}`
+      const summaryPrompt = "Describe your most recent action in 3-5 words using present tense (-ing). Name the file or function, not the branch. Do not use tools."
+      const toolTurn = assistantMessage([
+        { type: "tool_use", id: "cc-summary-tu1", name: "read", input: { file_path: "x" } },
+      ])
+      const history = [
+        { role: "user", content: "read x" },
+        { role: "assistant", content: [{ type: "tool_use", id: "cc-summary-tu1", name: "read", input: { file_path: "x" } }] },
+      ]
+      const toolResult = { type: "tool_result", tool_use_id: "cc-summary-tu1", content: "hi" }
+
+      // Turn 1: arm the checkpoint.
+      mockMessages = [
+        messageStart("msg_cc_summary_1"),
+        toolUseBlockStart(0, "read", "cc-summary-tu1"),
+        inputJsonDelta(0, '{"file_path":"x"}'),
+        blockStop(0),
+        messageDelta("tool_use"),
+        toolTurn,
+        userDenyMessage("cc-summary-tu1"),
+        assistantMessage([{ type: "text", text: "CC_SUMMARY_GARBAGE_DIGEST" }]),
+      ]
+      const first = await postClaudeCode(app, {
+        model: "claude-sonnet-4-5", max_tokens: 400, stream, tools: [READ_TOOL], messages: history.slice(0, 1),
+      }, sessionId)
+      expect(first.status).toBe(200)
+      await first.text()
+      let stored: any
+      for (let i = 0; i < 500 && !stored?.passthroughToolCallAssistantUuid; i++) {
+        stored = lookupSharedSession(sessionId)
+        if (!stored?.passthroughToolCallAssistantUuid) await new Promise((resolve) => setTimeout(resolve, 10))
+      }
+      expect(stored?.passthroughToolCallIds).toEqual(["cc-summary-tu1"])
+
+      // The fork: the turn's own delta, with the summary prompt merged into it.
+      const label = [
+        messageStart("msg_cc_summary_label"),
+        textBlockStart(0),
+        textDelta(0, "Reading x"),
+        blockStop(0),
+        messageDelta("end_turn"),
+        messageStop(),
+        assistantMessage([{ type: "text", text: "Reading x" }]),
+      ]
+      mockMessages = label
+      const fork = await postClaudeCode(app, {
+        model: "claude-sonnet-4-5", max_tokens: 400, stream: true, tools: [READ_TOOL],
+        messages: [...history, { role: "user", content: [toolResult, { type: "text", text: summaryPrompt }] }],
+      }, sessionId)
+      expect(fork.status).toBe(200)
+      expect(await fork.text()).toContain("Reading x")
+      expect(capturedQueryParamsAll[1].options.resume).toBeUndefined()
+      expect(capturedQueryParamsAll[1].options.resumeSessionAt).toBeUndefined()
+      expect(typeof capturedQueryParamsAll[1].prompt).toBe("string")
+      expect(capturedQueryParamsAll[1].prompt).toContain(summaryPrompt)
+      // The conversation's checkpoint is exactly as the turn left it.
+      expect(lookupSharedSession(sessionId)).toEqual(stored)
+
+      // Turn 2 still resumes at that checkpoint.
+      mockMessages = [
+        messageStart("msg_cc_summary_2"),
+        textBlockStart(0),
+        textDelta(0, "the file says hi"),
+        blockStop(0),
+        messageDelta("end_turn"),
+        messageStop(),
+        assistantMessage([{ type: "text", text: "the file says hi" }]),
+      ]
+      const second = await postClaudeCode(app, {
+        model: "claude-sonnet-4-5", max_tokens: 400, stream, tools: [READ_TOOL],
+        messages: [...history, { role: "user", content: [toolResult] }],
+      }, sessionId)
+      expect(second.status).toBe(200)
+      expect(await second.text()).toContain("the file says hi")
+      expect(capturedQueryParamsAll[2].options.resume).toBe(initialManagedSessionId())
+      expect(capturedQueryParamsAll[2].options.resumeSessionAt).toBe(toolTurn.uuid)
+    })
+  }
+
+  // With no turn lease to wait on, a progress summary runs beside the turn it
+  // forks, under the same session key and with the same tools. Handed the
+  // session's cached MCP server, the two SDK children shared one server
+  // instance and one of them started without tools (observed live: a subagent
+  // turn sent with `tools: []` missed its whole prompt cache, made no tool
+  // call, and re-planned for five minutes).
+  it("runs a Claude Code progress summary on a tool server of its own", async () => {
+    const sessionId = `cc-summary-mcp-${TEST_RUN_ID}`
+    const summaryPrompt = "Describe your most recent action in 3-5 words using present tense (-ing). Name the file or function, not the branch. Do not use tools."
+    const answer = (id: string, text: string) => [
+      messageStart(id),
+      textBlockStart(0),
+      textDelta(0, text),
+      blockStop(0),
+      messageDelta("end_turn"),
+      messageStop(),
+      assistantMessage([{ type: "text", text }]),
+    ]
+    const request = (messages: unknown[]) =>
+      postClaudeCode(app, { model: "claude-sonnet-4-5", max_tokens: 400, stream: true, tools: [READ_TOOL], messages }, sessionId)
+    const toolServer = (index: number) => Object.values(capturedQueryParamsAll[index].options.mcpServers ?? {})[0]
+    const history = [{ role: "user", content: "read x" }, { role: "assistant", content: "x says hi" }]
+
+    mockMessages = answer("msg_cc_mcp_1", "x says hi")
+    const first = await request(history.slice(0, 1))
+    expect(first.status).toBe(200)
+    await first.text()
+
+    mockMessages = answer("msg_cc_mcp_label", "Reading x")
+    const fork = await request([...history, { role: "user", content: summaryPrompt }])
+    expect(fork.status).toBe(200)
+    await fork.text()
+
+    mockMessages = answer("msg_cc_mcp_2", "y says bye")
+    const second = await request([...history, { role: "user", content: "read y" }])
+    expect(second.status).toBe(200)
+    await second.text()
+
+    expect(toolServer(0)).toBeDefined()
+    expect(toolServer(1)).toBeDefined()
+    expect(toolServer(1)).not.toBe(toolServer(0))
+    // The conversation keeps reusing its own: recreating it risks its prompt cache.
+    expect(toolServer(2)).toBe(toolServer(0))
+  })
+
   // Fail-closed twin: a second trailing system breaks the one-reminder
   // contract, so the continuation must fall back to a fresh replay.
   it("stream: two trailing system reminders fail closed to a fresh replay", async () => {

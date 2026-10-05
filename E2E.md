@@ -6107,12 +6107,42 @@ came to 0.8K–3.5K characters; the rest was thinking, and each opened by
 re-establishing its plan ("Picking up where the replay ended", "Nothing has
 been edited yet").
 
-**Not covered.** The proxy path with the fix. That a subagent resumes across a
-fork, that the fork skips the lease, and that the fork is replayed from its
-latest step, are asserted only through the mocked SDK
-(`proxy-concurrency-coordination.test.ts`); a live run on a working proxy is
-still owed, including what a label answered from the latest step costs and
-says.
+**Live run with the fix (2026-10-04 23:36–23:43, a working proxy built from
+`32e8f19`, macOS 26.5 arm64, Agent SDK child Claude Code 2.1.284, client
+2.1.289, `opus[1m]`; the same background subagent, 59 requests).** After one
+last replayed turn (the restart: 360s, 39,652 output tokens), all 11 subagent
+turns resumed, in 5.2 minutes: a median 19.3s and 2,008 output tokens each,
+89–100% of input read from cache, 123,095 cache-write tokens between them, no
+lease wait over 7ms. No request logged `modified-history`. Six forks were
+answered from the latest step (`auxiliary replay reduced: 151 messages -> 3`):
+2,217–11,525 cache-write tokens each, 1.9–4.5s, no lease wait; the first sent
+a 3,326-character prompt and returned "Reading reground.md needs-human
+semantics".
+
+That run also failed 32 fork attempts with HTTP 500 (`already has an active
+SDK writer`), in five bursts of 3–8 while a subagent turn was in flight. With
+no lease to wait on, a fork whose delta settles the stored tool-call
+checkpoint was rebound to it and resumed the session the turn was writing; the
+CLI retried until the turn ended. Each attempt took at most 2.5s and reached
+no model, and every turn still resumed.
+
+It also sent three requests with no tools at all, one of them a subagent turn.
+Each began within about a second of another request under the same session
+key, and the SDK child's own `prompt_snapshot` records `tools: []` for it
+against five for every request that ran alone. Fork and turn share a key and a
+tool set, so they were handed the session's one cached passthrough MCP server.
+The two forks lost nothing by it. The turn (23:41:43) read 8,183 tokens from
+cache instead of ~490,000, made no tool call, was re-prompted, and took 326s
+and 846,986 cache-write tokens across its two calls.
+
+Both are fixed in this branch after that build, each with a test in
+`passthrough-early-stop-integration.test.ts` that is red against `32e8f19`: a
+side call is never rebound to the conversation's checkpoint, and it gets a
+tool server of its own.
+
+**Not covered.** A live run of those two fixes: on a working proxy, a fork
+sent while its turn is in flight should now be answered at once from its
+latest step, and no request should go out without its tools.
 
 ## E73: Unknown thinking display values
 

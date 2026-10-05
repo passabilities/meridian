@@ -382,6 +382,15 @@ committed as a turn, it replaced the mapping and the subagent's next real turn
 replayed its whole history — and a replayed turn has lost the model's earlier
 reasoning, so it re-plans before it acts.
 
+Off the lease, a fork runs beside the turn it copies, and two pieces of
+per-session state assumed one request at a time. A side call is never rebound
+to the conversation's pending tool-call checkpoint: a fork sent while the turn
+reporting those tool results is in flight settles the same batch, and bound to
+the checkpoint it resumed the session that turn was writing. And it gets a
+passthrough MCP server of its own instead of the session's cached one: two SDK
+children on one server instance left one of them without tools, and a turn
+sent with no tools misses its whole prompt cache and cannot act.
+
 An isolated fork is answered from a session of its own, which shares no prompt
 cache with the subagent's. Replaying the transcript it carries wrote the
 subagent's whole context to the cache for every label, so
