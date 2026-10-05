@@ -12,11 +12,14 @@ const root = realpathSync(mkdtempSync(join(tmpdir(), "meridian-cap-")))
 const stream = process.argv.includes("--stream")
 const mode = process.argv.find(arg => arg.startsWith("--case="))?.slice(7) ?? "partial"
 const headerless = process.argv.includes("--headerless")
-// Deferred tools lift the one-turn cap to 4. The fixture keeps answering with
-// the bare name (and once with the registered name, which the hook drops as
-// the hidden digest) until the real CLI reports max_turns (4).
-const deferred = process.argv.includes("--deferred")
-if (deferred) assert(mode === "client-refusal", "The deferred budget is only tested with CLI refusal recovery")
+// A budget above one turn keeps the CLI going after its refusal. The fixture
+// keeps answering with the bare name (and once with the registered name, which
+// the hook drops as the hidden digest) until the real CLI reports max_turns (4).
+// An operator pin reaches that budget; deferred tools also did until 2026-10
+// (scripts/e2e-deferred-tool-turn.mjs holds them to one turn now).
+const multiTurn = process.argv.includes("--multi-turn")
+assert(!process.argv.includes("--deferred"), "--deferred is gone: deferred tools no longer lift the cap. Use --multi-turn for the four-turn budget")
+if (multiTurn) assert(mode === "client-refusal", "The multi-turn budget is only tested with CLI refusal recovery")
 if (headerless) assert(mode === "client-refusal", "Headerless Pi is only tested with CLI refusal recovery")
 assert(["partial", "empty", "thinking", "unhandled", "retry", "retry-resume", "pinned", "client-refusal"].includes(mode))
 if (mode === "client-refusal") assert(stream, "CLI refusal recovery is streaming-only")
@@ -28,6 +31,7 @@ for (const key of Object.keys(process.env)) {
 Object.assign(process.env, { MERIDIAN_CONFIG_DIR: join(root, "config"), MERIDIAN_SESSION_DIR: join(root, "sessions"),
   MERIDIAN_WORKDIR: root, MERIDIAN_PASSTHROUGH: "1", MERIDIAN_TELEMETRY_PERSIST: "0" })
 if (mode === "pinned") process.env.MERIDIAN_PASSTHROUGH_MAX_TURNS = "1"
+if (multiTurn) process.env.MERIDIAN_PASSTHROUGH_MAX_TURNS = "4"
 let phase = mode === "retry-resume" || mode === "client-refusal" ? "seed" : "cap"
 let capAttempt = 0
 const apiCallsByQuery = new Map()
@@ -41,7 +45,6 @@ const results = []
 const hooks = []
 const rejections = []
 const tool = { name: "read_fixture", description: "Read synthetic data without side effects", input_schema: { type: "object", properties: {} } }
-const deferredTool = { name: "aux_fixture", description: "Unused deferred fixture tool", input_schema: { type: "object", properties: {} }, defer_loading: true }
 const upstream = Bun.serve({ hostname: "127.0.0.1", port: 0, async fetch(request) {
   try {
     if (!new URL(request.url).pathname.endsWith("/messages")) return Response.json({ input_tokens: 100 })
@@ -158,7 +161,7 @@ async function request(messages, includeTools = true) {
   } else headers["x-opencode-session"] = "cap-fixture"
   const response = await fetch(`http://127.0.0.1:${address.port}/v1/messages`, {
     method: "POST", headers,
-    body: JSON.stringify({ model: "haiku", stream, max_tokens: 256, ...(includeTools ? { tools: deferred ? [tool, deferredTool] : [tool] } : {}), messages }), signal: AbortSignal.timeout(120_000),
+    body: JSON.stringify({ model: "haiku", stream, max_tokens: 256, ...(includeTools ? { tools: [tool] } : {}), messages }), signal: AbortSignal.timeout(120_000),
   })
   const raw = await response.text()
   const content = stream ? [] : JSON.parse(raw).content ?? []
@@ -205,8 +208,8 @@ try {
   assert(!hooks.some(hook => hook.phase === "cap" && hook.attempt === 1 && hook.id === toolId), "Fault attempt executed a real hook")
   const capQueries = queries.filter(query => query.phase === "cap")
   assert.equal(capQueries.length, retry ? 2 : 1)
-  assert.equal(capQueries[0].maxTurns, deferred ? 4 : 1)
-  if (deferred) assert(hooks.some(hook => hook.phase === "cap" && hook.id === `${toolId}_retry2`), "Registered-name retry never reached the hook")
+  assert.equal(capQueries[0].maxTurns, multiTurn ? 4 : 1)
+  if (multiTurn) assert(hooks.some(hook => hook.phase === "cap" && hook.id === `${toolId}_retry2`), "Registered-name retry never reached the hook")
   if (retry) {
     success(response, "tool_use")
     assert.equal(capQueries[1].maxTurns, 3)
@@ -257,7 +260,7 @@ try {
     else assert.equal(response.status, 500, response.raw)
   }
   assert.deepEqual(upstreamErrors, [])
-  console.log(JSON.stringify({ result: "PASS", mode, stream, deferred, root, withheld, queries, results,
+  console.log(JSON.stringify({ result: "PASS", mode, stream, multiTurn, root, withheld, queries, results,
     rejections: rejections.map(({ phase, attempt, id }) => ({ phase, attempt, id })), upstreamCalls }))
 } finally {
   await proxy.close()

@@ -27,6 +27,7 @@ jobs:
       - run: bun scripts/e2e-rejected-tool-handoff.mjs --case=rejected
       - run: bun scripts/e2e-rejected-tool-handoff.mjs --case=registered
       - run: bun scripts/e2e-capped-turns.mjs --case=client-refusal --stream
+      - run: bun scripts/e2e-deferred-tool-turn.mjs
       - run: bun scripts/e2e-compaction-summary.mjs
       - run: bun scripts/e2e-compaction-summary.mjs --legacy
       - run: bun run build

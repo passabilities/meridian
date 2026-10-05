@@ -80,3 +80,33 @@ this path. Focused recovery/integration tests: 133 pass. Final `npm test`:
 5014 pass / 0 fail / 4 skip, standalone typecheck and build pass. Mandatory
 final-head CI remains a merge gate. This does not resolve the separate unproven
 abort-window canary issue #1009 or prove all deferred tool/model combinations.
+
+## 2026-10-05: the roster request is one turn now
+
+Deferred tools no longer lift the passthrough turn cap (E2E.md E75): the
+ToolSearch turn the lift was for cannot happen, because passthrough strips
+ToolSearch with the SDK's other built-in tools. Everything above describes the
+four-turn budget as it was and is left as written. What changes for this
+record:
+
+- "With more than 80 tools, the proxy budgets four turns" is no longer true.
+  The roster request is asked with `maxTurns` 1, the bare call's rejection is
+  the turn's only Messages call, and no registered-name retry follows.
+- `scripts/e2e-opencode-deferred-refusal.mjs` asserts that shape: the roster
+  query counted deferred and capped at 1, one upstream call, no hook, then the
+  same client-side outcome as before (one tool completion, no client error,
+  the client-only receipt in the next request, a fresh SDK query for it).
+- `bun scripts/e2e-capped-turns.mjs --case=client-refusal --stream --deferred`
+  is now `--multi-turn`, which reaches the four-turn budget through
+  `MERIDIAN_PASSTHROUGH_MAX_TURNS=4`. `--deferred` is refused with a message.
+
+macOS arm64, OpenCode 1.18.33, SDK 0.2.141, SDK child Claude Code 2.1.289, Bun
+1.3.14, controlled local API. On the parent of the change the harness as it
+stood passes (roster query `maxTurns` 4, rejections 1/3/4, hook for 2). On the
+change, the harness as it stood reports the same client-side outcome and then
+fails its `maxTurns===4` assertion; with the assertions updated it passes
+(roster query `maxTurns` 1, one rejection, no hook, exit 0, no client error,
+one tool completion, receipt delivered).
+
+Not re-run: the Linux container, and the live Opus flow
+(`e2e-opencode-lifecycle-admission.mjs`).

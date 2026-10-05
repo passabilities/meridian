@@ -6,8 +6,9 @@
  * every non-core tool at once. Tools render at position 0 of the prompt, so
  * that moves the `anthropic/alwaysLoad` marker on every definition and
  * invalidates the tools, system AND message cache tiers: a full cold replay of
- * the conversation. It also flips `ENABLE_TOOL_SEARCH` and, since #860,
- * `maxTurns` — silently re-enabling the billed digest turn.
+ * the conversation. It also flips `ENABLE_TOOL_SEARCH` and, from #860 until
+ * deferred tools stopped lifting the turn cap (2026-10), `maxTurns` — silently
+ * re-enabling the billed digest turn.
  *
  * The blast radius is the point: one added tool re-renders the whole tool list.
  */
@@ -65,7 +66,7 @@ describe("createPassthroughMcpServer with a pinned decision", () => {
   })
 
   // And the reverse: a session that started deferring keeps deferring, so
-  // maxTurns does not silently change under it.
+  // its tool block does not re-render under it either.
   it("honours a pin of true while the live count says false", () => {
     const mcp = createPassthroughMcpServer(tools(3), CORE, undefined, true)
     expect(mcp.hasDeferredTools).toBe(true)

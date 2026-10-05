@@ -1027,13 +1027,17 @@ Codex and Polytoken require client-owned tools and cannot be switched to interna
 
 For large tool sets (>15 tools), non-core tools are automatically deferred via the SDK's ToolSearch mechanism. Core tools (read, write, edit, bash, glob, grep) are always loaded eagerly. The deferral threshold is configurable with `MERIDIAN_DEFER_TOOL_THRESHOLD`.
 
+> **Status (2026-10): the deferral does not take effect.** ToolSearch is one of the SDK's built-in tools, and passthrough strips those from the request, so the CLI offers no ToolSearch and sends every tool loaded (checked on CLI 2.1.141, 2.1.284 and 2.1.289). The threshold still decides whether a session is *counted* as deferred (`deferred=` in the log, `hasDeferredTools` in telemetry), but a large tool set costs its full definitions on every request. `bun scripts/e2e-deferred-tool-turn.mjs` asserts this, and CI runs it.
+
 **Digest-turn elimination** — after a tool call is captured, the SDK would normally invoke the model one more time to "digest" the denial before ending the turn. That extra invocation is discarded by the proxy but fully billed — and on always-thinking models like Fable it costs a full thinking pass each time.
 
 Meridian eliminates it by capping `maxTurns` at 1 for passthrough turns, so the SDK stops at the tool-use boundary rather than starting the digest turn. The capped stop arrives as the SDK's `error_max_turns` result, which is safe to keep: the SDK can only report that from a `result` it has already enqueued, and it flushes its transcript on `result` — so the session is durably committed at the tool boundary and the next request resumes from it with the client's real `tool_result`. A turn that ends on its own (plain text, no tools) never asks for a second turn and so never trips the cap.
 
 Measured against the live SDK (sonnet, one tool call), capped vs. uncapped: **66 vs 159 output tokens and 0 vs ~127k cache-read tokens** — the digest turn drags the CLI's full context along with it. Parallel tool calls are unaffected: the SDK surfaces them within a single turn, so all of them still reach the client.
 
-The cap is lifted for the cases that genuinely need the SDK to keep going — deferred tools (ToolSearch discovery is a real round-trip), a configured advisor, and structured output — and an explicit `MERIDIAN_PASSTHROUGH_MAX_TURNS` always wins. Kill switch: `MERIDIAN_PASSTHROUGH_EARLY_STOP=0` restores the uncapped multi-turn behavior.
+The cap is lifted for the cases that genuinely need the SDK to keep going — a configured advisor and structured output — and an explicit `MERIDIAN_PASSTHROUGH_MAX_TURNS` always wins. Kill switch: `MERIDIAN_PASSTHROUGH_EARLY_STOP=0` restores the uncapped multi-turn behavior.
+
+Deferred tools lifted the cap too until 2026-10, to leave a turn for ToolSearch discovery. With ToolSearch stripped (see the status note above) there was no such turn, and the lift let the digest turn run on the tool turns of every large-tool-set session, with the model often retrying the denied call after it: on two live Claude Code sessions with 199 and 215 tools, 27 of 45 tool turns made two upstream calls and 15 made three to eight, at a median 403K tokens of prompt each. Those sessions are capped like any other now. What they give up is a second attempt inside the turn after the CLI rejects a call it cannot dispatch; a streamed bare tool name is still handed to the client (see `MERIDIAN_PASSTHROUGH_UNCAPTURED_TOOL_RECOVERY`), as it is for a small tool set.
 
 > **Upgrade note.** If you previously set `MERIDIAN_PASSTHROUGH_MAX_TURNS` — most
 > likely to give deep orchestration chains more headroom (#494) — you will not

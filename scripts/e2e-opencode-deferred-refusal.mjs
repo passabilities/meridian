@@ -1,6 +1,13 @@
 #!/usr/bin/env bun
 // Actual OpenCode + real SDK/CLI, controlled local API (not a live model).
 // E2E_OPENCODE_BIN=opencode [E2E_EXPECT_ERROR=1] bun this-file
+//
+// OpenCode's roster is past the auto-defer threshold. Until 2026-10-05 that
+// lifted the turn cap to 4 and this harness asserted the four-turn shape: the
+// bare call rejected, a registered-name retry reaching the hook, more
+// rejections, error_max_turns. Deferred tools are held to one turn now (E2E.md
+// E75), so the rejected call is the only Messages call of the turn and the
+// handoff has to work from that alone.
 import assert from 'node:assert/strict'
 import {mkdtempSync,mkdirSync,writeFileSync} from 'node:fs'
 import {tmpdir} from 'node:os'
@@ -38,7 +45,7 @@ const upstream=Bun.serve({hostname:'127.0.0.1',port:0,async fetch(req){
 }})
 const real=sdk.query
 const spy=spyOn(sdk,'query').mockImplementation(input=>{
- const current=phase;queries.push({phase:current,maxTurns:input.options?.maxTurns,resume:!!input.options?.resume})
+ const current=phase;queries.push({phase:current,maxTurns:input.options?.maxTurns,resume:!!input.options?.resume,tools:input.options?.allowedTools?.length||0,deferred:input.options?.env?.ENABLE_TOOL_SEARCH==='true'})
  const actualHooks=input.options?.hooks
  const actual=real({...input,options:{...input.options,hooks:{...actualHooks,PreToolUse:actualHooks?.PreToolUse?.map(m=>({...m,hooks:m.hooks.map(h=>async(...args)=>{hooks.push({phase:current,id:args[0].tool_use_id});return h(...args)})}))}}})
  return new Proxy(actual,{get(target,key){if(key===Symbol.asyncIterator)return async function*(){for await(const m of actual){
@@ -69,9 +76,11 @@ try{
  const errors=events.filter(e=>e.type==='error'),toolEnds=events.filter(e=>e.type==='tool_use')
  assert(requests.some(r=>r.adapter==='opencode'&&r.tools>80),'Real client did not declare a large tool roster')
  console.log(JSON.stringify({stage:'observed',queries,requests,results,errors:errors.length,toolEnds:toolEnds.length}))
- assert(queries.some(q=>q.phase==='cap'&&q.maxTurns===4));assert(results.some(r=>r.phase==='cap'&&r.subtype==='error_max_turns'))
+ const roster=queries.filter(q=>q.phase==='cap'&&q.tools>80)
+ assert.equal(roster.length,1,'Expected one SDK query for the roster request');assert(roster[0].deferred,'Roster request was not counted as deferred')
+ assert.equal(roster[0].maxTurns,1,'Deferred roster request was not held to one turn');assert(results.some(r=>r.phase==='cap'&&r.subtype==='error_max_turns'))
  assert(rejections.includes('toolu_refusal_1'));assert(!hooks.some(h=>h.id==='toolu_refusal_1'),'Rejected call ran in SDK')
- assert(hooks.some(h=>h.id==='toolu_refusal_2'),'Digest retry did not reach the real hook')
+ assert.equal(calls,1,'The capped turn asked the model again after the rejection');assert.equal(hooks.filter(h=>h.phase==='cap').length,0,'A digest retry reached the hook')
  if(expectError){assert(errors.length>0,'Baseline did not expose max-turn error');assert(!requests.some(r=>r.receipt),'Baseline unexpectedly completed result handoff')}
  else{assert.equal(exit,0);assert.equal(errors.length,0);assert.equal(toolEnds.length,1);assert(requests.some(r=>r.receipt));assert(queries.some(q=>q.phase==='followup'&&!q.resume),'Rejected SDK session reused')}
  console.log(JSON.stringify({result:'PASS',expectError,platform:`${process.platform}/${process.arch}`,opencode:version.stdout.trim(),exit,errors:errors.length,toolEnds:toolEnds.length,queries,requests,results,rejections,hooks,privateArtifacts:root,upstream:'controlled-local-API-not-live-model'}))

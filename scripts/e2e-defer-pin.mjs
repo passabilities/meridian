@@ -29,6 +29,10 @@
 // re-enabling the billed digest turn. Those are what the pin removes, and what
 // this gate asserts. Cache numbers are reported as context, not asserted.
 //
+// Since 2026-10-05 deferred tools no longer lift the turn cap (E2E.md E75), so
+// a flip would no longer move `maxTurns`. The `alwaysLoad` re-marking is what
+// the pin still prevents, and the deferral-state claim below is unchanged.
+//
 // Costs a few cents of real tokens and needs Claude Max. Run before releases
 // touching auto-defer, tool registration, or prompt assembly.
 //

@@ -211,6 +211,7 @@ describe("Integration: passthrough early stop", () => {
   let savedPassthrough: string | undefined
   let savedEarlyStop: string | undefined
   let savedUncapturedRecovery: string | undefined
+  let savedTurnBudget: string | undefined
 
   beforeAll(() => {
     setSessionStoreDir(TEST_SESSION_DIR)
@@ -227,6 +228,7 @@ describe("Integration: passthrough early stop", () => {
     savedPassthrough = process.env.MERIDIAN_PASSTHROUGH
     savedEarlyStop = process.env.MERIDIAN_PASSTHROUGH_EARLY_STOP
     savedUncapturedRecovery = process.env.MERIDIAN_PASSTHROUGH_UNCAPTURED_TOOL_RECOVERY
+    savedTurnBudget = process.env.MERIDIAN_PASSTHROUGH_MAX_TURNS
     process.env.MERIDIAN_PASSTHROUGH = "1"
     delete process.env.MERIDIAN_PASSTHROUGH_EARLY_STOP
     mockMessages = []
@@ -251,6 +253,8 @@ describe("Integration: passthrough early stop", () => {
     else delete process.env.MERIDIAN_PASSTHROUGH_EARLY_STOP
     if (savedUncapturedRecovery !== undefined) process.env.MERIDIAN_PASSTHROUGH_UNCAPTURED_TOOL_RECOVERY = savedUncapturedRecovery
     else delete process.env.MERIDIAN_PASSTHROUGH_UNCAPTURED_TOOL_RECOVERY
+    if (savedTurnBudget !== undefined) process.env.MERIDIAN_PASSTHROUGH_MAX_TURNS = savedTurnBudget
+    else delete process.env.MERIDIAN_PASSTHROUGH_MAX_TURNS
   })
 
   it("replays and replaces a legacy user-denial boundary without a false conflict", async () => {
@@ -2185,6 +2189,91 @@ describe("Integration: passthrough early stop", () => {
     expect(capturedQueryParamsAll[1].options.resumeSessionAt).toBe(toolTurn.uuid)
   })
 
+  // Deferred tools do not lift the cap: passthrough strips ToolSearch along
+  // with the SDK's other built-in tools, so no discovery turn exists and every
+  // client tool arrives loaded. A deferred session's tool turn is therefore the
+  // same capped stop as any other, including a call to the very tool the
+  // client declared deferred. Lifted, each such turn was followed by a billed
+  // digest of the deny at the session's full context.
+  it("stream: a deferred-tools session stops at the tool boundary and resumes there", async () => {
+    const deferredTool = { name: "lsp_diagnostics", defer_loading: true, input_schema: { type: "object", properties: { file: { type: "string" } } } }
+    const tools = [READ_TOOL, deferredTool]
+    const toolTurn = assistantMessage([
+      { type: "tool_use", id: "deferred-read", name: "read", input: { file_path: "x" } },
+      { type: "tool_use", id: "deferred-lint", name: "lsp_diagnostics", input: { file: "x" } },
+    ])
+    mockMessages = [
+      messageStart("msg_deferred_capped"),
+      toolUseBlockStart(0, "read", "deferred-read"),
+      inputJsonDelta(0, '{"file_path":"x"}'),
+      blockStop(0),
+      toolUseBlockStart(1, "lsp_diagnostics", "deferred-lint"),
+      inputJsonDelta(1, '{"file":"x"}'),
+      blockStop(1),
+      messageDelta("tool_use"),
+      toolTurn,
+      userDenyMessage("deferred-read"),
+      userDenyMessage("deferred-lint"),
+      { type: "result", subtype: "error_max_turns", is_error: true, session_id: "test-session" },
+    ]
+    mockTerminalError = new Error("Claude Code returned an error result: Reached maximum number of turns (1)")
+
+    const sessionHeader = "es-deferred-capped"
+    const first = await post(app, {
+      model: "claude-sonnet-4-5",
+      max_tokens: 400,
+      stream: true,
+      tools,
+      messages: [{ role: "user", content: "read x and lint it" }],
+    }, sessionHeader)
+    expect(first.status).toBe(200)
+    const events = parseSSE(await first.text())
+    expect(capturedQueryParamsAll).toHaveLength(1)
+    expect(capturedQueryParamsAll[0].options.maxTurns).toBe(1)
+    expect(events.filter(e => e.event === "error")).toHaveLength(0)
+    const toolBlocks = events.flatMap(({ event, data }) => {
+      const block = data.content_block as { type?: string; id?: string; name?: string } | undefined
+      return event === "content_block_start" && block?.type === "tool_use" ? [`${block.id}:${block.name}`] : []
+    })
+    expect(toolBlocks).toEqual(["deferred-read:read", "deferred-lint:lsp_diagnostics"])
+    const terminalReasons = events.flatMap(({ event, data }) => {
+      const delta = data.delta as { stop_reason?: string } | undefined
+      return event === "message_delta" && typeof delta?.stop_reason === "string" ? [delta.stop_reason] : []
+    })
+    expect(terminalReasons).toEqual(["tool_use"])
+    let stored: ReturnType<typeof lookupSharedSession>
+    for (let i = 0; i < 500 && !stored?.passthroughToolCallAssistantUuid; i++) {
+      stored = lookupSharedSession(`${sessionHeader}-${TEST_RUN_ID}`)
+      if (!stored?.passthroughToolCallAssistantUuid) await new Promise((resolve) => setTimeout(resolve, 10))
+    }
+    expect(stored?.passthroughToolCallIds).toEqual(["deferred-read", "deferred-lint"])
+    expect(stored?.passthroughToolCallAssistantUuid).toBe(toolTurn.uuid)
+
+    mockTerminalError = undefined
+    mockMessages = [assistantMessage([{ type: "text", text: "x is clean" }])]
+    const second = await post(app, {
+      model: "claude-sonnet-4-5",
+      max_tokens: 400,
+      stream: false,
+      tools,
+      messages: [
+        { role: "user", content: "read x and lint it" },
+        { role: "assistant", content: [
+          { type: "tool_use", id: "deferred-read", name: "read", input: { file_path: "x" } },
+          { type: "tool_use", id: "deferred-lint", name: "lsp_diagnostics", input: { file: "x" } },
+        ] },
+        { role: "user", content: [
+          { type: "tool_result", tool_use_id: "deferred-read", content: "X" },
+          { type: "tool_result", tool_use_id: "deferred-lint", content: "no diagnostics" },
+        ] },
+      ],
+    }, sessionHeader)
+    expect(second.status).toBe(200)
+    expect(capturedQueryParamsAll[1].options.maxTurns).toBe(1)
+    expect(capturedQueryParamsAll[1].options.resume).toBe(initialManagedSessionId())
+    expect(capturedQueryParamsAll[1].options.resumeSessionAt).toBe(toolTurn.uuid)
+  })
+
   it("stream: a capped checkpoint fork does not store parent rollback UUIDs", async () => {
     const parentToolTurn = assistantMessage([
       { type: "tool_use", id: "capped-fork-parent", name: "read", input: { file_path: "parent" } },
@@ -2706,13 +2795,69 @@ describe("Integration: passthrough early stop", () => {
     expect(capturedQueryParamsAll[4]?.options.allowedTools ?? []).not.toContain("mcp__oc__glob")
   })
 
-  // Deferred tools lift the one-turn cap (maxTurns 4). The same bare-name
-  // rejection then keeps the SDK going after the checkpoint: the model retries
-  // under the registered name (dropped as hidden digest) or the bare name again
-  // (rejected again), and the turn ends at max_turns (4). The client already
-  // holds the complete streamed call, so it must still get a tool_use handoff.
-  it("stream: a CLI-rejected call recovers at the deferred-tools turn budget", async () => {
+  // The same rejection on a deferred-tools session, which is held to one turn
+  // like any other. The rejected call is then the turn's only Messages call
+  // and the handoff has to work from that alone: no registered-name retry
+  // follows it. scripts/e2e-opencode-deferred-refusal.mjs drives this shape
+  // with the real OpenCode client and its 90-tool roster.
+  it("stream: a CLI-rejected call on a deferred-tools session is handed off at the one-turn cap", async () => {
     delete process.env.MERIDIAN_PASSTHROUGH_UNCAPTURED_TOOL_RECOVERY
+    const sessionHeader = "es-deferred-rejected-capped"
+    const tools = [
+      { name: "bash", input_schema: { type: "object", properties: { command: { type: "string" } }, required: ["command"] } },
+      { name: "lsp_diagnostics", defer_loading: true, input_schema: { type: "object", properties: { file: { type: "string" } } } },
+    ]
+    mockMessages = [
+      messageStart("msg_deferred_rejected_capped"),
+      toolUseBlockStart(0, "bash", "toolu_bare_capped"),
+      inputJsonDelta(0, '{"command":"ls"}'),
+      blockStop(0),
+      messageDelta("tool_use"),
+      messageStop(),
+      { ...assistantMessage([
+        { type: "tool_use", id: "toolu_bare_capped", name: "bash", input: { command: "ls" } },
+      ]), test_skip_pre_tool_hook: true },
+      unavailableToolMessage("toolu_bare_capped", "bash"),
+      { type: "result", subtype: "error_max_turns", is_error: true, session_id: "test-session" },
+    ]
+    mockTerminalError = new Error("Claude Code returned an error result: Reached maximum number of turns (1)")
+
+    const res = await post(app, {
+      model: "claude-sonnet-4-5",
+      max_tokens: 400,
+      stream: true,
+      tools,
+      messages: [{ role: "user", content: "list the files" }],
+    }, sessionHeader)
+    expect(res.status).toBe(200)
+    const events = parseSSE(await res.text())
+    expect(capturedQueryParamsAll).toHaveLength(1)
+    expect(capturedQueryParamsAll[0]?.options.maxTurns).toBe(1)
+    expect(events.filter(e => e.event === "error")).toHaveLength(0)
+    const toolBlocks = events.flatMap(({ event, data }) => {
+      const block = data.content_block as { type?: string; id?: string; name?: string } | undefined
+      return event === "content_block_start" && block?.type === "tool_use" ? [`${block.id}:${block.name}`] : []
+    })
+    expect(toolBlocks).toEqual(["toolu_bare_capped:bash"])
+    const terminalReasons = events.flatMap(({ event, data }) => {
+      const delta = data.delta as { stop_reason?: string } | undefined
+      return event === "message_delta" && typeof delta?.stop_reason === "string" ? [delta.stop_reason] : []
+    })
+    expect(terminalReasons).toEqual(["tool_use"])
+    expect(events.filter(e => e.event === "message_stop")).toHaveLength(1)
+    // The rejected SDK session cannot be resumed: its call was never answered.
+    expect(lookupSharedSession(`${sessionHeader}-${TEST_RUN_ID}`)).toBeUndefined()
+  })
+
+  // A budget above one turn (an operator pin; deferred tools also lifted the
+  // cap to 4 until 2026-10, which is where this shape was first seen) keeps the
+  // SDK going after the bare-name rejection: the model retries under the
+  // registered name (dropped as hidden digest) or the bare name again (rejected
+  // again), and the turn ends at max_turns (4). The client already holds the
+  // complete streamed call, so it must still get a tool_use handoff.
+  it("stream: a CLI-rejected call recovers at a multi-turn budget", async () => {
+    delete process.env.MERIDIAN_PASSTHROUGH_UNCAPTURED_TOOL_RECOVERY
+    process.env.MERIDIAN_PASSTHROUGH_MAX_TURNS = "4"
     const sessionHeader = "es-deferred-rejected"
     const tools = [
       { name: "bash", input_schema: { type: "object", properties: { command: { type: "string" } }, required: ["command"] } },
@@ -2764,8 +2909,9 @@ describe("Integration: passthrough early stop", () => {
     expect(lookupSharedSession(`${sessionHeader}-${TEST_RUN_ID}`)).toBeUndefined()
   })
 
-  it("stream: an uncaptured call without CLI rejection still errors at the deferred budget", async () => {
+  it("stream: an uncaptured call without CLI rejection still errors at a multi-turn budget", async () => {
     process.env.MERIDIAN_PASSTHROUGH_UNCAPTURED_TOOL_RECOVERY = "1"
+    process.env.MERIDIAN_PASSTHROUGH_MAX_TURNS = "4"
     const tools = [
       { name: "bash", input_schema: { type: "object", properties: { command: { type: "string" } }, required: ["command"] } },
       { name: "lsp_diagnostics", defer_loading: true, input_schema: { type: "object", properties: { file: { type: "string" } } } },

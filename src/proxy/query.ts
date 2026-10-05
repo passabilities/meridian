@@ -242,17 +242,38 @@ export interface BuildQueryResult {
  * of 3: 66 vs 159 output tokens and 0 vs ~127k cache-read tokens, because the
  * digest turn drags the CLI's full context along with it.
  *
- * The bumps below are the cases that genuinely need the SDK to keep going, and
- * each one turns the cap off rather than adding to it:
- *   - Deferred tools (4): a ToolSearch discovery is a real model round-trip
- *     that consumes a turn before the model can emit the real tool_use. Capping
- *     here would stop the query on the discovery turn and never reach the tool
- *     call (#547).
+ * The cases below genuinely need the SDK to keep going, and each one turns the
+ * cap off rather than adding to it:
  *   - Advisor (+3): server-side advisor executes call + result + final answer.
  *   - Structured output: the SDK runs its internal StructuredOutput tool and
  *     needs turns to submit the result; capping strands it (HTTP 500).
  *   - Early-stop kill switch off: MERIDIAN_PASSTHROUGH_EARLY_STOP=0 restores
  *     the pre-cap wire behavior wholesale, so the budget must come back too.
+ *
+ * Deferred tools are NOT one of them, though they were until 2026-10. The cap
+ * was lifted to leave a turn for ToolSearch discovery (#547), but ToolSearch
+ * is one of the SDK's built-in tools and passthrough strips those from the
+ * request (`tools: []` below), so the CLI never offers it and sends every
+ * client tool loaded (checked on CLI 2.1.141, 2.1.284 and 2.1.289). With no
+ * discovery turn to make room for, the lifted cap bought the digest turn and
+ * the model's retries of the denied call after it: on two live Claude Code
+ * sessions with 199 and 215 tools, 42 of 45 tool turns made 2-8 Messages calls
+ * at a median 403K tokens of prompt each, and the 323 tool calls in that
+ * proxy's SDK transcripts included no ToolSearch.
+ *
+ * The extra turns did also give the model a second attempt after the CLI
+ * rejected a call it could not dispatch: a bare client-tool name, or a
+ * ToolSearch that is not on offer. A streamed bare name is handed to the
+ * client from the capped turn itself (#1192). The others end the turn, as they
+ * always have on a session without deferred tools; E2E.md E75 lists them.
+ *
+ * `scripts/e2e-deferred-tool-turn.mjs` holds both halves against the real CLI,
+ * and CI runs it: one Messages call per tool turn, and no ToolSearch on offer.
+ * If deferral is ever made real, that gate fails and the discovery turn has to
+ * come back here with it.
+ *
+ * Deferred tools still add their turn (+1) to the uncapped budget, so the kill
+ * switch and the reissue keep the numbers they had.
  *
  * Base for those uncapped cases stays 3: turn 1 generates content (extended
  * thinking + tool_use blocks captured by PreToolUse hook); turn 2 receives the
@@ -570,8 +591,9 @@ export function buildQueryOptions(ctx: QueryContext, abortController?: AbortCont
             hasDeferredTools,
             ctx.advisorModel,
             // Every condition here is one that needs the SDK to keep going
-            // past the tool boundary; see computePassthroughMaxTurns.
-            ctx.earlyStop !== false && !hasDeferredTools && !ctx.advisorModel && !outputFormat,
+            // past the tool boundary; see computePassthroughMaxTurns for why
+            // deferred tools are not among them.
+            ctx.earlyStop !== false && !ctx.advisorModel && !outputFormat,
             ctx.liftSingleTurnCap === true,
           )
         : 200,

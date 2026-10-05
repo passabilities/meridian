@@ -252,8 +252,9 @@ export function getAutoDeferThreshold(): number {
  * every non-core tool at once. That moves the `anthropic/alwaysLoad` marker on
  * each definition, and tools render at position 0 of the prompt, so it
  * invalidates the tools, system AND message cache tiers. It also flips
- * `ENABLE_TOOL_SEARCH` and, since #860, `maxTurns` — silently re-enabling the
- * billed digest turn for that request (#861).
+ * `ENABLE_TOOL_SEARCH` and, from #860 until deferred tools stopped lifting the
+ * turn cap (2026-10, see computePassthroughMaxTurns), `maxTurns` — silently
+ * re-enabling the billed digest turn for that request (#861).
  */
 export function autoDeferDecision(
   threshold: number,

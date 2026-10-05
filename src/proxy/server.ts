@@ -3759,6 +3759,9 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
               hooks: [async (input: any) => {
                 // Let the SDK handle ToolSearch internally for deferred tool loading.
                 // ToolSearch is filtered from the response stream below.
+                // Not reached today: passthrough strips the SDK's built-in
+                // tools (`tools: []` in query.ts), ToolSearch with them, so the
+                // CLI rejects a `ToolSearch` call before any hook (E2E.md E75).
                 // Return {} — NOT undefined. SDK validates hook returns with Zod and
                 // rejects undefined ("expected object, received undefined"), which also
                 // cascades into "Reached maximum number of turns (2)". {} is the no-op.
@@ -3864,7 +3867,9 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
                   // `interrupt: true` / `continue: false` cannot do this: neither
                   // key exists in the CLI's hook-output schema, so both are
                   // stripped before the deny is processed (verified against the
-                  // real SDK). Aborting the query's controller SIGTERMs the
+                  // real SDK at the time; CLI 2.1.284 does honour `continue:
+                  // false` beside a deny, see E2E.md E75, and this path has not
+                  // been moved onto it). Aborting the query's controller SIGTERMs the
                   // subprocess; the abort-shaped termination is converted into a
                   // clean stop_reason:"tool_use" response by the recovery paths.
                   requestAbort.setCause("passthrough_single_step")
@@ -5791,6 +5796,8 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
                       if (block?.type === "tool_use" && typeof block.name === "string") {
                         // Filter out ToolSearch — handled internally by the SDK
                         // for deferred tool loading, not visible to the client.
+                        // (Never on offer in passthrough today, so what lands
+                        // here is a call the CLI rejected: E2E.md E75.)
                         if (block.name === "ToolSearch") {
                           if (eventIndex !== undefined) skipBlockIndices.add(eventIndex)
                           continue

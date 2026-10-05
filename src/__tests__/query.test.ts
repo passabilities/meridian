@@ -278,18 +278,25 @@ describe("buildQueryOptions", () => {
     }
   })
 
-  it("keeps maxTurns at 4 with deferred tools — ToolSearch discovery is a real round-trip, so the cap must not apply (#547)", () => {
+  it("caps maxTurns at 1 with deferred tools — passthrough strips the SDK's built-in tools, ToolSearch with them, so there is no discovery turn to leave room for", () => {
     const result = buildQueryOptions(makeContext({ passthrough: true, hasDeferredTools: true }))
-    expect(result.options.maxTurns).toBe(4)
+    expect(result.options.maxTurns).toBe(1)
+    // The premise the cap rests on: nothing the SDK could run by itself is registered.
+    expect(result.options.tools).toEqual([])
   })
 
-  it("sets maxTurns to 4 in passthrough mode when resume AND deferred tools are both active (resume rehydration is inline; only the discovery turn adds)", () => {
+  it("caps maxTurns at 1 in passthrough mode when resume AND deferred tools are both active", () => {
     const result = buildQueryOptions(makeContext({
       passthrough: true,
       resumeSessionId: "sess-123",
       hasDeferredTools: true,
     }))
-    expect(result.options.maxTurns).toBe(4)
+    expect(result.options.maxTurns).toBe(1)
+  })
+
+  it("keeps the deferred-tools turn in the budget wherever the cap is off (kill switch, reissue)", () => {
+    expect(buildQueryOptions(makeContext({ passthrough: true, hasDeferredTools: true, earlyStop: false })).options.maxTurns).toBe(4)
+    expect(buildQueryOptions(makeContext({ passthrough: true, hasDeferredTools: true, liftSingleTurnCap: true })).options.maxTurns).toBe(4)
   })
 
   it("keeps maxTurns at 6 with advisor — the advisor executes call/result/answer, so the cap must not apply", () => {
