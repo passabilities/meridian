@@ -35,6 +35,22 @@ export class UpstreamIdleError extends Error {
   }
 }
 
+/**
+ * The idle limit one request runs under.
+ *
+ * `idleMs` has to outlast the longest pause of a deep agentic turn. A side
+ * call (`AgentAdapter.isAuxiliaryRequest`) has no such pause: it answers in
+ * seconds or, when the model API holds the request, not at all, and the
+ * conversation waits on it either way. So it gets `auxiliaryIdleMs` when that
+ * is the shorter of the two. Zero or less means no separate limit. Taking the
+ * shorter also keeps a guard that is off (`idleMs` of zero or less) off for
+ * side calls.
+ */
+export function upstreamIdleLimitMs(auxiliary: boolean, idleMs: number, auxiliaryIdleMs: number): number {
+  if (!auxiliary || auxiliaryIdleMs <= 0) return idleMs
+  return Math.min(idleMs, auxiliaryIdleMs)
+}
+
 /** Opaque handle returned by a clock's timer scheduler. */
 type IdleTimerHandle = ReturnType<typeof setTimeout> | number
 

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "bun:test"
 import { resolve } from "node:path"
 
-const { guardUpstreamIdle, UpstreamIdleError, IDLE_DEADLINE_LATE_MS } = await import("../proxy/streamIdleGuard")
+const { guardUpstreamIdle, UpstreamIdleError, IDLE_DEADLINE_LATE_MS, upstreamIdleLimitMs } = await import("../proxy/streamIdleGuard")
 import type { IdleGuardClock, LateIdleDeadline } from "../proxy/streamIdleGuard"
 
 type IdleTimerHandle = ReturnType<typeof setTimeout> | number
@@ -303,5 +303,29 @@ describe("guardUpstreamIdle", () => {
     src.push(7); src.finish()
     await p
     expect(out).toEqual([7])
+  })
+})
+
+describe("upstreamIdleLimitMs", () => {
+  it("leaves a turn the full limit", () => {
+    expect(upstreamIdleLimitMs(false, 90_000, 30_000)).toBe(90_000)
+  })
+
+  it("gives a side call the shorter one", () => {
+    expect(upstreamIdleLimitMs(true, 90_000, 30_000)).toBe(30_000)
+  })
+
+  it("never lets a side call wait longer than a turn would", () => {
+    expect(upstreamIdleLimitMs(true, 20_000, 30_000)).toBe(20_000)
+  })
+
+  it("has no separate side-call limit at 0", () => {
+    expect(upstreamIdleLimitMs(true, 90_000, 0)).toBe(90_000)
+    expect(upstreamIdleLimitMs(true, 90_000, -1)).toBe(90_000)
+  })
+
+  it("stays off for side calls too when the guard itself is off", () => {
+    expect(upstreamIdleLimitMs(true, 0, 30_000)).toBe(0)
+    expect(upstreamIdleLimitMs(false, 0, 30_000)).toBe(0)
   })
 })

@@ -11,7 +11,7 @@
  */
 import { describe, it, expect } from "bun:test"
 import type { Context } from "hono"
-import { agentSummaryReplayMessages, CLAUDE_CODE_AGENT_ID_HEADER, claudeCodeAdapter, claudeCodeSessionKey, isClaudeCodeAuxiliaryRequest } from "../proxy/adapters/claudecode"
+import { agentSummaryReplayMessages, CLAUDE_CODE_AGENT_ID_HEADER, claudeCodeAdapter, claudeCodeAuxiliaryPromptGrows, claudeCodeSessionKey, isClaudeCodeAuxiliaryRequest } from "../proxy/adapters/claudecode"
 
 describe("claudeCodeAdapter — identity", () => {
   it("has name 'claude-code'", () => {
@@ -696,5 +696,63 @@ describe("claudeCodeAdapter.isAuxiliaryRequest", () => {
     expect(claudeCodeAdapter.isAuxiliaryRequest?.(
       contextWith({ "x-claude-code-request-class": "main" }), body,
     )).toBe(false)
+  })
+})
+
+describe("claudeCodeAuxiliaryPromptGrows — which side calls only add to their prompt", () => {
+  // The classifier re-sends the conversation's transcript on every check, with
+  // what happened since appended and the same instruction closing it.
+  const classifier = {
+    model: "claude-sonnet-5",
+    max_tokens: 64,
+    stream: false,
+    stop_sequences: ["</severity>"],
+    messages: [
+      { role: "user", content: [{ type: "text", text: "<user_claude_md>…</user_claude_md>" }] },
+      { role: "user", content: [{ type: "text", text: "<transcript>\n" }, { type: "text", text: "</transcript>\n" }] },
+    ],
+    metadata: { user_id: JSON.stringify({ session_id: "conv-1" }) },
+  }
+  const summaryFork = {
+    model: "claude-opus-5-5",
+    stream: true,
+    tools: [{ name: "Read", input_schema: { type: "object" } }],
+    messages: [
+      { role: "user", content: "Review the diff" },
+      { role: "assistant", content: [{ type: "tool_use", id: "toolu_1", name: "Read", input: { file_path: "a.ts" } }] },
+      { role: "user", content: [
+        { type: "tool_result", tool_use_id: "toolu_1", content: "export const a = 1" },
+        { type: "text", text: "Describe your most recent action in 3-5 words using present tense (-ing). Do not use tools." },
+      ] },
+    ],
+    metadata: { user_id: JSON.stringify({ session_id: "conv-1" }) },
+  }
+
+  it("says so for the classifier, under either verdict tag", () => {
+    expect(claudeCodeAuxiliaryPromptGrows(classifier)).toBe(true)
+    expect(claudeCodeAuxiliaryPromptGrows({ ...classifier, stop_sequences: ["</block>"] })).toBe(true)
+  })
+
+  it("does not for the progress summary, which is answered from a different step each time", () => {
+    expect(isClaudeCodeAuxiliaryRequest(undefined, summaryFork)).toBe(true)
+    expect(claudeCodeAuxiliaryPromptGrows(summaryFork)).toBe(false)
+  })
+
+  it("does not for a side call it knows only by the client's request class", () => {
+    const { stop_sequences: _omitted, ...classed } = classifier
+    expect(isClaudeCodeAuxiliaryRequest("auxiliary", classed)).toBe(true)
+    expect(claudeCodeAuxiliaryPromptGrows(classed)).toBe(false)
+  })
+
+  it("rejects malformed shapes without throwing", () => {
+    expect(claudeCodeAuxiliaryPromptGrows(undefined)).toBe(false)
+    expect(claudeCodeAuxiliaryPromptGrows("not an object")).toBe(false)
+    expect(claudeCodeAuxiliaryPromptGrows({ ...classifier, stop_sequences: "</severity>" })).toBe(false)
+  })
+
+  it("is what the adapter tells the proxy", () => {
+    const ctx = { req: { header: () => undefined } } as unknown as Parameters<typeof claudeCodeAdapter.getSessionId>[0]
+    expect(claudeCodeAdapter.auxiliaryPromptGrows?.(ctx, classifier)).toBe(true)
+    expect(claudeCodeAdapter.auxiliaryPromptGrows?.(ctx, summaryFork)).toBe(false)
   })
 })

@@ -27,6 +27,8 @@ let queryCalls = 0
 let controls: AttemptControl[] = []
 let capturedParams: Array<{ prompt?: unknown; options?: { resume?: string; resumeSessionAt?: string; sessionId?: string; env?: Record<string, string> } }> = []
 let rateLimitWorkQueries = false
+/** Answer as the API does when a CLI adds its cache breakpoints beside the prompt's own. */
+let refuseOwnedBreakpoints = false
 
 function deferredAttempt(): AttemptControl & { wait: Promise<void>; markStarted: () => void } {
   let release = () => {}
@@ -50,6 +52,9 @@ installSdkMock(() => ({
       try {
         if (rateLimitWorkQueries && params.options?.env?.CLAUDE_CONFIG_DIR?.includes("hot-work")) {
           throw new Error("429 rate limit reached for this account")
+        }
+        if (refuseOwnedBreakpoints && params.options?.env?.DISABLE_PROMPT_CACHING === "1") {
+          throw new Error('Claude Code returned an error result: API Error: 400 {"type":"error","error":{"type":"invalid_request_error","message":"A maximum of 4 blocks with cache_control may be provided. Found 5."}}')
         }
         yield { ...messageStart(), session_id: sessionId }
         await control.wait
@@ -185,6 +190,49 @@ function claudeCodeClassifierRequest(sessionId: string, extraHeaders: Record<str
   })
 }
 
+const CLASSIFIER_INSTRUCTION = "Stage 1 does NOT apply user intent.\nRespond with <severity>N</severity> ONLY. No other text."
+
+/**
+ * A permission check on a conversation long enough to be worth caching, as
+ * CLI 2.1.289 sends it: the user's instructions as a message of their own,
+ * then the transcript as a block per entry with the CLI's own cache
+ * breakpoints, the action under review, and the instruction closing it. Every
+ * check re-sends the transcript with what happened since appended.
+ */
+function claudeCodeTranscriptCheck(sessionId: string, entries: number, instruction = CLASSIFIER_INSTRUCTION): Request {
+  const mark = { cache_control: { type: "ephemeral", ttl: "1h" } }
+  const entry = (index: number) => ({
+    type: "text",
+    text: `{"Bash":{"command":"bun test src/__tests__/step-${index}.test.ts","description":"Run the tests for step ${index}"}}\n{"outcome":"ok"}\n`,
+  })
+  return new Request("http://localhost/v1/messages", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "user-agent": "claude-cli/2.1.289" },
+    body: JSON.stringify({
+      model: "claude-sonnet-4-6",
+      max_tokens: 64,
+      stream: false,
+      stop_sequences: ["</severity>"],
+      messages: [
+        { role: "user", content: [{
+          type: "text",
+          text: `The following is the user's CLAUDE.md configuration.\n\n<user_claude_md>\n${"Never commit secret material.\n".repeat(700)}</user_claude_md>`,
+          ...mark,
+        }] },
+        { role: "user", content: [
+          { type: "text", text: "<transcript>\n" },
+          ...Array.from({ length: entries - 1 }, (_, index) => entry(index)),
+          { ...entry(entries - 1), ...mark },
+          { type: "text", text: `{"Bash":{"command":"git push origin step-${entries}"}}\n`, ...mark },
+          { type: "text", text: "</transcript>\n" },
+          { type: "text", text: instruction },
+        ] },
+      ],
+      metadata: { user_id: JSON.stringify({ session_id: sessionId }) },
+    }),
+  })
+}
+
 /**
  * A Claude Code Agent-tool subagent turn: the parent conversation's own
  * metadata session id plus the subagent's `x-claude-code-agent-id`.
@@ -301,6 +349,29 @@ function sdkPrompt(index: number): string {
   return prompt
 }
 
+interface PromptBlock {
+  type: string
+  text: string
+  cache_control?: unknown
+}
+
+/** The text blocks of the single user message one SDK attempt was handed. */
+async function sdkPromptBlocks(index: number): Promise<PromptBlock[]> {
+  const prompt = capturedParams[index]?.prompt
+  if (!prompt || typeof prompt === "string") throw new Error(`SDK attempt #${index} was not handed a structured prompt`)
+  const messages: Array<{ message: { content: PromptBlock[] } }> = []
+  for await (const message of prompt as AsyncIterable<{ message: { content: PromptBlock[] } }>) messages.push(message)
+  if (messages.length !== 1) throw new Error(`SDK attempt #${index} was handed ${messages.length} user messages`)
+  return messages[0]!.message.content
+}
+
+/** The text through the end of every block, and through each cache breakpoint. */
+function promptPrefixes(blocks: PromptBlock[]): { boundaries: string[]; breakpoints: string[] } {
+  let text = ""
+  const boundaries = blocks.map(block => (text += block.text))
+  return { boundaries, breakpoints: boundaries.filter((_, index) => blocks[index]!.cache_control !== undefined) }
+}
+
 async function waitForControl(index: number, timeoutMs = 3000): Promise<AttemptControl> {
   const deadline = Date.now() + timeoutMs
   while (!controls[index]) {
@@ -319,6 +390,8 @@ describe("SDK and Session concurrency coordination", () => {
   const originalMax = process.env.MERIDIAN_MAX_CONCURRENT
   const originalHold = process.env.MERIDIAN_SESSION_TURN_MAX_HOLD_MS
   const originalRouting = process.env.MERIDIAN_ROUTING
+  const originalPromptCache = process.env.MERIDIAN_AUXILIARY_PROMPT_CACHE
+  const originalAuxiliaryIdle = process.env.MERIDIAN_UPSTREAM_AUXILIARY_IDLE_MS
 
   beforeEach(() => {
     testSessionDir = mkdtempSync(join(tmpdir(), "meridian-concurrency-"))
@@ -330,9 +403,11 @@ describe("SDK and Session concurrency coordination", () => {
     controls = []
     capturedParams = []
     rateLimitWorkQueries = false
+    refuseOwnedBreakpoints = false
     clearSessionCache()
     resetProcessSdkSemaphoreForTests()
     telemetryStore.clear()
+    diagnosticLog.clear()
   })
 
   afterEach(() => {
@@ -345,6 +420,10 @@ describe("SDK and Session concurrency coordination", () => {
     else process.env.MERIDIAN_SESSION_TURN_MAX_HOLD_MS = originalHold
     if (originalRouting === undefined) delete process.env.MERIDIAN_ROUTING
     else process.env.MERIDIAN_ROUTING = originalRouting
+    if (originalPromptCache === undefined) delete process.env.MERIDIAN_AUXILIARY_PROMPT_CACHE
+    else process.env.MERIDIAN_AUXILIARY_PROMPT_CACHE = originalPromptCache
+    if (originalAuxiliaryIdle === undefined) delete process.env.MERIDIAN_UPSTREAM_AUXILIARY_IDLE_MS
+    else process.env.MERIDIAN_UPSTREAM_AUXILIARY_IDLE_MS = originalAuxiliaryIdle
   })
 
   it("holds the SDK permit for the complete streaming lifecycle", async () => {
@@ -893,6 +972,149 @@ describe("SDK and Session concurrency coordination", () => {
     expect(sdkPrompt(0)).toContain("Describe your most recent action in 3-5 words")
   })
 
+  it("sends a permission check's transcript as blocks with its own cache breakpoints", async () => {
+    const app = createProxyServer({ port: 0, host: "127.0.0.1", silent: true }).app
+    const sessionId = `claude-code-check-layout-${crypto.randomUUID()}`
+
+    const checkP = app.fetch(claudeCodeTranscriptCheck(sessionId, 400))
+    ;(await waitForControl(0)).release()
+    expect((await checkP).status).toBe(200)
+    const blocks = await sdkPromptBlocks(0)
+
+    // The same request with the layout switched off is the prompt as it was
+    // always sent: one string. The blocks are that text and nothing else.
+    process.env.MERIDIAN_AUXILIARY_PROMPT_CACHE = "0"
+    const flatP = app.fetch(claudeCodeTranscriptCheck(sessionId, 400))
+    ;(await waitForControl(1)).release()
+    expect((await flatP).status).toBe(200)
+    expect(blocks.map(block => block.text).join("")).toBe(sdkPrompt(1))
+    expect(blocks.length).toBeGreaterThan(3)
+    expect(blocks.every(block => block.type === "text" && block.text.trim() !== "")).toBe(true)
+
+    // Two breakpoints, both Meridian's: where the user's instructions end, and
+    // the last cut before the part that changes. The client's own are gone.
+    // On a subscription profile they live an hour, as the SDK child's would.
+    const marked = blocks.filter(block => block.cache_control !== undefined)
+    expect(marked.map(block => block.cache_control))
+      .toEqual([{ type: "ephemeral", ttl: "1h" }, { type: "ephemeral", ttl: "1h" }])
+    const { breakpoints } = promptPrefixes(blocks)
+    expect(breakpoints[0]).toEndWith("</user_claude_md>\n</conversation_history>\n\nThe above is a replay of your prior conversation with this user — the original session could not be resumed. It is context only: do not continue or imitate its transcript format, do not write \"[Assistant: ...]\" markers, and never invent tool output — use your actual tools when action is needed. Respond only as the assistant to the user's message below.\n\n")
+    expect(breakpoints[1]!.includes("step-200.test.ts")).toBe(true)
+    expect(breakpoints[1]!.includes("step-399.test.ts")).toBe(false)
+    expect(blocks.at(-1)!.cache_control).toBeUndefined()
+    expect(blocks.at(-1)!.text).toEndWith(CLASSIFIER_INSTRUCTION)
+
+    // Its breakpoints are only valid alone, so the CLI's are switched off —
+    // for this prompt, and not for the plain one.
+    expect(capturedParams[0]?.options?.env?.DISABLE_PROMPT_CACHING).toBe("1")
+    expect(capturedParams[1]?.options?.env?.DISABLE_PROMPT_CACHING).toBeUndefined()
+    const laidOut = diagnosticLog.getRecent({ category: "session" }).map(entry => entry.message)
+      .filter(message => message.includes("auxiliary prompt laid out for caching"))
+    expect(laidOut).toHaveLength(1)
+    expect(laidOut[0]).toContain(`${blocks.length} blocks, 2 breakpoints`)
+  })
+
+  it("caches a permission check for five minutes on an API-key profile, as its SDK child would", async () => {
+    const app = createProxyServer({
+      port: 0, host: "127.0.0.1", silent: true,
+      profiles: [{ id: "keyed", type: "api", apiKey: "test-key", baseUrl: "http://127.0.0.1:9" }],
+      defaultProfile: "keyed",
+    }).app
+    const sessionId = `claude-code-check-api-profile-${crypto.randomUUID()}`
+
+    const checkP = app.fetch(claudeCodeTranscriptCheck(sessionId, 400))
+    ;(await waitForControl(0)).release()
+    expect((await checkP).status).toBe(200)
+    const marked = (await sdkPromptBlocks(0)).filter(block => block.cache_control !== undefined)
+    expect(marked.map(block => block.cache_control)).toEqual([{ type: "ephemeral" }, { type: "ephemeral" }])
+    expect(capturedParams[0]?.options?.env?.DISABLE_PROMPT_CACHING).toBe("1")
+  })
+
+  it("lets a later permission check read back what the one before it wrote", async () => {
+    const app = createProxyServer({ port: 0, host: "127.0.0.1", silent: true }).app
+    const sessionId = `claude-code-check-growth-${crypto.randomUUID()}`
+    const prompts: PromptBlock[][] = []
+    // Stage 1, then stage 2 of the same check, then the next check.
+    const checks: Array<[number, string]> = [
+      [400, CLASSIFIER_INSTRUCTION],
+      [400, "Use <thinking> first, then respond with <severity>N</severity>."],
+      [431, CLASSIFIER_INSTRUCTION],
+    ]
+    for (const [index, [entries, instruction]] of checks.entries()) {
+      const checkP = app.fetch(claudeCodeTranscriptCheck(sessionId, entries, instruction))
+      ;(await waitForControl(index)).release()
+      expect((await checkP).status).toBe(200)
+      prompts.push(await sdkPromptBlocks(index))
+    }
+    // The cache reads an entry only where a later request has a block boundary
+    // exactly where an earlier one put a breakpoint.
+    for (const [index, earlier] of prompts.slice(0, -1).entries()) {
+      const later = promptPrefixes(prompts[index + 1]!)
+      for (const prefix of promptPrefixes(earlier).breakpoints) expect(later.boundaries).toContain(prefix)
+    }
+    const grown = prompts.map(blocks => blocks.map(block => block.text).join(""))
+    const reused = promptPrefixes(prompts[1]!).breakpoints.at(-1)!
+    expect(reused.length).toBeGreaterThan(grown[2]!.length * 0.6)
+    expect(grown[2]!.startsWith(reused)).toBe(true)
+  })
+
+  it("leaves a side call too short to cache, and one that does not grow, as they were", async () => {
+    const app = createProxyServer({ port: 0, host: "127.0.0.1", silent: true }).app
+    const sessionId = `claude-code-check-short-${crypto.randomUUID()}`
+
+    const shortP = app.fetch(claudeCodeClassifierRequest(sessionId))
+    ;(await waitForControl(0)).release()
+    expect((await shortP).status).toBe(200)
+    expect(sdkPrompt(0)).toContain("Should this action be blocked?")
+    expect(capturedParams[0]?.options?.env?.DISABLE_PROMPT_CACHING).toBeUndefined()
+
+    // A progress summary is answered from its latest step, a different one
+    // every time, so however long that step is there is nothing to read back.
+    const calls = Array.from({ length: 16 }, (_, index) => `toolu_read_${index}`)
+    const longRound = [
+      ...SUBAGENT_TOOL_ROUND,
+      { role: "assistant", content: calls.map(id => ({ type: "tool_use", id, name: "Read", input: { file_path: `${id}.ts` } })) },
+      { role: "user", content: calls.map(id => ({ type: "tool_result", tool_use_id: id, content: `export const ${id} = 1\n`.repeat(80) })) },
+    ]
+    const summary = await app.fetch(claudeCodeAgentSummaryRequest(longRound, sessionId, "a4a81dc1bbf7ee837"))
+    ;(await waitForControl(1)).release()
+    expect(summary.status).toBe(200)
+    await summary.text()
+    expect(sdkPrompt(1).length).toBeGreaterThan(30_000)
+    expect(sdkPrompt(1)).toContain("Describe your most recent action in 3-5 words")
+    expect(capturedParams[1]?.options?.env?.DISABLE_PROMPT_CACHING).toBeUndefined()
+    expect(diagnosticLog.getRecent({ category: "session" }).map(entry => entry.message)
+      .filter(message => message.includes("auxiliary prompt laid out for caching"))).toHaveLength(0)
+  })
+
+  it("resends a permission check as plain text when the API refuses its breakpoints, and stops laying them out", async () => {
+    const app = createProxyServer({ port: 0, host: "127.0.0.1", silent: true }).app
+    const sessionId = `claude-code-check-refused-${crypto.randomUUID()}`
+    refuseOwnedBreakpoints = true
+
+    const checkP = app.fetch(claudeCodeTranscriptCheck(sessionId, 400))
+    await waitForControl(0)
+    ;(await waitForControl(1)).release()
+    const check = await checkP
+    expect(check.status).toBe(200)
+    expect((await check.json() as { content: Array<{ text?: string }> }).content[0]?.text).toBe("ok")
+    expect(capturedParams[0]?.options?.env?.DISABLE_PROMPT_CACHING).toBe("1")
+    expect(capturedParams[1]?.options?.env?.DISABLE_PROMPT_CACHING).toBeUndefined()
+    expect(sdkPrompt(1)).toEndWith(CLASSIFIER_INSTRUCTION)
+    expect(sdkPrompt(1)).toContain("step-399.test.ts")
+
+    // A CLI that adds breakpoints of its own does so every time: the next
+    // check goes out plain at once instead of paying for a refusal first.
+    const nextP = app.fetch(claudeCodeTranscriptCheck(sessionId, 420))
+    ;(await waitForControl(2)).release()
+    expect((await nextP).status).toBe(200)
+    expect(queryCalls).toBe(3)
+    expect(sdkPrompt(2)).toContain("step-419.test.ts")
+    expect(capturedParams[2]?.options?.env?.DISABLE_PROMPT_CACHING).toBeUndefined()
+    expect(diagnosticLog.getRecent({ category: "session" }).map(entry => entry.message)
+      .filter(message => message.includes("cache breakpoints refused"))).toHaveLength(1)
+  })
+
   it("keeps the shared key when the agent id is malformed", async () => {
     const app = createProxyServer({ port: 0, host: "127.0.0.1", silent: true }).app
     const sessionId = `claude-code-bad-agent-${crypto.randomUUID()}`
@@ -1160,6 +1382,78 @@ describe("SDK and Session concurrency coordination", () => {
     expect((await secondP).status).toBe(200)
     expect(queryCalls).toBe(2)
   })
+
+  it("gives up on a side call the model never answers long before it would on a turn", async () => {
+    process.env.MERIDIAN_UPSTREAM_AUXILIARY_IDLE_MS = "150"
+    process.env.MERIDIAN_MAX_CONCURRENT = "3"
+    resetProcessSdkSemaphoreForTests()
+    const app = createProxyServer({ port: 0, host: "127.0.0.1", silent: true }).app
+    const sessionId = `claude-code-aux-idle-${crypto.randomUUID()}`
+
+    // A turn that has gone quiet, and beside it a permission check the model
+    // never answers. The conversation cannot move until the check returns.
+    const turnP = app.fetch(claudeCodeRequest([{ role: "user", content: "Run the tests" }], sessionId))
+    const turnControl = await waitForControl(0)
+    const startedAt = Date.now()
+    const stalled = await app.fetch(claudeCodeClassifierRequest(sessionId))
+    const waited = Date.now() - startedAt
+    expect(stalled.status).toBe(504)
+    const refusal = await stalled.json() as { error: { type: string; message: string } }
+    expect(refusal.error.type).toBe("upstream_timeout")
+    expect(refusal.error.message).toContain("Upstream stalled: no data for")
+    expect(waited).toBeGreaterThanOrEqual(140)
+    expect(waited).toBeLessThan(5_000)
+
+    // The client asks again, as it does after a 504, and is answered.
+    const retryP = app.fetch(claudeCodeClassifierRequest(sessionId))
+    ;(await waitForControl(2)).release()
+    expect((await retryP).status).toBe(200)
+
+    // The turn has now been silent for longer than the side call was allowed,
+    // and is still running under the limit meant for turns.
+    await Bun.sleep(Math.max(0, 200 - (Date.now() - startedAt)))
+    turnControl.release()
+    expect((await turnP).status).toBe(200)
+    controls[1]?.release()
+  }, 15_000)
+
+  it("stops a side call that stalls every time, and names the limit that applies to it", async () => {
+    process.env.MERIDIAN_UPSTREAM_AUXILIARY_IDLE_MS = "120"
+    const app = createProxyServer({ port: 0, host: "127.0.0.1", silent: true }).app
+    const sessionId = `claude-code-aux-idle-ceiling-${crypto.randomUUID()}`
+
+    const statuses: number[] = []
+    let last: { error?: { type?: string; message?: string } } = {}
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const response = await app.fetch(claudeCodeClassifierRequest(sessionId))
+      statuses.push(response.status)
+      last = await response.json() as typeof last
+    }
+    expect(statuses).toEqual([504, 504, 400])
+    expect(last.error?.message).toContain("the 3rd consecutive stall on this session (limit 120ms)")
+    expect(last.error?.message).toContain("raise MERIDIAN_UPSTREAM_AUXILIARY_IDLE_MS,")
+
+    // The same check again is turned away before another query is spent on it.
+    const again = await app.fetch(claudeCodeClassifierRequest(sessionId))
+    expect(again.status).toBe(400)
+    expect(queryCalls).toBe(3)
+    for (const control of controls) control.release()
+  }, 15_000)
+
+  it("gives a streamed side call the same short limit", async () => {
+    process.env.MERIDIAN_UPSTREAM_AUXILIARY_IDLE_MS = "150"
+    const app = createProxyServer({ port: 0, host: "127.0.0.1", silent: true }).app
+    const sessionId = `claude-code-aux-idle-stream-${crypto.randomUUID()}`
+
+    const startedAt = Date.now()
+    const summary = await app.fetch(claudeCodeAgentSummaryRequest(SUBAGENT_NEXT_ROUND, sessionId, "a4a81dc1bbf7ee837"))
+    const events = await summary.text()
+    expect(Date.now() - startedAt).toBeLessThan(5_000)
+    expect(events).toContain("event: error")
+    expect(events).toContain("upstream_timeout")
+    expect(events).toContain("Upstream stalled: no data for")
+    controls[0]?.release()
+  }, 15_000)
 
   it("aborts a wedged turn without releasing its fencing lease early", async () => {
     process.env.MERIDIAN_MAX_CONCURRENT = "2"

@@ -13,7 +13,7 @@ import { homedir } from "node:os"
 import { join } from "node:path"
 import { query } from "@anthropic-ai/claude-agent-sdk"
 import { rateLimitStore } from "./rateLimitStore"
-import { guardUpstreamIdle, UpstreamIdleError, type LateIdleDeadline } from "./streamIdleGuard"
+import { guardUpstreamIdle, UpstreamIdleError, upstreamIdleLimitMs, type LateIdleDeadline } from "./streamIdleGuard"
 import { IdleStallCeilingError, IdleStallTracker, idleStallRequestKey } from "./idleStallCeiling"
 import { linkRequestAbort, type RequestAbortLink } from "./requestAbort"
 import { processSessionTree, truncateSessionKey, type SessionTreeRegistration } from "./sessionTree"
@@ -67,7 +67,7 @@ import { LRUMap } from "../utils/lruMap"
 import { telemetryStore, diagnosticLog, createTelemetryRoutes, landingHtml, renderPrometheusMetrics, resolveTelemetryConfig, diagnosticLogCapacity } from "../telemetry"
 import { detectSupervision } from "./supervision"
 import type { RequestMetric } from "../telemetry"
-import { canRecoverCapturedToolUses, canRecoverUncapturedToolUses, isStreamedToolBlockComplete, unavailableToolResults, type StreamedToolBlockRecord, classifyError, extractSdkTermination, formatSdkTermination, classifyResumeRefusal, isRateLimitError, isExtraUsageRequiredError, isExpiredTokenError, isAccountFailoverError, isQuotaRefusal, isOutputTokenCapExceeded } from "./errors"
+import { canRecoverCapturedToolUses, canRecoverUncapturedToolUses, isStreamedToolBlockComplete, unavailableToolResults, type StreamedToolBlockRecord, classifyError, extractSdkTermination, formatSdkTermination, classifyResumeRefusal, isRateLimitError, isExtraUsageRequiredError, isExpiredTokenError, isAccountFailoverError, isQuotaRefusal, isOutputTokenCapExceeded, isCacheBreakpointRejection } from "./errors"
 import { refreshOAuthToken, ensureFreshToken, startBackgroundRefresh, stopBackgroundRefresh, createPlatformCredentialStore, readStoredCredentialPresence, getAuthRenewalStatus, getStoredPlanFields, resolveRenewalWarnDays, type CredentialStore, type StoredPlanFields } from "./tokenRefresh"
 import { planAllowance } from "./planAllowance"
 import { isCredentialsReadOnly, logCredentialsModeBanner } from "./credentialsMode"
@@ -96,7 +96,8 @@ import { openAiAdapter, deriveToolLoopSessionId, SYNTHESIZED_SESSION_HEADER } fr
 import { translateResponsesToAnthropic, translateAnthropicToResponses, createResponsesSseTranslator, reasoningRequested, buildResponsesToolAliases, resolveCodexThreadIdentity, type ResponsesRequest, type AnthropicSseEvent as ResponsesAnthropicSseEvent } from "./openaiResponses"
 import { flattenAssistantContent, normalizeStructuredUserContent, replayToolResultHeader, frameStructuredReplay, coalesceStructuredUserMessages, coalesceTrailingSystemReminders } from "./replay"
 import { unstreamedAssistantBlockFrames } from "./unstreamedAssistant"
-import { extractAdvisorModel, extractSystemText, getLastUserMessage, stripAdvisorTools, stripNonStandardStreamFields, MULTIMODAL_TYPES, buildToolUseIndex, frameReplayTurns } from "./messages"
+import { extractAdvisorModel, extractSystemText, getLastUserMessage, stripAdvisorTools, stripNonStandardStreamFields, MULTIMODAL_TYPES, buildToolUseIndex, frameReplayTurns, frameReplayTurnSegments } from "./messages"
+import { layoutGrowingPrompt } from "./promptCacheLayout"
 import { requireAuth, authEnabled } from "./auth"
 import { detectAdapter } from "./adapters/detect"
 import { rootSessionIdOf } from "./adapter"
@@ -253,6 +254,29 @@ let claudeExecutable = ""
 // streamIdleGuard.ts.
 const UPSTREAM_IDLE_MS = envInt("UPSTREAM_IDLE_MS", 90_000)
 
+// The same guard for a side call (AgentAdapter.isAuxiliaryRequest), which has
+// no thinking pause to outlast and holds its conversation up for as long as it
+// is waited on. Of 182 auto-mode permission checks on one working proxy, 166
+// were answered within 10s and five more within 22s; two took 39s and 61s, and
+// nine were not answered in 90s — while the client's next attempt was, in
+// 2.9-4.2s every time (one stall was watched from outside the proxy: request
+// fully delivered, nothing sent back). 30s sits above the checks that were
+// merely slow and gives back two thirds of the wait on the rest. Never longer
+// than UPSTREAM_IDLE_MS, and 0 leaves side calls on it. Read when a request
+// arrives, so it follows the environment without a restart.
+const upstreamAuxiliaryIdleMs = (): number => envInt("UPSTREAM_AUXILIARY_IDLE_MS", 30_000)
+
+/** The upstream idle limit one request runs under, and the setting it is. */
+interface UpstreamIdleLimit {
+  ms: number
+  setting: string
+}
+
+function upstreamIdleFor(auxiliary: boolean): UpstreamIdleLimit {
+  const ms = upstreamIdleLimitMs(auxiliary, UPSTREAM_IDLE_MS, upstreamAuxiliaryIdleMs())
+  return { ms, setting: ms === UPSTREAM_IDLE_MS ? "MERIDIAN_UPSTREAM_IDLE_MS" : "MERIDIAN_UPSTREAM_AUXILIARY_IDLE_MS" }
+}
+
 // How long a passthrough deny may be held waiting for the turn-generation
 // boundary. Derived from UPSTREAM_IDLE_MS, never a standalone number, because
 // this is the same coordination contract: guardUpstreamIdle owns model-stream
@@ -334,6 +358,12 @@ interface RequestMeta {
    * lease, so skipping the lease and skipping session lookup cannot disagree.
    */
   auxiliaryRequest?: boolean
+  /**
+   * The upstream idle limit this request runs under. Decided with
+   * `auxiliaryRequest`, so the guard, the stall record and the retry
+   * preflight read one value. Absent means UPSTREAM_IDLE_MS.
+   */
+  upstreamIdle?: UpstreamIdleLimit
 }
 
 interface PriorityAttemptExposure {
@@ -563,9 +593,13 @@ function plog(message: string): void {
   if (!proxyLogSilent) console.error(message)
 }
 
-function logLateIdleDeadline(mode: string): (late: LateIdleDeadline) => void {
+function upstreamIdleOf(meta: RequestMeta): UpstreamIdleLimit {
+  return meta.upstreamIdle ?? upstreamIdleFor(false)
+}
+
+function logLateIdleDeadline(mode: string, limitMs: number): (late: LateIdleDeadline) => void {
   return ({ lateMs, sinceLastMs, resumed }) => {
-    plog(`[PROXY] upstream idle deadline fired ${lateMs}ms late (sinceLastMs=${sinceLastMs}, limit=${UPSTREAM_IDLE_MS}ms): ${resumed ? "upstream progress or completion was waiting" : "no model progress observed after yielding"}`)
+    plog(`[PROXY] upstream idle deadline fired ${lateMs}ms late (sinceLastMs=${sinceLastMs}, limit=${limitMs}ms): ${resumed ? "upstream progress or completion was waiting" : "no model progress observed after yielding"}`)
     claudeLog("upstream.idle_deadline_late", { mode, lateMs, sinceLastMs, resumed })
   }
 }
@@ -724,6 +758,12 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
 
   // Consecutive upstream-idle stalls per session, for the retry ceiling.
   const idleStalls = new IdleStallTracker(UPSTREAM_IDLE_MAX_CONSECUTIVE, getMaxSessionsLimit())
+
+  // Set once the API has refused a prompt carrying Meridian's cache
+  // breakpoints. That happens only when the CLI adds its own beside them,
+  // which it then does on every request, so growing auxiliary prompts go out
+  // plain for the life of this process rather than each paying for a refusal.
+  let auxiliaryCacheLayoutRefused = false
 
   // A --resume spawned while the session's previous subprocess is still
   // exiting is refused, in two wordings: "currently running as a background
@@ -1020,8 +1060,9 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
       }
       signal.throwIfAborted()
       sdkQuery = query(params)
-      yield* guardUpstreamIdle(sdkQuery, UPSTREAM_IDLE_MS, (sinceLastMs) =>
-        claudeLog("upstream.stalled", { mode, sinceLastMs }), undefined, logLateIdleDeadline(mode))
+      const idleLimitMs = upstreamIdleOf(requestMeta).ms
+      yield* guardUpstreamIdle(sdkQuery, idleLimitMs, (sinceLastMs) =>
+        claudeLog("upstream.stalled", { mode, sinceLastMs, limitMs: idleLimitMs }), undefined, logLateIdleDeadline(mode, idleLimitMs))
     } finally {
       try {
         // Production Query objects expose close(); test doubles and older SDK
@@ -2914,7 +2955,8 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
         let resumeSessionId = cachedSession?.claudeSessionId
         // Stable client/checkpoint identity survives a failed managed fork.
         const idleStallSessionKey = profileSessionId || resumeSessionId || ""
-        const idlePreflight = idleStalls.preflight(idleStallSessionKey, idleRequestKey, UPSTREAM_IDLE_MS, performance.now())
+        const upstreamIdle = upstreamIdleOf(requestMeta)
+        const idlePreflight = idleStalls.preflight(idleStallSessionKey, idleRequestKey, upstreamIdle.ms, performance.now())
         if (idlePreflight) throw new IdleStallCeilingError(idlePreflight)
         const resumeFrom = lineageResult.type === "continuation" || lineageResult.type === "compaction"
           ? lineageResult.resumeFrom
@@ -3143,6 +3185,13 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
           requestMeta.requestId,
         )
       }
+      // A side call whose prompt only grows is cut at fixed points so each one
+      // reads back from the prompt cache what the last wrote, instead of
+      // writing the whole prompt again (see AgentAdapter.auxiliaryPromptGrows).
+      let growingAuxiliaryPrompt = independentCause === "auxiliary-request"
+        && !auxiliaryCacheLayoutRefused
+        && env("AUXILIARY_PROMPT_CACHE") !== "0"
+        && adapter.auxiliaryPromptGrows?.(c, body) === true
       // Budget only the replay payload, never the lineage or SDK UUID mapping.
       const replaySource = auxiliaryReplay ?? messagesToConvert
       const freshReplay = !isResume && !resumeSessionId
@@ -3331,10 +3380,14 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
       // Structured prompts are stored as arrays so they can be replayed on retry.
       let structuredMessages: Array<{ type: "user"; message: { role: string; content: any }; parent_tool_use_id: null }> | undefined
       let textPrompt: string | undefined
+      // Set while the prompt is text blocks carrying Meridian's own cache
+      // breakpoints; the SDK child's are then switched off for the query.
+      let promptCacheLayout: { blocks: number; breakpoints: number } | undefined
 
       function rebuildReplayPrompt(): void {
         structuredMessages = undefined
         textPrompt = undefined
+        promptCacheLayout = undefined
         // Keep a trailing reminder in its live user turn before framing;
         // otherwise the request becomes history and only metadata stays live.
         // Original client messages remain untouched for lineage and budgeting.
@@ -3428,9 +3481,34 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
           // Resume deltas are tail-only and stay bare.
           const resumeDelta = promptTurns.map((t: { text: string }) => t.text).filter(Boolean).join("\n\n") || ""
           textPrompt = isResume ? resumeDelta : frameReplayTurns(promptTurns)
+          // The same text, as blocks: nothing the model reads changes. Cached
+          // for as long as the SDK child's own writes are — an hour under a
+          // subscription, five minutes under an API key — so a check after a
+          // pause never rewrites what the child would still have read back.
+          const cacheLayout = growingAuxiliaryPrompt && !isResume
+            ? layoutGrowingPrompt(frameReplayTurnSegments(promptTurns), { ttl: profile.type === "api" ? undefined : "1h" })
+            : undefined
+          if (cacheLayout) {
+            structuredMessages = [{
+              type: "user" as const,
+              message: { role: "user" as const, content: cacheLayout },
+              parent_tool_use_id: null,
+            }]
+            promptCacheLayout = {
+              blocks: cacheLayout.length,
+              breakpoints: cacheLayout.filter(block => block.cache_control).length,
+            }
+          }
         }
       }
       rebuildReplayPrompt()
+      if (promptCacheLayout) {
+        claudeLog("session.auxiliary_cache_layout", promptCacheLayout)
+        diagnosticLog.session(
+          `${requestMeta.requestId} auxiliary prompt laid out for caching: ${promptCacheLayout.blocks} blocks, ${promptCacheLayout.breakpoints} breakpoints`,
+          requestMeta.requestId,
+        )
+      }
 
       function rebudgetReplay(reason: string): void {
         if (!freshReplay) return
@@ -3457,6 +3535,23 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
         if (!trimReplay(replayTrimRetries + 1)) return false
         replayTrimRetries++
         rebuildReplayPrompt()
+        return true
+      }
+
+      // The API refuses a prompt's own cache breakpoints only when the CLI has
+      // added more beside them. Resend the same text plain, cached by the CLI
+      // as it always was, and stop laying prompts out.
+      function retryWithoutCacheLayout(errMsg: string): boolean {
+        if (!promptCacheLayout || !isCacheBreakpointRejection(errMsg)) return false
+        auxiliaryCacheLayoutRefused = true
+        growingAuxiliaryPrompt = false
+        rebuildReplayPrompt()
+        claudeLog("session.auxiliary_cache_layout_refused", {})
+        diagnosticLog.session(
+          `${requestMeta.requestId} cache breakpoints refused by the API; prompt resent as plain text and the layout is off until restart`,
+          requestMeta.requestId,
+        )
+        plog(`[PROXY] ${requestMeta.requestId} cache breakpoints refused by the API — resending as plain text; auxiliary prompt cache layout is off until restart`)
         return true
       }
 
@@ -3981,7 +4076,7 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
                 try {
                   if (resumeSessionId) resumedMappingMayBeAdvanced = true
                   const attemptQuery = buildQueryOptions({
-                    prompt: makePrompt(), model, workingDirectory, clientWorkingDirectory: promptClientWorkingDirectory, clientEnvironmentMayDifferFromProxy, systemContext, claudeExecutable,
+                    prompt: makePrompt(), ownsCacheBreakpoints: promptCacheLayout !== undefined, model, workingDirectory, clientWorkingDirectory: promptClientWorkingDirectory, clientEnvironmentMayDifferFromProxy, systemContext, claudeExecutable,
                     passthrough, stream: false, sdkAgents, passthroughMcp, cleanEnv: profileEnv, envOverrides, hasDeferredTools, earlyStop: earlyStopEnabled, liftSingleTurnCap: singleTurnCapLifted,
                     resumeSessionId, isUndo: sdkUndo, resumeSessionAtUuid: undoRollbackUuid ?? passthroughToolCallAssistantUuid, forkSession: busySessionFork || undefined, forkSessionId: managedForkTarget?.sessionId, sdkHooks, blockedTools: pipelineCtx.blockedTools, incompatibleTools: pipelineCtx.incompatibleTools, mcpServerName: adapter.getMcpServerName(), allowedMcpTools: pipelineCtx.allowedMcpTools, onStderr,
                     effort, thinking, taskBudget, outputFormat, betas, settingSources,
@@ -4025,6 +4120,7 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
                   // even when the iterator has not yielded assistant content.
                   if (didYieldContent || options.priorityAttemptExposure?.committed) throw error
                   if (retryReplayOverflow(errMsg)) continue
+                  if (retryWithoutCacheLayout(errMsg)) continue
 
                   // Retry: the resume was refused, not answered. Both refusals
                   // that mean "not right now" — the session is busy, or it could
@@ -4532,9 +4628,10 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
             const idleVerdict = error instanceof UpstreamIdleError
               ? idleStalls.record(
                   idleStallSessionKey,
-                  UPSTREAM_IDLE_MS,
+                  upstreamIdle.ms,
                   error.sinceLastMs,
                   { key: idleRequestKey, now: performance.now() },
+                  upstreamIdle.setting,
                 )
               : undefined
             const canRecoverAsToolUse = canRecoverCapturedToolUses({
@@ -5170,7 +5267,7 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
                   try {
                     if (resumeSessionId) resumedMappingMayBeAdvanced = true
                     const attemptQuery = buildQueryOptions({
-                      prompt: makePrompt(), model, workingDirectory, clientWorkingDirectory: promptClientWorkingDirectory, clientEnvironmentMayDifferFromProxy, systemContext, claudeExecutable,
+                      prompt: makePrompt(), ownsCacheBreakpoints: promptCacheLayout !== undefined, model, workingDirectory, clientWorkingDirectory: promptClientWorkingDirectory, clientEnvironmentMayDifferFromProxy, systemContext, claudeExecutable,
                       passthrough, stream: true, sdkAgents, passthroughMcp, cleanEnv: profileEnv, envOverrides, hasDeferredTools, earlyStop: earlyStopEnabled, liftSingleTurnCap: singleTurnCapLifted,
                       resumeSessionId, isUndo: sdkUndo, resumeSessionAtUuid: undoRollbackUuid ?? passthroughToolCallAssistantUuid, forkSession: busySessionFork || undefined, forkSessionId: managedForkTarget?.sessionId, sdkHooks, blockedTools: pipelineCtx.blockedTools, incompatibleTools: pipelineCtx.incompatibleTools, mcpServerName: adapter.getMcpServerName(), allowedMcpTools: pipelineCtx.allowedMcpTools, onStderr,
                       effort, thinking, taskBudget, outputFormat, betas, settingSources,
@@ -5205,6 +5302,7 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
                     // even before the first client-visible SSE event.
                     if (didYieldClientEvent || options.priorityAttemptExposure?.committed) throw error
                     if (retryReplayOverflow(errMsg)) continue
+                    if (retryWithoutCacheLayout(errMsg)) continue
 
                     // Retry: the resume was refused, not answered — see the
                     // non-stream branch above for the full rationale. The busy
@@ -5462,16 +5560,17 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
               nextClientBlockIndex = 0
               const sdkToClientIndex = new Map<number, number>()
 
-              const guardedResponse = guardUpstreamIdle(response, UPSTREAM_IDLE_MS, (sinceLastMs) =>
+              const guardedResponse = guardUpstreamIdle(response, upstreamIdle.ms, (sinceLastMs) =>
                 claudeLog("upstream.stalled", {
                   mode: "stream",
                   model,
                   sinceLastMs,
+                  limitMs: upstreamIdle.ms,
                   streamEventsSeen,
                   firstChunkAt: firstChunkAt ?? null,
                 }),
                 undefined,
-                logLateIdleDeadline("stream"),
+                logLateIdleDeadline("stream", upstreamIdle.ms),
               )
               try {
                 for await (const message of guardedResponse) {
@@ -6846,9 +6945,10 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
                 // Subsequent identical requests also fail before opening SSE.
                 const verdict = idleStalls.record(
                   idleStallSessionKey,
-                  UPSTREAM_IDLE_MS,
+                  upstreamIdle.ms,
                   error.sinceLastMs,
                   { key: idleRequestKey, now: performance.now() },
+                  upstreamIdle.setting,
                 )
                 claudeLog("upstream.idle_streak", {
                   model,
@@ -8032,6 +8132,7 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
         sharedSessionRevisionsAtArrival,
         routingTurnIdentity,
         auxiliaryRequest,
+        upstreamIdle: upstreamIdleFor(auxiliaryRequest),
         retainSessionTurnFence: () => { retainSessionTurnFence = true },
         cascadeSubtreeCancel,
         inflight: inflightEntry,

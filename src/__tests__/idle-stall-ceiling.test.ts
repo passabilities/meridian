@@ -109,6 +109,15 @@ describe("IdleStallTracker", () => {
     expect(v.message).toContain("MERIDIAN_UPSTREAM_IDLE_MS")
   })
 
+  it("names the limit that fired when it was not the turn's", () => {
+    const t = new IdleStallTracker(1, 10)
+    const v = t.record("sess-a", 30_000, 30_002, undefined, "MERIDIAN_UPSTREAM_AUXILIARY_IDLE_MS")
+    expect(v.terminal).toBe(true)
+    expect(v.message).toContain("limit 30000ms")
+    expect(v.message).toContain("raise MERIDIAN_UPSTREAM_AUXILIARY_IDLE_MS,")
+    expect(v.message).not.toContain("MERIDIAN_UPSTREAM_IDLE_MS")
+  })
+
   it.each([
     [1, "1st"],
     [2, "2nd"],

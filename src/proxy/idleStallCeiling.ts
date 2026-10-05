@@ -104,7 +104,14 @@ export class IdleStallTracker {
    *  session id). Those are counted as one-offs rather than pooled under a
    *  shared "" key, which would let unrelated sessions trip each other's
    *  ceiling. */
-  record(sessionKey: string, idleMs: number, sinceLastMs: number, request?: IdleStallRequestContext): IdleStallVerdict {
+  record(
+    sessionKey: string,
+    idleMs: number,
+    sinceLastMs: number,
+    request?: IdleStallRequestContext,
+    /** The setting `idleMs` came from, named in the terminal message as the one to raise. */
+    limitSetting = "MERIDIAN_UPSTREAM_IDLE_MS",
+  ): IdleStallVerdict {
     const previous = this.counts.get(sessionKey)
     const sameRequest = !request || previous?.request?.key === request.key
     const consecutive = sessionKey ? (sameRequest ? previous?.consecutive ?? 0 : 0) + 1 : 1
@@ -134,7 +141,7 @@ export class IdleStallTracker {
     return remember({
       status: 400,
       type: "invalid_request_error",
-      message: `Upstream stalled with no data for ${sinceLastMs}ms — the ${consecutive}${ordinalSuffix(consecutive)} consecutive stall on this session (limit ${idleMs}ms). The retry limit has been reached. Modify or shorten the turn, raise MERIDIAN_UPSTREAM_IDLE_MS, or wait ${Math.ceil(idleStallPauseMs(idleMs) / 1000)} seconds after the last stall before retrying it unchanged.`,
+      message: `Upstream stalled with no data for ${sinceLastMs}ms — the ${consecutive}${ordinalSuffix(consecutive)} consecutive stall on this session (limit ${idleMs}ms). The retry limit has been reached. Modify or shorten the turn, raise ${limitSetting}, or wait ${Math.ceil(idleStallPauseMs(idleMs) / 1000)} seconds after the last stall before retrying it unchanged.`,
       consecutive,
       terminal: true,
     })

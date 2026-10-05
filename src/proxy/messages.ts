@@ -171,13 +171,22 @@ export const REPLAY_CONTEXT_CLOSE = `\n</conversation_history>\n\n` +
   `Respond only as the assistant to the user's message below.\n\n`
 
 export function frameReplayTurns(turns: Array<{ role: string; text: string }>): string {
+  return frameReplayTurnSegments(turns).join("")
+}
+
+/**
+ * `frameReplayTurns`, as the parts it joins: the framed history and then the
+ * live message, or the one plain join when there is nothing to separate.
+ */
+export function frameReplayTurnSegments(turns: Array<{ role: string; text: string }>): string[] {
   const nonEmpty = turns.filter((t) => t.text)
+  if (nonEmpty.length === 0) return []
   const joined = nonEmpty.map((t) => t.text).join("\n\n")
-  if (nonEmpty.length < 2) return joined
+  if (nonEmpty.length < 2) return [joined]
   const last = nonEmpty[nonEmpty.length - 1]!
-  if (last.role !== "user") return joined
+  if (last.role !== "user") return [joined]
   const history = nonEmpty.slice(0, -1).map((t) => t.text).join("\n\n")
-  return REPLAY_CONTEXT_OPEN + history + REPLAY_CONTEXT_CLOSE + last.text
+  return [REPLAY_CONTEXT_OPEN + history + REPLAY_CONTEXT_CLOSE, last.text]
 }
 
 /**

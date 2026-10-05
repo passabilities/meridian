@@ -209,6 +209,7 @@ src/
 │   ├── tools.ts               ← Tool blocking lists, MCP server name, allowed tools
 │   ├── messages.ts            ← Content normalization, message parsing
 │   ├── replay.ts              ← Pure rendering of assistant calls and tool results for SDK replay
+│   ├── promptCacheLayout.ts   ← Cuts a prompt that only grows into blocks with stable cache breakpoints (PURE)
 │   ├── types.ts               ← ProxyConfig, ProxyInstance, ProxyServer types
 │   ├── session/
 │   │   ├── index.ts           ← Barrel export
@@ -331,6 +332,7 @@ Agent-specific behavior is isolated behind the `AgentAdapter` interface (`adapte
 | `getRootSessionId(c, body)` | Optional conversation root for account routing (sticky and priority assignment): a subagent with a session key of its own stays on its parent's account (Claude Code's Agent tool) |
 | `isAuxiliaryRequest(c, body)` | Declare a side call that shares the conversation's session key: it skips session lookup, publication and the turn lease (Claude Code's auto-mode classifier and background-agent progress summary) |
 | `getAuxiliaryReplayMessages(c, body)` | Optional: the messages such a side call's answer depends on, when that is less than the history it carries; only those are replayed into its session (Claude Code's progress summary: the latest step) |
+| `auxiliaryPromptGrows(c, body)` | Optional: true when such a side call repeats the prompt of the one before it and adds to its end; its prompt is then cut into blocks with the proxy's own cache breakpoints so each call reads back what the last wrote (Claude Code's auto-mode classifier: the transcript) |
 | `extractWorkingDirectory(body)` | Parse working directory from request body |
 | `normalizeContent(content)` | Normalize message content for hashing |
 | `getBlockedBuiltinTools()` | SDK tools replaced by agent's MCP equivalents |
@@ -398,6 +400,30 @@ subagent's whole context to the cache for every label, so
 assistant turn and the message carrying the prompt, with each tool input and
 output clipped. Lineage, logging and the stored mapping still see the request
 as sent.
+
+The auto-mode classifier is the opposite case: its answer depends on all of
+what it sends, and what it sends is the conversation's transcript again with
+what happened since appended. The CLI sends that as a block per entry with
+cache breakpoints, so a check reads the previous check's prefix. The SDK child
+caches a prompt as one block, which the next, longer prompt never matches, so
+every check wrote the whole transcript to the cache and read back only the
+system prompt. When an adapter says a side call's prompt only grows
+(`auxiliaryPromptGrows`), `layoutGrowingPrompt` cuts the same text front to
+back at fixed points — so a cut depends only on the text before it — and
+marks two of them: where the framed history ends, and the last cut before the
+part that changes. Both entries live as long as the SDK child's own writes do
+(an hour under a subscription, five minutes under an API key), so a check
+after a pause never rewrites what the child would still have read back. The
+SDK child's own prompt caching is switched off for
+that query (`DISABLE_PROMPT_CACHING`), because it forwards a prompt's
+breakpoints untouched and adds three of its own, and the API accepts four. If
+the API refuses the breakpoints anyway, the prompt is resent as plain text and
+the layout stays off for the life of the process.
+
+A side call also holds its conversation up for as long as it is waited on, and
+has no long thinking pause to outlast, so it runs under its own, shorter
+upstream idle limit (`MERIDIAN_UPSTREAM_AUXILIARY_IDLE_MS`): a check the model
+API never answers is given up on, and retried by the client, sooner.
 
 **A session header is identity, never authentication.** Polytoken's native
 `X-Polytoken-Session` header is the cleanest example: the trimmed header value

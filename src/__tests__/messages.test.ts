@@ -2,7 +2,7 @@
  * Unit tests for message parsing utilities.
  */
 import { describe, it, expect } from "bun:test"
-import { frameReplayTurns, normalizeContent, getLastUserMessage, extractAdvisorModel, stripAdvisorTools, stripNonStandardStreamFields, consolidateMultimodalOntoLastUser, buildToolUseIndex, describeToolCall, extractSystemText } from "../proxy/messages"
+import { frameReplayTurns, frameReplayTurnSegments, normalizeContent, getLastUserMessage, extractAdvisorModel, stripAdvisorTools, stripNonStandardStreamFields, consolidateMultimodalOntoLastUser, buildToolUseIndex, describeToolCall, extractSystemText } from "../proxy/messages"
 
 const img = (id: string) => ({ type: "image", source: { type: "base64", media_type: "image/png", data: id } })
 function userMsg(content: unknown) {
@@ -542,6 +542,38 @@ describe("frameReplayTurns (#619)", () => {
     expect(out).not.toContain("Human:")
     expect(out).toEndWith("final question")
     expect(out).toContain("[your bash ls]:")
+  })
+})
+
+describe("frameReplayTurnSegments", () => {
+  const t = (role: string, text: string) => ({ role, text })
+  const cases = [
+    [t("user", "read the config file"), t("assistant", "[Assistant: I read it]"), t("user", "now update the port")],
+    [t("user", "hello")],
+    [t("user", "do a thing"), t("assistant", "[Assistant: done]")],
+    [t("user", "first"), t("assistant", ""), t("user", "second"), t("user", "final question")],
+    [t("user", ""), t("assistant", "")],
+    [],
+  ]
+
+  it("joins back into exactly the framed prompt", () => {
+    for (const turns of cases) expect(frameReplayTurnSegments(turns).join("")).toBe(frameReplayTurns(turns))
+  })
+
+  it("keeps the framed history and the live message apart", () => {
+    const segments = frameReplayTurnSegments(cases[0]!)
+    expect(segments).toHaveLength(2)
+    expect(segments[0]).toStartWith("<conversation_history>\n")
+    expect(segments[0]).toContain("[Assistant: I read it]")
+    expect(segments[0]).toEndWith("Respond only as the assistant to the user's message below.\n\n")
+    expect(segments[1]).toBe("now update the port")
+  })
+
+  it("is one part when there is no history to frame, and none when there is no text", () => {
+    expect(frameReplayTurnSegments(cases[1]!)).toEqual(["hello"])
+    expect(frameReplayTurnSegments(cases[2]!)).toEqual(["do a thing\n\n[Assistant: done]"])
+    expect(frameReplayTurnSegments(cases[4]!)).toEqual([])
+    expect(frameReplayTurnSegments([])).toEqual([])
   })
 })
 

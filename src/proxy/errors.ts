@@ -657,6 +657,22 @@ export function isExtraUsageRequiredError(errMsg: string): boolean {
   return (lower.includes("extra usage") && lower.includes("1m")) || lower.includes("out of extra usage")
 }
 
+const HTTP_400 = /(?:^|[^0-9a-f])400(?![0-9a-f]|:\d)/
+
+/**
+ * Detect a request the API refused over its cache breakpoints: more than it
+ * accepts, a longer-lived one after a shorter-lived one, or one on a block
+ * that cannot carry it. Every such refusal names the `cache_control` field.
+ *
+ * Only a prompt that carries its own breakpoints can be refused this way, and
+ * only while something else adds more beside them — which a CLI that stops
+ * honoring `DISABLE_PROMPT_CACHING` would. The caller resends such a prompt
+ * as plain text, so a false match costs one retry and nothing else.
+ */
+export function isCacheBreakpointRejection(errMsg: string): boolean {
+  return errMsg.includes("cache_control") && (HTTP_400.test(errMsg) || errMsg.includes("invalid_request_error"))
+}
+
 /**
  * Structured SDK-termination metadata extracted from raw error text.
  * Used by diagnosticLog to surface why the SDK subprocess ended (max_turns,

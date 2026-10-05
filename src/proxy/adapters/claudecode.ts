@@ -235,6 +235,26 @@ export function isClaudeCodeAuxiliaryRequest(requestClass: string | undefined, b
   return extractClaudeCodeSessionId(body) !== undefined
 }
 
+/**
+ * Does this side call repeat the prompt of the one before it and add to its end?
+ *
+ * NOTE: agent-specific (claude-code). The auto-mode classifier re-sends the
+ * conversation's transcript on every permission check, with what happened
+ * since appended and the same instruction closing it (measured live across 33
+ * consecutive checks: each prompt was the previous one minus its 203-character
+ * ending, plus 0.3K-15K new characters). The CLI sends that transcript as a
+ * block per entry with its own cache breakpoints, so that a check reads the
+ * last one's prefix. Replayed through Meridian as one block it read nothing:
+ * 38 checks in 22 minutes wrote 3.66M cache tokens, 83% of all cache written.
+ *
+ * The progress summary does not grow — it is answered from a different step
+ * each time (see `agentSummaryReplayMessages`) — and a side call known only by
+ * the client's request class is not known to either.
+ */
+export function claudeCodeAuxiliaryPromptGrows(body: unknown): boolean {
+  return Boolean(body) && typeof body === "object" && hasClassifierShape(body as Parameters<typeof hasClassifierShape>[0])
+}
+
 /** The most a progress label is shown of any one tool input, tool output or note. */
 const AGENT_SUMMARY_FIELD_MAX = 2_000
 
@@ -383,6 +403,11 @@ export const claudeCodeAdapter: AgentAdapter = {
   /** See `agentSummaryReplayMessages`. */
   getAuxiliaryReplayMessages(_c: Context, body?: unknown): Array<{ role: string; content: unknown }> | undefined {
     return agentSummaryReplayMessages(body)
+  },
+
+  /** See `claudeCodeAuxiliaryPromptGrows`. */
+  auxiliaryPromptGrows(_c: Context, body?: unknown): boolean {
+    return claudeCodeAuxiliaryPromptGrows(body)
   },
 
   /**

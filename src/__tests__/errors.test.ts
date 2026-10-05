@@ -2,7 +2,7 @@
  * Unit tests for classifyError — pure function, no mocks needed.
  */
 import { describe, it, expect } from "bun:test"
-import { canRecoverCapturedToolUses, classifyError, extendedContextHint, classifyResumeRefusal, isBusySessionError, isExtraUsageRequiredError, extractSdkTermination, formatSdkTermination, isAccountFailoverError, isQuotaRefusal, isRateLimitError } from "../proxy/errors"
+import { canRecoverCapturedToolUses, classifyError, extendedContextHint, classifyResumeRefusal, isBusySessionError, isCacheBreakpointRejection, isExtraUsageRequiredError, extractSdkTermination, formatSdkTermination, isAccountFailoverError, isQuotaRefusal, isRateLimitError } from "../proxy/errors"
 
 describe("classifyError", () => {
   describe("authentication errors", () => {
@@ -603,6 +603,34 @@ describe("classifyError", () => {
 
     it("returns false when only '1m' but no 'extra usage'", () => {
       expect(isExtraUsageRequiredError("using 1m context window")).toBe(false)
+    })
+  })
+
+  describe("cache breakpoint rejection", () => {
+    it("detects a request refused for carrying too many breakpoints", () => {
+      expect(isCacheBreakpointRejection(
+        'Claude Code returned an error result: API Error: 400 {"type":"error","error":{"type":"invalid_request_error","message":"A maximum of 4 blocks with cache_control may be provided. Found 5."},"request_id":"req_011"}'
+      )).toBe(true)
+    })
+
+    it("detects a refusal over breakpoint order or placement", () => {
+      expect(isCacheBreakpointRejection(
+        "API Error: 400 invalid_request_error: messages.0.content.3.cache_control.ttl: a ttl='1h' cache_control block must not come after a ttl='5m' cache_control block"
+      )).toBe(true)
+      expect(isCacheBreakpointRejection(
+        '{"type":"invalid_request_error","message":"messages.0.content.0: cache_control cannot be set for empty text blocks"}'
+      )).toBe(true)
+    })
+
+    it("returns false for any other refused request", () => {
+      expect(isCacheBreakpointRejection("Claude Code returned an error result: API Error: 400 You're out of extra usage.")).toBe(false)
+      expect(isCacheBreakpointRejection('API Error: 400 {"type":"invalid_request_error","message":"prompt is too long: 250000 tokens > 200000 maximum"}')).toBe(false)
+    })
+
+    it("returns false when breakpoints are mentioned by something that is not a refused request", () => {
+      expect(isCacheBreakpointRejection("429 rate limit reached; cache_control breakpoints unaffected")).toBe(false)
+      expect(isCacheBreakpointRejection("Upstream stalled: no data for 30002ms")).toBe(false)
+      expect(isCacheBreakpointRejection("")).toBe(false)
     })
   })
 

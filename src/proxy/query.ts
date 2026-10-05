@@ -107,6 +107,13 @@ export interface QueryContext {
   cleanEnv: Record<string, string | undefined>
   /** Per-request env overrides that must win over inherited env */
   envOverrides?: Record<string, string | undefined>
+  /**
+   * The prompt is text blocks carrying their own cache breakpoints
+   * (`layoutGrowingPrompt`). The CLI's own are then switched off for this
+   * query: it forwards a prompt's breakpoints untouched and adds three of its
+   * own, and the API accepts four.
+   */
+  ownsCacheBreakpoints?: boolean
   /** Whether any passthrough tools use deferred loading */
   hasDeferredTools: boolean
   /**
@@ -702,6 +709,9 @@ export function buildQueryOptions(ctx: QueryContext, abortController?: AbortCont
         // See: https://github.com/rynfar/meridian/issues/256
         ...(process.getuid?.() === 0 ? { IS_SANDBOX: "1" } : {}),
         ...ctx.envOverrides,
+        // Last, and not the operator's to override: with the CLI's breakpoints
+        // beside the prompt's own the API refuses the request outright.
+        ...(ctx.ownsCacheBreakpoints ? { DISABLE_PROMPT_CACHING: "1" } : {}),
       },
       ...(Object.keys(sdkAgents).length > 0 ? { agents: sdkAgents } : {}),
       ...(resumeSessionId ? { resume: resumeSessionId } : {}),

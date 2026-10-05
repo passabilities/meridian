@@ -1021,6 +1021,7 @@ curl -s -X PUT -H 'Content-Type: application/json' -d '{"checkForUpdates":false}
 | E71 | [Claude Code auto-mode classifier isolation](#e71-claude-code-auto-mode-classifier-isolation) | **Automated, needs the `claude` CLI** (skips cleanly without it): `bun scripts/e2e-claude-code-auto-mode.mjs` — real proxy + SDK, the REAL Claude Code CLI in `--permission-mode auto`. Asserts the classifier's side requests are isolated as `independent-request:auxiliary-request` on both the shape and request-class header paths, every later main request continues its session, and nothing collides or is refused. **Run before releases touching the independence guards, the turn lease, or Claude Code detection** | 2026-09-30 |
 | E72 | [Claude Code Agent-tool subagent session isolation](#e72-claude-code-agent-tool-subagent-session-isolation) | **Automated, needs the `claude` CLI** (skips cleanly without it): `bun scripts/e2e-claude-code-subagent-session.mjs` — real proxy + SDK, the REAL Claude Code CLI spawning two parallel Agent-tool subagents. Asserts each subagent resumes its own session, the parent keeps resuming across subagent activity, nothing collides, and no flow waits on another's session lease. **Run before releases touching session keys, the turn lease, account routing, or Claude Code detection** | 2026-10-01 |
 | E73 | [Unknown thinking display values](#e73-unknown-thinking-display-values) | **Automated**: `bun scripts/e2e-thinking-display-interactive.mjs` — actual Claude Code 2.1.287 TUI in a PTY, real proxy/SDK/bundled subprocess. Requires an answer rendered in the client, live-prompt framing, supported-display controls and joined cleanup. The separate HTTP-shaped gate remains a backend smoke test. **Run before releases touching thinking passthrough or the SDK/CLI version** | 2026-10-01 |
+| E74 | [Claude Code permission-check prompt cache](#e74-claude-code-permission-check-prompt-cache) | **Automated, needs the `claude` CLI** (skips cleanly without it), **no model calls**: `bun scripts/e2e-claude-code-permission-check-cache.mjs` — the REAL Claude Code CLI in `--permission-mode auto`, this checkout's proxy, the real SDK and bundled CLI, and a scripted Messages API that keeps a prompt cache as the API documents it. Asserts each check goes upstream as text blocks carrying only Meridian's cache breakpoints, reads back what the check before it wrote, reads the same text as with the layout off, and falls back to the plain prompt when the API refuses the breakpoints. **Run before releases touching auxiliary requests, replay framing or the SDK/CLI version** | 2026-10-05 |
 
 | P1 | [Profile: List & Auth Status](#p1-profile-list--auth-status) | `/profiles/list` returns profiles with emails, login status, auth timestamps | - |
 | P2 | [Profile: Switch via API](#p2-profile-switch-via-api) | `POST /profiles/active` switches profile; health endpoint reflects new email | - |
@@ -6140,9 +6141,30 @@ Both are fixed in this branch after that build, each with a test in
 side call is never rebound to the conversation's checkpoint, and it gets a
 tool server of its own.
 
-**Not covered.** A live run of those two fixes: on a working proxy, a fork
-sent while its turn is in flight should now be answered at once from its
-latest step, and no request should go out without its tools.
+**Live run with both fixes (2026-10-05 00:15–00:37, a working proxy built from
+`88cdd4d`, same platform, CLI versions and model; the same background
+subagent, 120 requests).** No request returned 500 and nothing logged `already
+has an active SDK writer`. All 32 forks were answered from the latest step, 24
+of them while a turn of the same subagent was in flight: 1.6–3.5s, 1,324–3,748
+cache-write tokens each, no lease wait, and five tools in every fork's
+`prompt_snapshot`. All 35 subagent turns resumed: a median 20.1s and 2,346
+output tokens, 99–100% of input read from cache, 424–6,586 cache-write tokens
+each. Five forks started within 1.5s of a turn, one within 3ms; those turns
+read 588,048–636,121 tokens from cache, where the turn that lost its tools on
+`32e8f19` read 8,183.
+
+**Not covered.** The other side calls in that window, which this change does
+not touch. The auto-mode classifier (`sonnet`, no tools) made 38 calls, and
+the 34 that were answered wrote 3,660,655 cache tokens, 83% of all cache
+written: each resends its whole prompt (123K–273K characters) as one text
+block, and between consecutive calls about the subagent 95–100% of it repeats.
+The other four got no model response within the 90s idle limit (504
+`upstream_timeout`, 363s in all, all between 00:17 and 00:27) and passed when
+the CLI retried. A fifth, at 00:38, was watched from outside the proxy:
+for the whole 90s its SDK child held one established connection to the model
+API with 457,395 bytes sent, 6,282 received, no retransmits and no CPU use,
+and the retry was answered in 4.2s. Why the API held those requests is not
+known. E74 takes up both: what a check writes, and how long one is waited on.
 
 ## E73: Unknown thinking display values
 
@@ -6214,6 +6236,124 @@ subprocess had exited on `--thinking-display updates`) and nothing logged a
 drop; `"summarized"` answered. Branch: PASS, 4 of 4: both answered, thinking
 was not forced off, and the drop was logged once. Live, the owner's interactive Claude Code 2.1.287 session failed
 10 of 10 turns through the proxy with this error before the fix.
+
+## E74: Claude Code permission-check prompt cache
+
+**What it proves:** an auto-mode permission check reads back from the prompt
+cache what the check before it wrote, instead of writing the conversation's
+transcript to the cache again; and a check the model API never answers is
+given up on, and retried, sooner.
+
+The classifier re-sends the conversation's transcript on every check, with
+what happened since appended and the same instruction closing it. CLI 2.1.289
+sends that as two messages — the user's instructions, carrying a cache
+breakpoint, then the transcript as text blocks carrying two more — so that a
+check sent straight to the API reads the previous check's prefix. Meridian
+replayed it as one text block. The SDK child puts its breakpoint after the
+whole prompt, and the next, longer prompt has no block boundary there, so each
+check read back the system prompt and wrote everything else again.
+
+`claudeCodeAdapter.auxiliaryPromptGrows` now tells the proxy that the
+classifier's prompt only grows. `layoutGrowingPrompt` cuts the same text front
+to back in 16,384-character chunks ending at a line end, so a cut depends only
+on the text before it, and marks two cuts with a cache breakpoint: where the
+framed history (the user's instructions) ends, and the last cut that lies
+wholly before the final 2,048 characters, taken to be the part that changes.
+The entries live as long as the SDK child's own writes: an hour on a
+subscription profile, five minutes on an API-key profile. With a shorter life
+than the child's, a check after a pause would rewrite the system prompt the
+child would still have read back.
+The SDK child's own prompt caching is switched off for that query
+(`DISABLE_PROMPT_CACHING=1`): the bundled CLI forwards a prompt's breakpoints
+untouched and adds three of its own, and the API accepts four. Nothing the
+model reads changes. A prompt with no stable cut, and every other side call,
+is sent as before.
+
+```bash
+bun scripts/e2e-claude-code-permission-check-cache.mjs
+```
+
+The REAL Claude Code CLI in `--permission-mode auto`, this checkout's proxy,
+the real Agent SDK and its bundled CLI; only the model is a stand-in. A
+scripted Messages API on localhost plays an agent that makes nine shell writes
+outside its project (each goes to the classifier), answers the classifier, and
+records every request body. It keeps a prompt cache as the API documents it:
+an entry is written at each `cache_control` breakpoint, and a request reads
+the longest entry ending at one of the 20 block boundaries at or before one of
+its own breakpoints. Client and proxy get dummy keys, and the environment is
+scrubbed of `CLAUDE*`, `ANTHROPIC_*` and `MERIDIAN_*`, so the gate makes no
+model call and uses no credential. The client talks to a recording relay in
+front of the proxy, which is where its own request shape is read. Three runs:
+the layout on, the layout off (`MERIDIAN_AUXILIARY_PROMPT_CACHE=0`), and the
+layout on against an API that refuses the first request carrying a breakpoint
+inside a message, as the real one would if a CLI added its own beside
+Meridian's.
+
+**Pass criteria** (asserted, non-zero exit on any):
+
+- Every run's client exits 0 with its conversation finished, and all nine
+  writes go to the classifier. A run where it never fires fails rather than
+  passing vacuously.
+- Layout off: each check goes upstream as one text block, reads back the same
+  fixed part every time, and writes all the rest again, more each time.
+- Layout on: each check goes upstream as text blocks whose only breakpoints
+  are Meridian's (one or two, never one on a system block, never more than
+  four), and its text matches the layout-off run character for character.
+- Layout on: the last four checks read back the transcript as well as the
+  fixed part (more than with the layout off, and over 85% of the prompt),
+  write less than a third of what they wrote with the layout off, and each
+  pays for less anew (written, or sent uncached).
+- The proxy logs `auxiliary prompt laid out for caching` once per such check.
+- Refused: exactly one check is refused, that check and every later one goes
+  upstream as plain text, the client still finishes, and the proxy logs
+  `cache breakpoints refused` once.
+
+**Before/after (2026-10-05, macOS 26.5 arm64, Bun 1.3.14, Agent SDK 0.2.141,
+bundled CLI 2.1.284, client 2.1.289; an API-key profile, no model calls, sizes
+in characters of request body).** With `server.ts` as at `88cdd4d`: FAIL, 8
+checks — no check went upstream as blocks, each read back only the fixed part
+and wrote the rest again whichever way the switch was set, and nothing was
+refused or logged. Branch: PASS, 22 of 22. The client's own check: `user[1
+block, breakpoint]` then `user[13 blocks, breakpoints at 9 and 10]`.
+
+| Check | Prompt | Layout off: read / written | Layout on: read / written / uncached |
+|---|---|---|---|
+| 6 | 196.6K | 156.4K / 40.1K | 175.7K / 13.5K / 7.5K |
+| 7 | 199.9K | 156.4K / 43.5K | 189.2K / 0 / 10.8K |
+| 8 | 203.3K | 156.4K / 46.8K | 189.2K / 0 / 14.2K |
+| 9 | 206.6K | 156.4K / 50.2K | 189.2K / 0 / 17.5K |
+
+Layout off sent one block with the CLI's three breakpoints; layout on sent
+three or four blocks with one breakpoint, then two once the transcript
+outgrew a chunk, and none on the system prompt. Over the last four checks the
+layout wrote 13.5K characters against 180.6K, and paid for 63.5K anew against
+180.6K. The scripted conversation is short, so the system prompt (156.4K) is
+most of every prompt here; live, the transcript was half to three quarters of
+it.
+
+**Side-call idle limit.** A side call runs under
+`MERIDIAN_UPSTREAM_AUXILIARY_IDLE_MS` (30s) instead of the 90s limit for
+turns. Covered by `proxy-concurrency-coordination.test.ts` through the mocked
+SDK: a stalled check is answered 504 at its own limit while a silent turn
+beside it runs on, the client's retry is answered, a streamed side call gets
+the same limit, and three stalls in a row end in the terminal error naming
+that setting. The evidence for 30s is live, from the owner's working proxy on
+2026-10-04/05 (182 checks): 166 were answered within 10s and five more within
+22s; two took 39s and 61s; nine were not answered within 90s. The check sent
+again after each of those nine was answered in 2.9–4.2s. One stall was watched
+from outside the proxy (see E72's last run): the request was fully delivered
+and nothing came back.
+
+**Not covered.** A live run: the real cache, real token counts, an hour-long
+breakpoint on a subscription profile (the gate's profile is an API key, so its
+breakpoints are five-minute ones), and a stalled check ending at 30s. On a
+working proxy the SDK child's transcripts should show a check reading most of
+its prompt (`cache_read_input_tokens`) and writing only what was added
+(`cache_creation_input_tokens`); a line `cache breakpoints refused` in the
+proxy log would mean the API turned the breakpoints down and the proxy went
+back to the plain prompt. Before, on the
+owner's proxy from 00:15 to 01:38 on 2026-10-05, each of 111 checks read
+50,765 tokens and wrote 28,865–158,599: 8,208,612 cache-write tokens in all.
 
 ## Concurrent transcript publication
 

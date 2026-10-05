@@ -108,6 +108,20 @@ export interface AgentIdentity {
   getAuxiliaryReplayMessages?(c: Context, body?: unknown): Array<{ role: string; content: unknown }> | undefined
 
   /**
+   * Optional: true when this auxiliary request repeats the prompt of the one
+   * before it and adds to its end, as a side call re-reading a transcript does.
+   *
+   * An auxiliary request is answered from a session of its own, which caches
+   * its prompt as a single block, so no later request reads any of it back.
+   * For a prompt that only grows, the proxy instead cuts it at fixed points
+   * and places the cache breakpoints itself (`layoutGrowingPrompt`), and the
+   * SDK child's own are switched off for that call. Asked only about a request
+   * `isAuxiliaryRequest` accepted. Undefined, false, or no method keeps the
+   * single block.
+   */
+  auxiliaryPromptGrows?(c: Context, body?: unknown): boolean
+
+  /**
    * Optional trusted identity for a visible human turn.
    *
    * This is deliberately a positive, normalized assertion. Callers must treat

@@ -169,6 +169,29 @@ describe("buildQueryOptions", () => {
     expect(result.options.env?.ANTHROPIC_DEFAULT_OPUS_MODEL).toBe("claude-opus-4-7")
   })
 
+  // A prompt that carries its own cache breakpoints is only a valid request
+  // while the CLI adds none: together they exceed the API's four.
+  it("switches the CLI's own prompt caching off for a prompt that carries its breakpoints", () => {
+    const result = buildQueryOptions(makeContext({ ownsCacheBreakpoints: true }))
+    expect(result.options.env?.DISABLE_PROMPT_CACHING).toBe("1")
+  })
+
+  it("leaves the CLI's prompt caching as inherited for every other prompt", () => {
+    expect(buildQueryOptions(makeContext()).options.env?.DISABLE_PROMPT_CACHING).toBeUndefined()
+    expect(buildQueryOptions(makeContext({ ownsCacheBreakpoints: false })).options.env?.DISABLE_PROMPT_CACHING).toBeUndefined()
+    const inherited = buildQueryOptions(makeContext({ cleanEnv: { DISABLE_PROMPT_CACHING: "0" } }))
+    expect(inherited.options.env?.DISABLE_PROMPT_CACHING).toBe("0")
+  })
+
+  it("does not let inherited env or a profile override turn it back on under such a prompt", () => {
+    const result = buildQueryOptions(makeContext({
+      ownsCacheBreakpoints: true,
+      cleanEnv: { DISABLE_PROMPT_CACHING: "0" },
+      envOverrides: { DISABLE_PROMPT_CACHING: "" },
+    }))
+    expect(result.options.env?.DISABLE_PROMPT_CACHING).toBe("1")
+  })
+
   it("sets includePartialMessages for streaming", () => {
     const result = buildQueryOptions(makeContext({ stream: true }))
     expect((result.options as any).includePartialMessages).toBe(true)
