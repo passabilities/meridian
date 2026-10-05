@@ -760,9 +760,10 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
   const idleStalls = new IdleStallTracker(UPSTREAM_IDLE_MAX_CONSECUTIVE, getMaxSessionsLimit())
 
   // Set once the API has refused a prompt carrying Meridian's cache
-  // breakpoints. That happens only when the CLI adds its own beside them,
-  // which it then does on every request, so growing auxiliary prompts go out
-  // plain for the life of this process rather than each paying for a refusal.
+  // breakpoints: the CLI added its own beside them, or the API would not take
+  // the lifetime asked for. Either would happen again on every request, so
+  // growing auxiliary prompts go out plain for the life of this process
+  // rather than each paying for a refusal.
   let auxiliaryCacheLayoutRefused = false
 
   // A --resume spawned while the session's previous subprocess is still
@@ -3538,9 +3539,10 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
         return true
       }
 
-      // The API refuses a prompt's own cache breakpoints only when the CLI has
-      // added more beside them. Resend the same text plain, cached by the CLI
-      // as it always was, and stop laying prompts out.
+      // The API has refused the prompt's own cache breakpoints: too many once
+      // the CLI's are counted, or a lifetime it will not take. Resend the same
+      // text plain, cached by the CLI as it always was, and stop laying
+      // prompts out.
       function retryWithoutCacheLayout(errMsg: string): boolean {
         if (!promptCacheLayout || !isCacheBreakpointRejection(errMsg)) return false
         auxiliaryCacheLayoutRefused = true

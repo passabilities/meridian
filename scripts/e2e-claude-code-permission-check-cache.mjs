@@ -10,7 +10,8 @@
 // (measured live: 3.66M cache-write tokens in 22 minutes, 83% of all written).
 //
 // The REAL Claude Code CLI runs in auto mode against this checkout's proxy,
-// which drives the REAL Agent SDK and its bundled CLI. Only the model is a
+// which drives the REAL Agent SDK and this checkout's own CLI, the one `npm run
+// start` resolves (`E2E_SDK_CLAUDE_PATH` names another). Only the model is a
 // stand-in: a scripted Messages API on localhost that plays an agent making
 // shell writes outside its project (each one goes to the classifier), answers
 // the classifier, records every request body, and keeps a prompt cache the way
@@ -19,6 +20,11 @@
 // block boundaries at or before one of its own breakpoints. No model call, no
 // credential: the client and the proxy both get dummy keys, and the child
 // environment is scrubbed of `CLAUDE*`, `ANTHROPIC_*` and `MERIDIAN_*`.
+//
+// The proxy's working directory is a git repository, as a checkout's is, and a
+// tracked file in it changes half-way through each conversation. The SDK child
+// opens every prompt with `git status` of that directory, so a prompt cached
+// behind it is lost to the next check when the status moves.
 //
 // Three runs: the layout on, the layout off (`MERIDIAN_AUXILIARY_PROMPT_CACHE=0`,
 // the prompt as it was always sent), and the layout on against an API that
@@ -29,7 +35,7 @@
 // real cache, and real token counts, want a live run: see E2E.md.
 //
 //   bun scripts/e2e-claude-code-permission-check-cache.mjs
-import { mkdirSync, mkdtempSync, realpathSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, realpathSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { spawnSync } from 'node:child_process'
@@ -46,17 +52,35 @@ if (which.status !== 0 || !which.stdout.trim()) {
 }
 const CLI = which.stdout.trim()
 const version = spawnSync(CLI, ['--version'], { encoding: 'utf8' }).stdout.trim()
+// The proxy takes `claude` from PATH before its own packaged one. `npm run
+// start` puts this checkout's first; a bare `bun` run would find the client.
+const checkoutCli = join(repo, 'node_modules', '.bin', 'claude')
+const sdkCli = process.env.E2E_SDK_CLAUDE_PATH ?? (existsSync(checkoutCli) ? checkoutCli : CLI)
+const sdkVersion = spawnSync(sdkCli, ['--version'], { encoding: 'utf8' }).stdout.trim()
 
 for (const key of Object.keys(process.env)) {
   if (/^(MERIDIAN_|CLAUDE_PROXY_|CLAUDE(CODE|_)|ANTHROPIC_)/.test(key)) delete process.env[key]
 }
 const root = realpathSync(mkdtempSync(join(tmpdir(), 'mcccheck-')))
+// The proxy's working directory, and so every SDK child's: a repository with
+// one tracked file, clean until a run changes it.
+const workdir = realpathSync(mkdtempSync(join(tmpdir(), 'mcccheck-work-')))
+const TRACKED = join(workdir, 'notes.txt')
+const git = (...args) => spawnSync('git', ['-c', 'commit.gpgsign=false', ...args], { cwd: workdir, encoding: 'utf8',
+  env: { ...process.env, GIT_AUTHOR_NAME: 'gate', GIT_AUTHOR_EMAIL: 'gate@example.invalid', GIT_COMMITTER_NAME: 'gate', GIT_COMMITTER_EMAIL: 'gate@example.invalid' } })
+writeFileSync(TRACKED, 'as committed\n')
+if ([git('init', '-q', '-b', 'main'), git('add', '.'), git('commit', '-q', '-m', 'first commit')].some(step => step.status !== 0)) {
+  say('SKIP: `git` could not make the repository the proxy runs in')
+  process.exit(1)
+}
 Object.assign(process.env, {
   MERIDIAN_CONFIG_DIR: join(root, 'config'), MERIDIAN_SESSION_DIR: join(root, 'sessions'),
-  MERIDIAN_WORKDIR: root, MERIDIAN_TELEMETRY_PERSIST: '0',
+  MERIDIAN_WORKDIR: workdir, MERIDIAN_TELEMETRY_PERSIST: '0', MERIDIAN_CLAUDE_PATH: sdkCli,
 })
 
 const ROUNDS = 9
+/** The tracked file changes once this many checks have been answered. */
+const CHANGE_AFTER = 5
 const CHECK_MARKER = 'You are a security monitor for autonomous AI coding agents'
 const hash = value => createHash('sha256').update(value).digest('hex')
 const blocksOf = content => typeof content === 'string' ? [{ type: 'text', text: content }] : Array.isArray(content) ? content : []
@@ -76,11 +100,12 @@ function cacheUnits(body) {
   return units
 }
 
-function createStandIn({ outside, refuseFirstMessageBreakpoint }) {
+function createStandIn({ outside, refuseFirstMessageBreakpoint, afterCheck }) {
   const calls = []
   const cache = new Set()
   const errors = []
   let refused = 0
+  let answered = 0
 
   /** The documented cache: read the longest entry within the lookback of a breakpoint, then write every breakpoint. */
   function account(units) {
@@ -161,6 +186,8 @@ function createStandIn({ outside, refuseFirstMessageBreakpoint }) {
         }
         const usage = account(units)
         calls.push({ kind: answer.kind, body, units, usage })
+        // Before the verdict goes back, so the next check's child sees it.
+        if (answer.kind === 'check') afterCheck?.(++answered)
         return respond(body, answer, {
           input_tokens: Math.ceil(usage.plain / 4), output_tokens: 8,
           cache_read_input_tokens: Math.ceil(usage.read / 4), cache_creation_input_tokens: Math.ceil(usage.written / 4),
@@ -187,8 +214,10 @@ async function run(label, { layout, refuseFirstMessageBreakpoint = false }) {
   // The classifier is sent the user's instructions as a message of their own.
   writeFileSync(join(project, 'CLAUDE.md'), `# Scratch project\n\n${'- Keep build stamps outside the repository and never commit them.\n'.repeat(260)}`)
   mkdirSync(join(root, label), { recursive: true })
+  writeFileSync(TRACKED, 'as committed\n')
 
-  const standIn = createStandIn({ outside, refuseFirstMessageBreakpoint })
+  const standIn = createStandIn({ outside, refuseFirstMessageBreakpoint,
+    afterCheck: count => { if (count === CHANGE_AFTER) writeFileSync(TRACKED, 'as committed\nand edited since\n') } })
   const proxy = await startProxyServer({ port: 0, host: '127.0.0.1', silent: true,
     profiles: [{ id: 'fixture', type: 'api', apiKey: 'local-fixture-key', baseUrl: `http://127.0.0.1:${standIn.server.port}` }],
     defaultProfile: 'fixture',
@@ -238,20 +267,37 @@ const check = (ok, label, detail) => {
 const k = chars => `${(chars / 1000).toFixed(1)}K`
 const pct = (part, whole) => `${Math.round(100 * part / Math.max(1, whole))}%`
 
+// Each run has its own scratch directories and session; nothing else may differ.
+const strip = text => text.replace(/mcccheck-[a-z]+-[A-Za-z0-9]+|[0-9a-f]{8}-[0-9a-f-]{27}/g, '#')
+const userBlocks = body => body.messages.filter(message => message.role === 'user').flatMap(message => blocksOf(message.content))
+const userText = body => strip(userBlocks(body).map(block => block?.text ?? '').join(''))
+/** What the SDK child writes ahead of the prompt on its own: its session context, `git status` included. */
+const SESSION_CONTEXT = /^<system-reminder>\nAs you answer the user's questions[\s\S]*?<\/system-reminder>\s*/
+/** The blocks that carry Meridian's prompt: every user block but the child's own note. */
+const promptBlocks = body => userBlocks(body).filter(block => !SESSION_CONTEXT.test(block?.text ?? ''))
+const promptText = body => userText(body).replace(SESSION_CONTEXT, '')
+const gitStatusOf = body => /# gitStatus\n[\s\S]*?\nStatus:\n([\s\S]*?)\n\nRecent commits:/.exec(userText(body))?.[1]
+// All the model is told besides the prompt. The billing line is left out: the
+// CLI derives part of it from the first characters of the user message.
+const systemText = body => strip([
+  ...(Array.isArray(body.system) ? body.system : []).map(block => block?.text ?? '').filter(text => !text.startsWith('x-anthropic-billing-header')),
+  ...body.messages.filter(message => message.role === 'system').map(message => textOf(message.content)),
+].join('\n'))
+
 function report(result) {
   const checks = result.calls.filter(call => call.kind === 'check')
   say(`\n  --- ${result.label}: client exit ${result.status}, ${result.calls.length} upstream requests, ${checks.length} permission checks ---`)
-  say(`    ${'check'.padEnd(6)} ${'blocks'.padStart(6)} ${'marks'.padStart(5)} ${'prompt'.padStart(8)} ${'read'.padStart(8)} ${'written'.padStart(8)} ${'uncached'.padStart(8)}`)
+  say(`    ${'check'.padEnd(6)} ${'blocks'.padStart(6)} ${'marks'.padStart(5)} ${'prompt'.padStart(8)} ${'read'.padStart(8)} ${'written'.padStart(8)} ${'uncached'.padStart(8)}  git status ahead of it`)
   checks.forEach((call, index) => {
-    const user = call.units.filter(unit => unit.where === 'user')
-    say(`    ${String(index + 1).padEnd(6)} ${String(user.length).padStart(6)} ${String(call.units.filter(unit => unit.marker).length).padStart(5)}`
-      + ` ${k(call.usage.total).padStart(8)} ${k(call.usage.read).padStart(8)} ${k(call.usage.written).padStart(8)} ${k(call.usage.plain).padStart(8)}`)
+    say(`    ${String(index + 1).padEnd(6)} ${String(promptBlocks(call.body).length).padStart(6)} ${String(call.units.filter(unit => unit.marker).length).padStart(5)}`
+      + ` ${k(call.usage.total).padStart(8)} ${k(call.usage.read).padStart(8)} ${k(call.usage.written).padStart(8)} ${k(call.usage.plain).padStart(8)}  ${gitStatusOf(call.body) ?? 'none'}`)
   })
   return checks
 }
 
 say(`\n=== Claude Code permission-check prompt cache ===`)
-say(`  client: ${version}   proxy: this checkout   SDK child: bundled CLI   upstream: scripted stand-in with a documented-semantics cache (no model calls)`)
+say(`  client: ${version}   proxy: this checkout   SDK child: ${sdkVersion} (${sdkCli})`)
+say(`  upstream: scripted stand-in with a documented-semantics cache (no model calls)   proxy directory: a git repository, one file changed after check ${CHANGE_AFTER}`)
 
 const on = await run('layout-on', { layout: true })
 const off = await run('layout-off', { layout: false })
@@ -284,9 +330,14 @@ check(on.clientChecks.length >= ROUNDS && on.clientChecks.every(body => body.mes
   "the client sent its instructions and the transcript as separate messages", `${on.clientChecks.length} checks, ${on.clientChecks.at(-1)?.messages.length} messages`)
 
 // 2. Before: one block, the CLI's breakpoints only, nothing read back but the system prompt.
+const offStatus = offChecks.map(call => gitStatusOf(call.body))
+check(offStatus.length > CHANGE_AFTER && offStatus.every(status => status !== undefined)
+  && offStatus[CHANGE_AFTER - 1] === '(clean)' && offStatus[CHANGE_AFTER] !== '(clean)',
+  "layout off: the SDK child opens every prompt with `git status` of the proxy's directory, as it is when the check is made",
+  `check ${CHANGE_AFTER}: ${JSON.stringify(offStatus[CHANGE_AFTER - 1])}, check ${CHANGE_AFTER + 1}: ${JSON.stringify(offStatus[CHANGE_AFTER])}`)
 const offLate = offChecks.slice(-4)
-check(offChecks.every(call => call.units.filter(unit => unit.where === 'user').length === 1),
-  'layout off: the prompt goes upstream as one text block', `${offChecks.map(call => call.units.filter(unit => unit.where === 'user').length).join(',')}`)
+check(offChecks.every(call => promptBlocks(call.body).length === 1),
+  'layout off: the prompt goes upstream as one text block', `${offChecks.map(call => promptBlocks(call.body).length).join(',')}`)
 // What never changes is the system prompt, which here is most of a short
 // conversation's prompt; the instructions and the transcript are what is rewritten.
 const offRest = offChecks.slice(1)
@@ -296,7 +347,7 @@ check(offRest.every(call => call.usage.read === offRest[0].usage.read && call.us
   `read ${k(offRest[0]?.usage.read ?? 0)} every time; wrote ${offRest.map(call => k(call.usage.written)).join(', ')}`)
 
 // 3. THE FIX: blocks, Meridian's breakpoints alone, and each check reads the one before it.
-const laidOut = onChecks.filter(call => call.units.filter(unit => unit.where === 'user').length > 1)
+const laidOut = onChecks.filter(call => promptBlocks(call.body).length > 1)
 check(laidOut.length >= onChecks.length - 1, 'layout on: the prompt goes upstream as text blocks', `${laidOut.length} of ${onChecks.length} checks`)
 check(laidOut.length > 0 && laidOut.every(call => call.units.every(unit => unit.where !== 'system' || !unit.marker)
   && call.units.filter(unit => unit.marker).length >= 1 && call.units.filter(unit => unit.marker).length <= 2
@@ -305,12 +356,25 @@ check(laidOut.length > 0 && laidOut.every(call => call.units.every(unit => unit.
   laidOut.map(call => call.units.filter(unit => unit.marker).length).join(','))
 check(onChecks.every(call => call.units.filter(unit => unit.marker).length <= 4), 'layout on: never more breakpoints than the API accepts',
   onChecks.map(call => call.units.filter(unit => unit.marker).length).join(','))
-// Each run has its own scratch directories and session; nothing else may differ.
-const strip = text => text.replace(/mcccheck-[a-z]+-[A-Za-z0-9]+|[0-9a-f]{8}-[0-9a-f-]{27}/g, '#')
-const userText = body => strip(body.messages.filter(message => message.role === 'user').map(message => textOf(message.content)).join(''))
-const differing = onChecks.filter((call, index) => !offChecks[index] || userText(call.body) !== userText(offChecks[index].body)).length
-check(differing === 0, 'layout on: every check reads, character for character, what it reads with the layout off',
+const differing = onChecks.filter((call, index) => !offChecks[index] || promptText(call.body) !== promptText(offChecks[index].body)).length
+check(differing === 0, "layout on: every check's prompt is, character for character, the one sent with the layout off",
   `${onChecks.length - differing} of ${onChecks.length} identical`)
+// The one thing taken away is the child's own `git status`, which stood ahead
+// of the prompt and of every breakpoint in it.
+check(laidOut.length > 0 && laidOut.every(call => !userText(call.body).includes('# gitStatus')),
+  'layout on: no `git status` stands ahead of a prompt laid out for caching',
+  `${laidOut.filter(call => !userText(call.body).includes('# gitStatus')).length} of ${laidOut.length} without one`)
+const otherwise = onChecks.filter((call, index) => !offChecks[index] || systemText(call.body) !== systemText(offChecks[index].body)).length
+check(otherwise === 0, 'layout on: the system prompt and the environment note are the ones sent with the layout off',
+  `${onChecks.length - otherwise} of ${onChecks.length} identical`)
+// A file changed in the proxy's directory after check CHANGE_AFTER. The next
+// check must still find everything that one had in the cache.
+const beforeChange = onChecks[CHANGE_AFTER - 1]
+const afterChange = onChecks[CHANGE_AFTER]
+const cachedBefore = beforeChange ? beforeChange.usage.read + beforeChange.usage.written : 0
+check(Boolean(beforeChange && afterChange) && cachedBefore > 0 && afterChange.usage.read >= cachedBefore,
+  "layout on: a file changing in the proxy's directory costs the next check nothing that was cached",
+  `check ${CHANGE_AFTER} left ${k(cachedBefore)} cached; check ${CHANGE_AFTER + 1} read ${k(afterChange?.usage.read ?? 0)}`)
 // With the layout off a check reads back only the fixed part. With it on, the
 // instructions and the transcript come back too.
 const onLate = onChecks.slice(-4)
@@ -334,7 +398,7 @@ check(laidOut.length > 0 && on.logs.filter(line => line.includes('auxiliary prom
 // 4. A refusal costs one retry, and the conversation still finishes.
 const refusals = refused.calls.filter(call => call.kind === 'check-refused')
 check(refusals.length === 1, 'refused: the stand-in refused exactly one check for its breakpoints', `${refusals.length}`)
-check(refusedChecks.length >= ROUNDS && refusedChecks.every(call => call.units.filter(unit => unit.where === 'user').length === 1),
+check(refusedChecks.length >= ROUNDS && refusedChecks.every(call => promptBlocks(call.body).length === 1),
   'refused: that check and every one after it went upstream as plain text', `${refusedChecks.length} answered checks`)
 check(refused.logs.filter(line => line.includes('cache breakpoints refused')).length === 1,
   'refused: the proxy says once that it turned the layout off', `${refused.logs.filter(line => line.includes('cache breakpoints refused')).length} lines`)

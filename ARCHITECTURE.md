@@ -416,7 +416,12 @@ part that changes. Both entries live as long as the SDK child's own writes do
 after a pause never rewrites what the child would still have read back. The
 SDK child's own prompt caching is switched off for
 that query (`DISABLE_PROMPT_CACHING`), because it forwards a prompt's
-breakpoints untouched and adds three of its own, and the API accepts four. If
+breakpoints untouched and adds three of its own, and the API accepts four. So
+is its git status snapshot (`CLAUDE_CODE_DISABLE_GIT_INSTRUCTIONS`): every
+child reads `git status` in the proxy's working directory afresh and writes it
+at the head of the first user message, ahead of the prompt and of both
+breakpoints, so a file changing there put everything they had cached out of
+the next check's reach. If
 the API refuses the breakpoints anyway, the prompt is resent as plain text and
 the layout stays off for the life of the process.
 

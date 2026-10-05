@@ -192,6 +192,30 @@ describe("buildQueryOptions", () => {
     expect(result.options.env?.DISABLE_PROMPT_CACHING).toBe("1")
   })
 
+  // The CLI opens the prompt with a snapshot of `git status` in its own
+  // working directory, ahead of the prompt's breakpoints. Nothing cached
+  // behind it is read back once a file there changes.
+  it("keeps the CLI's git status snapshot out of a prompt that carries its breakpoints", () => {
+    const result = buildQueryOptions(makeContext({ ownsCacheBreakpoints: true }))
+    expect(result.options.env?.CLAUDE_CODE_DISABLE_GIT_INSTRUCTIONS).toBe("1")
+  })
+
+  it("leaves the CLI's git status snapshot as inherited for every other prompt", () => {
+    expect(buildQueryOptions(makeContext()).options.env?.CLAUDE_CODE_DISABLE_GIT_INSTRUCTIONS).toBeUndefined()
+    expect(buildQueryOptions(makeContext({ ownsCacheBreakpoints: false })).options.env?.CLAUDE_CODE_DISABLE_GIT_INSTRUCTIONS).toBeUndefined()
+    const inherited = buildQueryOptions(makeContext({ cleanEnv: { CLAUDE_CODE_DISABLE_GIT_INSTRUCTIONS: "0" } }))
+    expect(inherited.options.env?.CLAUDE_CODE_DISABLE_GIT_INSTRUCTIONS).toBe("0")
+  })
+
+  it("does not let inherited env or a profile override put the snapshot back under such a prompt", () => {
+    const result = buildQueryOptions(makeContext({
+      ownsCacheBreakpoints: true,
+      cleanEnv: { CLAUDE_CODE_DISABLE_GIT_INSTRUCTIONS: "0" },
+      envOverrides: { CLAUDE_CODE_DISABLE_GIT_INSTRUCTIONS: "" },
+    }))
+    expect(result.options.env?.CLAUDE_CODE_DISABLE_GIT_INSTRUCTIONS).toBe("1")
+  })
+
   it("sets includePartialMessages for streaming", () => {
     const result = buildQueryOptions(makeContext({ stream: true }))
     expect((result.options as any).includePartialMessages).toBe(true)

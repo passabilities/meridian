@@ -1008,6 +1008,11 @@ describe("SDK and Session concurrency coordination", () => {
     // for this prompt, and not for the plain one.
     expect(capturedParams[0]?.options?.env?.DISABLE_PROMPT_CACHING).toBe("1")
     expect(capturedParams[1]?.options?.env?.DISABLE_PROMPT_CACHING).toBeUndefined()
+    // The CLI would open the prompt with `git status` of the proxy's own
+    // directory, ahead of those breakpoints, and a file changing there would
+    // put everything they cached out of reach.
+    expect(capturedParams[0]?.options?.env?.CLAUDE_CODE_DISABLE_GIT_INSTRUCTIONS).toBe("1")
+    expect(capturedParams[1]?.options?.env?.CLAUDE_CODE_DISABLE_GIT_INSTRUCTIONS).toBeUndefined()
     const laidOut = diagnosticLog.getRecent({ category: "session" }).map(entry => entry.message)
       .filter(message => message.includes("auxiliary prompt laid out for caching"))
     expect(laidOut).toHaveLength(1)
@@ -1067,6 +1072,7 @@ describe("SDK and Session concurrency coordination", () => {
     expect((await shortP).status).toBe(200)
     expect(sdkPrompt(0)).toContain("Should this action be blocked?")
     expect(capturedParams[0]?.options?.env?.DISABLE_PROMPT_CACHING).toBeUndefined()
+    expect(capturedParams[0]?.options?.env?.CLAUDE_CODE_DISABLE_GIT_INSTRUCTIONS).toBeUndefined()
 
     // A progress summary is answered from its latest step, a different one
     // every time, so however long that step is there is nothing to read back.
@@ -1100,6 +1106,8 @@ describe("SDK and Session concurrency coordination", () => {
     expect((await check.json() as { content: Array<{ text?: string }> }).content[0]?.text).toBe("ok")
     expect(capturedParams[0]?.options?.env?.DISABLE_PROMPT_CACHING).toBe("1")
     expect(capturedParams[1]?.options?.env?.DISABLE_PROMPT_CACHING).toBeUndefined()
+    expect(capturedParams[0]?.options?.env?.CLAUDE_CODE_DISABLE_GIT_INSTRUCTIONS).toBe("1")
+    expect(capturedParams[1]?.options?.env?.CLAUDE_CODE_DISABLE_GIT_INSTRUCTIONS).toBeUndefined()
     expect(sdkPrompt(1)).toEndWith(CLASSIFIER_INSTRUCTION)
     expect(sdkPrompt(1)).toContain("step-399.test.ts")
 

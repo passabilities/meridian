@@ -1021,7 +1021,7 @@ curl -s -X PUT -H 'Content-Type: application/json' -d '{"checkForUpdates":false}
 | E71 | [Claude Code auto-mode classifier isolation](#e71-claude-code-auto-mode-classifier-isolation) | **Automated, needs the `claude` CLI** (skips cleanly without it): `bun scripts/e2e-claude-code-auto-mode.mjs` — real proxy + SDK, the REAL Claude Code CLI in `--permission-mode auto`. Asserts the classifier's side requests are isolated as `independent-request:auxiliary-request` on both the shape and request-class header paths, every later main request continues its session, and nothing collides or is refused. **Run before releases touching the independence guards, the turn lease, or Claude Code detection** | 2026-09-30 |
 | E72 | [Claude Code Agent-tool subagent session isolation](#e72-claude-code-agent-tool-subagent-session-isolation) | **Automated, needs the `claude` CLI** (skips cleanly without it): `bun scripts/e2e-claude-code-subagent-session.mjs` — real proxy + SDK, the REAL Claude Code CLI spawning two parallel Agent-tool subagents. Asserts each subagent resumes its own session, the parent keeps resuming across subagent activity, nothing collides, and no flow waits on another's session lease. **Run before releases touching session keys, the turn lease, account routing, or Claude Code detection** | 2026-10-01 |
 | E73 | [Unknown thinking display values](#e73-unknown-thinking-display-values) | **Automated**: `bun scripts/e2e-thinking-display-interactive.mjs` — actual Claude Code 2.1.287 TUI in a PTY, real proxy/SDK/bundled subprocess. Requires an answer rendered in the client, live-prompt framing, supported-display controls and joined cleanup. The separate HTTP-shaped gate remains a backend smoke test. **Run before releases touching thinking passthrough or the SDK/CLI version** | 2026-10-01 |
-| E74 | [Claude Code permission-check prompt cache](#e74-claude-code-permission-check-prompt-cache) | **Automated, needs the `claude` CLI** (skips cleanly without it), **no model calls**: `bun scripts/e2e-claude-code-permission-check-cache.mjs` — the REAL Claude Code CLI in `--permission-mode auto`, this checkout's proxy, the real SDK and bundled CLI, and a scripted Messages API that keeps a prompt cache as the API documents it. Asserts each check goes upstream as text blocks carrying only Meridian's cache breakpoints, reads back what the check before it wrote, reads the same text as with the layout off, and falls back to the plain prompt when the API refuses the breakpoints. **Run before releases touching auxiliary requests, replay framing or the SDK/CLI version** | 2026-10-05 |
+| E74 | [Claude Code permission-check prompt cache](#e74-claude-code-permission-check-prompt-cache) | **Automated, needs the `claude` CLI** (skips cleanly without it), **no model calls**: `bun scripts/e2e-claude-code-permission-check-cache.mjs` — the REAL Claude Code CLI in `--permission-mode auto`, this checkout's proxy running in a git repository, the real SDK driving this checkout's CLI, and a scripted Messages API that keeps a prompt cache as the API documents it. Asserts each check goes upstream as text blocks carrying only Meridian's cache breakpoints, reads back what the check before it wrote — also after a file in the proxy's directory changes — carries the same prompt as with the layout off, and falls back to the plain prompt when the API refuses the breakpoints. **Run before releases touching auxiliary requests, replay framing or the SDK/CLI version** | 2026-10-05 |
 
 | P1 | [Profile: List & Auth Status](#p1-profile-list--auth-status) | `/profiles/list` returns profiles with emails, login status, auth timestamps | - |
 | P2 | [Profile: Switch via API](#p2-profile-switch-via-api) | `POST /profiles/active` switches profile; health endpoint reflects new email | - |
@@ -6265,16 +6265,27 @@ than the child's, a check after a pause would rewrite the system prompt the
 child would still have read back.
 The SDK child's own prompt caching is switched off for that query
 (`DISABLE_PROMPT_CACHING=1`): the bundled CLI forwards a prompt's breakpoints
-untouched and adds three of its own, and the API accepts four. Nothing the
-model reads changes. A prompt with no stable cut, and every other side call,
-is sent as before.
+untouched and adds three of its own, and the API accepts four. So is its git
+status snapshot (`CLAUDE_CODE_DISABLE_GIT_INSTRUCTIONS=1`). Every SDK child
+runs `git status` in the proxy's working directory and writes the result, with
+the branch and the last five commits, at the head of the first user message —
+ahead of the prompt and of both breakpoints. When a file there changed, the
+next check read back none of what they had cached (see the live run below).
+The prompt Meridian sends is unchanged character for character, and so are the
+system prompt and the child's environment note; what the classifier no longer
+gets is the state of a repository that is the proxy's, not the one the agent
+is working in. A prompt with no stable cut, and every other side call, is sent
+as before.
 
 ```bash
 bun scripts/e2e-claude-code-permission-check-cache.mjs
 ```
 
 The REAL Claude Code CLI in `--permission-mode auto`, this checkout's proxy,
-the real Agent SDK and its bundled CLI; only the model is a stand-in. A
+and the real Agent SDK driving this checkout's own CLI; only the model is a
+stand-in. The proxy takes `claude` from PATH before its packaged one, so the
+gate names the SDK child itself: `node_modules/.bin/claude`, which is what
+`npm run start` resolves, or `E2E_SDK_CLAUDE_PATH`. A
 scripted Messages API on localhost plays an agent that makes nine shell writes
 outside its project (each goes to the classifier), answers the classifier, and
 records every request body. It keeps a prompt cache as the API documents it:
@@ -6283,7 +6294,9 @@ the longest entry ending at one of the 20 block boundaries at or before one of
 its own breakpoints. Client and proxy get dummy keys, and the environment is
 scrubbed of `CLAUDE*`, `ANTHROPIC_*` and `MERIDIAN_*`, so the gate makes no
 model call and uses no credential. The client talks to a recording relay in
-front of the proxy, which is where its own request shape is read. Three runs:
+front of the proxy, which is where its own request shape is read. The proxy's
+working directory is a git repository, as a checkout's is, and a tracked file
+in it changes once the fifth check of each run has been answered. Three runs:
 the layout on, the layout off (`MERIDIAN_AUXILIARY_PROMPT_CACHE=0`), and the
 layout on against an API that refuses the first request carrying a breakpoint
 inside a message, as the real one would if a CLI added its own beside
@@ -6294,11 +6307,17 @@ Meridian's.
 - Every run's client exits 0 with its conversation finished, and all nine
   writes go to the classifier. A run where it never fires fails rather than
   passing vacuously.
-- Layout off: each check goes upstream as one text block, reads back the same
-  fixed part every time, and writes all the rest again, more each time.
+- Layout off: each check goes upstream as one text block behind the SDK
+  child's `git status` of the proxy's directory (clean through check 5, the
+  changed file from check 6), reads back the same fixed part every time, and
+  writes all the rest again, more each time.
 - Layout on: each check goes upstream as text blocks whose only breakpoints
   are Meridian's (one or two, never one on a system block, never more than
-  four), and its text matches the layout-off run character for character.
+  four). Its prompt matches the layout-off run character for character, and so
+  do the system prompt and the child's environment note; no `git status`
+  stands ahead of it.
+- Layout on: the check made after the file changed reads back everything the
+  check before it had left in the cache.
 - Layout on: the last four checks read back the transcript as well as the
   fixed part (more than with the layout off, and over 85% of the prompt),
   write less than a third of what they wrote with the layout off, and each
@@ -6309,27 +6328,39 @@ Meridian's.
   `cache breakpoints refused` once.
 
 **Before/after (2026-10-05, macOS 26.5 arm64, Bun 1.3.14, Agent SDK 0.2.141,
-bundled CLI 2.1.284, client 2.1.289; an API-key profile, no model calls, sizes
-in characters of request body).** With `server.ts` as at `88cdd4d`: FAIL, 8
-checks — no check went upstream as blocks, each read back only the fixed part
-and wrote the rest again whichever way the switch was set, and nothing was
-refused or logged. Branch: PASS, 22 of 22. The client's own check: `user[1
-block, breakpoint]` then `user[13 blocks, breakpoints at 9 and 10]`.
+SDK child CLI 2.1.284, client 2.1.289; an API-key profile, no model calls,
+sizes in characters of request body).** With `server.ts` as at `88cdd4d`, before
+any of this: FAIL, 10 checks — no check went upstream as blocks, each read
+back only the fixed part and wrote the rest again whichever way the switch was
+set, and nothing was refused or logged. With `query.ts` as at `0615b1a`, the
+layout without the git status switch: FAIL, 5 checks — `git status` stood
+ahead of all nine laid-out prompts, and the check made after the file changed
+read nothing back and wrote 189.8K where the check before it had left 176.3K
+in the cache, system prompt included, so the last four checks wrote more
+(189.8K) than with the layout off (183.0K). Branch: PASS, 25 of 25. The
+client's own check: `user[1 block, breakpoint]` then `user[13 blocks,
+breakpoints at 9 and 10]`.
 
-| Check | Prompt | Layout off: read / written | Layout on: read / written / uncached |
+| Check | Layout off: read / written | Layout on at `0615b1a`: read / written / uncached | Layout on: read / written / uncached |
 |---|---|---|---|
-| 6 | 196.6K | 156.4K / 40.1K | 175.7K / 13.5K / 7.5K |
-| 7 | 199.9K | 156.4K / 43.5K | 189.2K / 0 / 10.8K |
-| 8 | 203.3K | 156.4K / 46.8K | 189.2K / 0 / 14.2K |
-| 9 | 206.6K | 156.4K / 50.2K | 189.2K / 0 / 17.5K |
+| 5 | 156.5K / 37.4K | 176.3K / 0 / 17.6K | 175.7K / 0 / 17.6K |
+| 6, after the file changed | 156.5K / 40.7K | 0 / 189.8K / 7.5K | 175.7K / 13.5K / 7.5K |
+| 7 | 156.5K / 44.1K | 189.8K / 0 / 10.8K | 189.2K / 0 / 10.8K |
+| 8 | 156.5K / 47.4K | 189.8K / 0 / 14.2K | 189.2K / 0 / 14.2K |
+| 9 | 156.5K / 50.8K | 189.8K / 0 / 17.5K | 189.2K / 0 / 17.5K |
 
-Layout off sent one block with the CLI's three breakpoints; layout on sent
-three or four blocks with one breakpoint, then two once the transcript
-outgrew a chunk, and none on the system prompt. Over the last four checks the
-layout wrote 13.5K characters against 180.6K, and paid for 63.5K anew against
-180.6K. The scripted conversation is short, so the system prompt (156.4K) is
-most of every prompt here; live, the transcript was half to three quarters of
-it.
+Layout off sent one block behind the child's `git status`, with the CLI's
+three breakpoints; layout on sent three or four blocks with one breakpoint,
+then two once the transcript outgrew a chunk, and none on the system prompt.
+Over the last four checks the layout wrote 13.5K characters against 183.0K,
+and paid for 63.5K anew against 183.0K. The scripted conversation is short, so
+the system prompt (156.5K) is most of every prompt here; live, the transcript
+was half to three quarters of it.
+
+The gate as first written (in `407f115`) passed 22 of 22 on the code that
+fails five checks here. Its SDK child was whatever `claude` PATH held, the
+2.1.289 client, and its proxy ran in a directory that was not a repository, so
+no `git status` was ever written. The live run below is what showed it.
 
 **Side-call idle limit.** A side call runs under
 `MERIDIAN_UPSTREAM_AUXILIARY_IDLE_MS` (30s) instead of the 90s limit for
@@ -6344,16 +6375,54 @@ again after each of those nine was answered in 2.9–4.2s. One stall was watched
 from outside the proxy (see E72's last run): the request was fully delivered
 and nothing came back.
 
-**Not covered.** A live run: the real cache, real token counts, an hour-long
-breakpoint on a subscription profile (the gate's profile is an API key, so its
-breakpoints are five-minute ones), and a stalled check ending at 30s. On a
-working proxy the SDK child's transcripts should show a check reading most of
-its prompt (`cache_read_input_tokens`) and writing only what was added
-(`cache_creation_input_tokens`); a line `cache breakpoints refused` in the
-proxy log would mean the API turned the breakpoints down and the proxy went
-back to the plain prompt. Before, on the
-owner's proxy from 00:15 to 01:38 on 2026-10-05, each of 111 checks read
-50,765 tokens and wrote 28,865–158,599: 8,208,612 cache-write tokens in all.
+**Live run (2026-10-05 02:02–02:32, the owner's working proxy built from
+`0615b1a` — the layout and the side-call limit, without the git status switch
+— macOS 26.5 arm64, SDK child CLI 2.1.284, client 2.1.289, a subscription
+profile, `sonnet`; 88 checks of one conversation, 287 requests in all).**
+Before, on the same proxy from 00:15 to 01:38, each of 111 checks read 50,765
+tokens and wrote 28,865–158,599: 8,208,612 cache-write tokens, 83% of all
+written.
+
+All 88 checks went upstream as blocks (6–13 of them, two breakpoints) and none
+was refused: the API took hour-long breakpoints from the subscription child,
+and every token the checks wrote was written for an hour. The first read the
+system prompt and wrote 31,675 tokens; the second, ten seconds later, read
+82,440 and wrote none. Of the 86 answered after the first, 80 read back
+82,440–138,079 tokens, 88–98% of their prompt: 74 wrote nothing and six wrote
+the one chunk that had become stable since (7,036–8,536 tokens). The 87
+answered checks wrote 466,151 tokens between them, 28% of all written.
+
+The other six read back only the system prompt and wrote 31,687–79,142 tokens
+each, 387,213 of that 466,151. Each was the first check after `git status`
+changed in the directory the proxy runs from — this change was being written
+in that checkout, and each first edit of a tracked file added a line — and no
+check missed without such a change: six status changes, six misses, the same
+six checks. They still found the system prompt because an entry for it
+survived from the build before, whose checks each wrote or refreshed one; a
+laid-out check writes none, and the gate shows what the same change costs
+without it. The git status switch is what came of this, and is not in that
+build.
+
+One check got no answer. The proxy gave up on it after 30.8s (`Upstream
+stalled: no data for 30000ms`, 504 `upstream_timeout`), the CLI sent it again
+half a second later, and that one was answered in 3.8s: 35.1s from first
+attempt to verdict, where each of the nine stalls earlier that night cost 90s
+before the retry went out. The other 87 were answered in 1.7–15.6s, 84 of them
+within 5s.
+
+**Not covered.** A live run of the git status switch itself: the gate shows
+the bundled CLI honouring it, and the 2.1.289 client binary was probed with the
+same result, but no working proxy has run with it yet. On one that does, a
+check should read back most of its prompt whatever happens to the files around
+the proxy; a line `cache breakpoints refused` in the proxy log would mean the
+API turned the breakpoints down and the proxy went back to the plain prompt.
+
+**Known limit.** The layout's entries all lie behind the user's instructions.
+A check whose instructions match no cached entry (another project's CLAUDE.md,
+or instructions that were edited) has only the system prompt's own entry to
+fall back on. A laid-out check never writes that entry; a plain-prompt check
+does, and reading it keeps it alive. If neither has happened within the hour,
+that check writes the system prompt again, once.
 
 ## Concurrent transcript publication
 
