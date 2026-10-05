@@ -25,7 +25,7 @@ let activeQueries = 0
 let maxActiveQueries = 0
 let queryCalls = 0
 let controls: AttemptControl[] = []
-let capturedParams: Array<{ options?: { resume?: string; resumeSessionAt?: string; sessionId?: string; env?: Record<string, string> } }> = []
+let capturedParams: Array<{ prompt?: unknown; options?: { resume?: string; resumeSessionAt?: string; sessionId?: string; env?: Record<string, string> } }> = []
 let rateLimitWorkQueries = false
 
 function deferredAttempt(): AttemptControl & { wait: Promise<void>; markStarted: () => void } {
@@ -80,7 +80,7 @@ installMcpToolsMock(() => ({
 
 const { createProxyServer, clearSessionCache } = await import("../proxy/server")
 const { resetProcessSdkSemaphoreForTests } = await import("../proxy/concurrency")
-const { telemetryStore } = await import("../telemetry")
+const { telemetryStore, diagnosticLog } = await import("../telemetry")
 const { setSessionStoreDir, storeSharedSession, readSessionStoreSnapshot } = await import("../proxy/sessionStore")
 const { processSessionTurns } = await import("../proxy/session/turnCoordinator")
 const { computeLineageHash, computeMessageHashes, verifyLineage } = await import("../proxy/session/lineage")
@@ -204,6 +204,72 @@ function claudeCodeSubagentKey(sessionId: string, agentId: string): string {
 }
 
 /**
+ * One round of a subagent's tool loop, as CLI 2.1.289 sends it: the turn ends
+ * in a tool result, and the CLI's reminders ride as mid-conversation `system`
+ * messages, one of them trailing the turn.
+ */
+const SUBAGENT_TOOL_ROUND = [
+  { role: "user", content: "Review the diff" },
+  { role: "system", content: "# Environment\nYou have been invoked in the following environment:" },
+  { role: "assistant", content: [{ type: "tool_use", id: "toolu_read_a", name: "Read", input: { file_path: "a.ts" } }] },
+  { role: "user", content: [{ type: "tool_result", tool_use_id: "toolu_read_a", content: "export const a = 1" }] },
+  { role: "system", content: "Available agent types for the Agent tool:\n- claude: Catch-all" },
+]
+
+/** The round after it: the same history, one more tool call and its result. */
+const SUBAGENT_NEXT_ROUND = [
+  ...SUBAGENT_TOOL_ROUND,
+  { role: "assistant", content: [{ type: "tool_use", id: "toolu_read_b", name: "Read", input: { file_path: "b.ts" } }] },
+  { role: "user", content: [{ type: "tool_result", tool_use_id: "toolu_read_b", content: "export const b = 2" }] },
+]
+
+/**
+ * Claude Code's background-agent progress summary (`agent_summary`): on a 30s
+ * timer the CLI forks a running subagent's transcript under that subagent's
+ * own session id and agent id, merging its prompt into the turn's tool-result
+ * message. The fork keeps the subagent's tools and streams.
+ */
+function claudeCodeAgentSummaryRequest(
+  history: Array<{ role: string; content: unknown }>,
+  sessionId: string,
+  agentId: string,
+): Request {
+  const turn = history.findLastIndex(message => message.role === "user")
+  const trailing = history[turn]
+  if (!trailing || !Array.isArray(trailing.content)) throw new Error("test history must end in a tool-result turn")
+  const prompt = [
+    "Describe your most recent action in 3-5 words using present tense (-ing). Name the file or function, not the branch. Do not use tools.",
+    "",
+    "Good: \"Reading runAgent.ts\"",
+    "Bad (past tense): \"Analyzed the branch diff\"",
+  ].join("\n")
+  return new Request("http://localhost/v1/messages", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "user-agent": "claude-cli/2.1.289",
+      "x-claude-code-agent-id": agentId,
+    },
+    body: JSON.stringify({
+      model: "claude-sonnet-4-6",
+      max_tokens: 128,
+      stream: true,
+      tools: [{
+        name: "Read",
+        description: "Read a file",
+        input_schema: { type: "object", properties: { file_path: { type: "string" } }, required: ["file_path"] },
+      }],
+      messages: [
+        ...history.slice(0, turn),
+        { ...trailing, content: [...trailing.content, { type: "text", text: prompt }] },
+        ...history.slice(turn + 1),
+      ],
+      metadata: { user_id: JSON.stringify({ session_id: sessionId }) },
+    }),
+  })
+}
+
+/**
  * A generic OpenAI client running its own tool loop sends no session header.
  * The derived key (deriveToolLoopSessionId) is what the inner hop resolves, so
  * two rounds of one loop that collide share it.
@@ -226,6 +292,13 @@ function observeTurnArrival(sessionId: string) {
     return pending
   })
   return { arrived, restore: () => observer.mockRestore() }
+}
+
+/** The text prompt one SDK attempt was handed. */
+function sdkPrompt(index: number): string {
+  const prompt = capturedParams[index]?.prompt
+  if (typeof prompt !== "string") throw new Error(`SDK attempt #${index} was not handed a text prompt`)
+  return prompt
 }
 
 async function waitForControl(index: number, timeoutMs = 3000): Promise<AttemptControl> {
@@ -685,6 +758,139 @@ describe("SDK and Session concurrency coordination", () => {
     expect((await auxP).status).toBe(200)
     expect(capturedParams[1]?.options?.resume).toBeUndefined()
     expect(readSessionStoreSnapshot()[subagentKey]).toEqual(published)
+  })
+
+  it("keeps a Claude Code subagent resumable across its background progress summary", async () => {
+    const app = createProxyServer({ port: 0, host: "127.0.0.1", silent: true }).app
+    const sessionId = `claude-code-agent-summary-${crypto.randomUUID()}`
+    const agentId = "a4a81dc1bbf7ee837"
+    const subagentKey = claudeCodeSubagentKey(sessionId, agentId)
+
+    const turnP = app.fetch(claudeCodeSubagentRequest(SUBAGENT_TOOL_ROUND, sessionId, agentId))
+    ;(await waitForControl(0)).release()
+    expect((await turnP).status).toBe(200)
+    const published = readSessionStoreSnapshot()[subagentKey]
+    expect(published?.messageCount).toBe(5)
+
+    // The fork repeats the subagent's history with one more block on its final
+    // user message. Committed as a turn, that variant replaces the mapping, and
+    // the subagent's next real turn reads as modified history against it.
+    const summary = await app.fetch(claudeCodeAgentSummaryRequest(SUBAGENT_TOOL_ROUND, sessionId, agentId))
+    ;(await waitForControl(1)).release()
+    expect(summary.status).toBe(200)
+    await summary.text()
+    expect(readSessionStoreSnapshot()[subagentKey]).toEqual(published)
+
+    const nextP = app.fetch(claudeCodeSubagentRequest(SUBAGENT_NEXT_ROUND, sessionId, agentId))
+    ;(await waitForControl(2)).release()
+    expect((await nextP).status).toBe(200)
+    expect(capturedParams[2]?.options?.resume).toBe(capturedParams[0]?.options?.sessionId)
+  })
+
+  it("keeps a Claude Code subagent resumable when its progress summary runs ahead of the next turn", async () => {
+    const app = createProxyServer({ port: 0, host: "127.0.0.1", silent: true }).app
+    const sessionId = `claude-code-agent-summary-ahead-${crypto.randomUUID()}`
+    const agentId = "a4a81dc1bbf7ee837"
+    const subagentKey = claudeCodeSubagentKey(sessionId, agentId)
+
+    const turnP = app.fetch(claudeCodeSubagentRequest(SUBAGENT_TOOL_ROUND, sessionId, agentId))
+    ;(await waitForControl(0)).release()
+    expect((await turnP).status).toBe(200)
+    const published = readSessionStoreSnapshot()[subagentKey]
+    expect(published?.messageCount).toBe(5)
+
+    // The next tool result is in, but the turn that reports it is held up
+    // (observed live behind a stalled permission check), so the CLI's timer
+    // forks the transcript first. This fork extends the stored history exactly
+    // as that turn will, so nothing about its lineage marks it as a side call.
+    const summary = await app.fetch(claudeCodeAgentSummaryRequest(SUBAGENT_NEXT_ROUND, sessionId, agentId))
+    ;(await waitForControl(1)).release()
+    expect(summary.status).toBe(200)
+    await summary.text()
+    expect(readSessionStoreSnapshot()[subagentKey]).toEqual(published)
+
+    const nextP = app.fetch(claudeCodeSubagentRequest(SUBAGENT_NEXT_ROUND, sessionId, agentId))
+    ;(await waitForControl(2)).release()
+    expect((await nextP).status).toBe(200)
+    expect(capturedParams[2]?.options?.resume).toBe(capturedParams[0]?.options?.sessionId)
+  })
+
+  it("never queues a progress summary behind the subagent's running turn", async () => {
+    // Two SDK permits, so only the session lease could make the fork wait.
+    process.env.MERIDIAN_MAX_CONCURRENT = "2"
+    resetProcessSdkSemaphoreForTests()
+    const app = createProxyServer({ port: 0, host: "127.0.0.1", silent: true }).app
+    const sessionId = `claude-code-agent-summary-lease-${crypto.randomUUID()}`
+    const agentId = "a974a04cc37ab3ce8"
+    const subagentKey = claudeCodeSubagentKey(sessionId, agentId)
+
+    const turnP = app.fetch(claudeCodeSubagentRequest(SUBAGENT_TOOL_ROUND, sessionId, agentId))
+    const turnControl = await waitForControl(0)
+    // The CLI's timer fires while the subagent's turn is inside the SDK and
+    // holds the session lease. Queued behind it, the fork would never reach
+    // the SDK and this would time out.
+    const summaryP = app.fetch(claudeCodeAgentSummaryRequest(SUBAGENT_TOOL_ROUND, sessionId, agentId))
+    ;(await waitForControl(1)).release()
+    const summary = await summaryP
+    expect(summary.status).toBe(200)
+    await summary.text()
+    expect(telemetryStore.getRecent().find(m => m.sessionQueueWaitMs !== undefined && m.sessionQueueWaitMs > 50))
+      .toBeUndefined()
+
+    // The turn still publishes its own session after the fork finished first.
+    turnControl.release()
+    expect((await turnP).status).toBe(200)
+    expect(readSessionStoreSnapshot()[subagentKey]?.claudeSessionId).toBe(capturedParams[0]?.options?.sessionId)
+    expect(telemetryStore.getRecent().filter(m => m.error === "session_turn_conflict")).toHaveLength(0)
+  })
+
+  it("answers a progress summary from the latest step instead of replaying the whole history", async () => {
+    const app = createProxyServer({ port: 0, host: "127.0.0.1", silent: true }).app
+    const sessionId = `claude-code-agent-summary-replay-${crypto.randomUUID()}`
+    const agentId = "a4a81dc1bbf7ee837"
+
+    // A turn of the subagent's own with no session to resume replays all of it.
+    const turnP = app.fetch(claudeCodeSubagentRequest(SUBAGENT_NEXT_ROUND, sessionId, agentId))
+    ;(await waitForControl(0)).release()
+    expect((await turnP).status).toBe(200)
+    expect(sdkPrompt(0)).toContain("Review the diff")
+    expect(sdkPrompt(0)).toContain("export const a = 1")
+    expect(sdkPrompt(0)).toContain("export const b = 2")
+
+    // The fork carries that same history and answers from a session of its
+    // own, so all of it was sent, and written to the prompt cache, for a label
+    // that describes the latest step (measured live: ~316K tokens per label).
+    const summary = await app.fetch(claudeCodeAgentSummaryRequest(SUBAGENT_NEXT_ROUND, sessionId, agentId))
+    ;(await waitForControl(1)).release()
+    expect(summary.status).toBe(200)
+    await summary.text()
+    expect(capturedParams[1]?.options?.resume).toBeUndefined()
+    expect(sdkPrompt(1)).toContain("b.ts")
+    expect(sdkPrompt(1)).toContain("export const b = 2")
+    expect(sdkPrompt(1)).toContain("Describe your most recent action in 3-5 words")
+    expect(sdkPrompt(1)).not.toContain("Review the diff")
+    expect(sdkPrompt(1)).not.toContain("export const a = 1")
+    expect(sdkPrompt(1)).toContain("5 earlier messages")
+    // Marker, latest assistant turn, prompt turn — and the log says so.
+    expect(diagnosticLog.getRecent({ category: "session" }).map(entry => entry.message))
+      .toContainEqual(expect.stringContaining("auxiliary replay reduced: 7 messages -> 3"))
+  })
+
+  it("replays a request whole when the client says it is a turn, whatever it ends with", async () => {
+    const app = createProxyServer({ port: 0, host: "127.0.0.1", silent: true }).app
+    const sessionId = `claude-code-agent-summary-declared-${crypto.randomUUID()}`
+    const fork = claudeCodeAgentSummaryRequest(SUBAGENT_NEXT_ROUND, sessionId, "a4a81dc1bbf7ee837")
+    // An explicit request class outranks the prompt's shape. Only a side call
+    // is answered from part of what it sent; a turn's history is the turn.
+    fork.headers.set("x-claude-code-request-class", "subagent")
+
+    const turn = await app.fetch(fork)
+    ;(await waitForControl(0)).release()
+    expect(turn.status).toBe(200)
+    await turn.text()
+    expect(sdkPrompt(0)).toContain("Review the diff")
+    expect(sdkPrompt(0)).toContain("export const a = 1")
+    expect(sdkPrompt(0)).toContain("Describe your most recent action in 3-5 words")
   })
 
   it("keeps the shared key when the agent id is malformed", async () => {

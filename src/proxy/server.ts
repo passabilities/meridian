@@ -3126,8 +3126,20 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
         }
       }
 
+      // A side call is answered from this payload alone, and its adapter may
+      // know the answer depends on less of it than the request carries.
+      const auxiliaryReplay = independentCause === "auxiliary-request"
+        ? adapter.getAuxiliaryReplayMessages?.(c, body)
+        : undefined
+      if (auxiliaryReplay) {
+        claudeLog("session.auxiliary_replay", { messages: allMessages.length, replayed: auxiliaryReplay.length })
+        diagnosticLog.session(
+          `${requestMeta.requestId} auxiliary replay reduced: ${allMessages.length} messages -> ${auxiliaryReplay.length}`,
+          requestMeta.requestId,
+        )
+      }
       // Budget only the replay payload, never the lineage or SDK UUID mapping.
-      const replaySource = messagesToConvert
+      const replaySource = auxiliaryReplay ?? messagesToConvert
       const freshReplay = !isResume && !resumeSessionId
       // Client usage describes its resumed context, not the fresh transcript;
       // derive replay capacity from the actual SDK model's window instead.

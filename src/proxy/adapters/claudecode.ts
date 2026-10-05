@@ -159,6 +159,43 @@ export const CLAUDE_CODE_REQUEST_CLASS_HEADER = "x-claude-code-request-class"
 /** The auto-mode classifier's XML verdicts end at these tags. */
 const CLASSIFIER_STOP_SEQUENCES = new Set(["</block>", "</severity>"])
 
+/** The auto-mode classifier: no tools, not streamed, a stop sequence closing its verdict tag. */
+function hasClassifierShape(request: { tools?: unknown; stream?: unknown; stop_sequences?: unknown }): boolean {
+  if (Array.isArray(request.tools) && request.tools.length > 0) return false
+  if (request.stream === true) return false
+  if (!Array.isArray(request.stop_sequences)) return false
+  return request.stop_sequences.some(stop => typeof stop === "string" && CLASSIFIER_STOP_SEQUENCES.has(stop))
+}
+
+/** How the CLI's background-agent progress prompt (`agent_summary`) opens. */
+const AGENT_SUMMARY_PROMPT = "Describe your most recent action in 3-5 words using present tense (-ing)."
+
+function isAgentSummaryPromptBlock(block: unknown): boolean {
+  if (!block || typeof block !== "object") return false
+  const { type, text } = block as { type?: unknown; text?: unknown }
+  return type === "text" && typeof text === "string" && text.startsWith(AGENT_SUMMARY_PROMPT)
+}
+
+/**
+ * Where the progress-summary fork carries the CLI's summary prompt: its final
+ * user message. Mid-conversation `system` messages may trail that message, as
+ * they do any turn; nothing else may. -1 when the request is not that fork.
+ */
+function agentSummaryPromptIndex(messages: unknown[]): number {
+  const index = messages.findLastIndex(message => (message as { role?: unknown } | null)?.role !== "system")
+  const last = messages[index]
+  if (!last || typeof last !== "object") return -1
+  const { role, content } = last as { role?: unknown; content?: unknown }
+  if (role !== "user") return -1
+  if (typeof content === "string") return content.startsWith(AGENT_SUMMARY_PROMPT) ? index : -1
+  if (!Array.isArray(content)) return -1
+  return content.some(isAgentSummaryPromptBlock) ? index : -1
+}
+
+function endsWithAgentSummaryPrompt(request: { messages?: unknown }): boolean {
+  return Array.isArray(request.messages) && agentSummaryPromptIndex(request.messages) >= 0
+}
+
 /**
  * Is this a Claude Code side call under the conversation's session id?
  *
@@ -167,26 +204,105 @@ const CLASSIFIER_STOP_SEQUENCES = new Set(["</block>", "</severity>"])
  * transcript of its own. Read as a turn, it classifies `unrelated-history` and
  * overwrites the conversation's mapping, so the next real turn cannot resume.
  *
+ * The background-agent progress summary (`agent_summary`) does the same under
+ * a subagent's key. On a 30s timer the CLI forks the running subagent's
+ * transcript whenever it has changed, with that subagent's agent id, tools and
+ * streaming, and merges its prompt into the turn's tool-result message. Read
+ * as a turn, that one extra block passes for a late parallel tool result,
+ * replays the whole history because it settles no pending tool call, and
+ * replaces the subagent's mapping — so the subagent's next real turn diverges
+ * `modified-history` and replays it again (measured live: 24 forks, 24
+ * replayed turns at 7% cache hits, against 93% on the turns no fork preceded).
+ * A replayed turn also arrives without the model's earlier reasoning: three in
+ * a row spent 18K-36K output tokens re-planning before a tool call, against
+ * 2.7K on the resumed turn between them.
+ *
  * The CLI names its request class in `x-claude-code-request-class`, but sends
  * it only with `CLAUDE_CODE_GATEWAY_HINT_HEADERS=1`, to a first-party base URL,
  * or under a remote flag — through Meridian it is normally absent. When present
- * it decides outright. Otherwise the classifier's shape does: a session key,
- * no tools, not streamed, and a stop sequence closing its verdict tag. The
- * streamed session-start request, compaction and main turns all fall outside
- * it. If a future CLI changes those stop sequences, detection falls back to
- * today's behavior rather than isolating a real turn.
+ * it decides outright. Otherwise the side call's shape does. The classifier's:
+ * a session key, no tools, not streamed, and a stop sequence closing its
+ * verdict tag. The summary fork's: a session key and the summary prompt
+ * opening a text block of its final user message. The streamed session-start
+ * request, compaction and main turns all fall outside both. If a future CLI
+ * changes those stop sequences or that prompt, detection falls back to today's
+ * behavior rather than isolating a real turn.
  */
 export function isClaudeCodeAuxiliaryRequest(requestClass: string | undefined, body: unknown): boolean {
   if (requestClass !== undefined) return requestClass === "auxiliary"
   if (!body || typeof body !== "object") return false
-  const request = body as { tools?: unknown; stream?: unknown; stop_sequences?: unknown }
-  if (Array.isArray(request.tools) && request.tools.length > 0) return false
-  if (request.stream === true) return false
-  if (!Array.isArray(request.stop_sequences)) return false
-  if (!request.stop_sequences.some(stop => typeof stop === "string" && CLASSIFIER_STOP_SEQUENCES.has(stop))) {
-    return false
-  }
+  if (!hasClassifierShape(body) && !endsWithAgentSummaryPrompt(body)) return false
   return extractClaudeCodeSessionId(body) !== undefined
+}
+
+/** The most a progress label is shown of any one tool input, tool output or note. */
+const AGENT_SUMMARY_FIELD_MAX = 2_000
+
+function clipSummaryText(text: string): string {
+  if (text.length <= AGENT_SUMMARY_FIELD_MAX || text.startsWith(AGENT_SUMMARY_PROMPT)) return text
+  return `${text.slice(0, AGENT_SUMMARY_FIELD_MAX)}\n[… ${text.length - AGENT_SUMMARY_FIELD_MAX} more characters omitted]`
+}
+
+/** A tool input is plain JSON: clip every string in it, however it is nested. */
+function clipSummaryInput(value: unknown): unknown {
+  if (typeof value === "string") return clipSummaryText(value)
+  if (Array.isArray(value)) return value.map(clipSummaryInput)
+  if (!value || typeof value !== "object") return value
+  return Object.fromEntries(Object.entries(value).map(([key, entry]) => [key, clipSummaryInput(entry)]))
+}
+
+/** Text is clipped; images and every other block pass through whole. */
+function clipSummaryContent(content: unknown): unknown {
+  if (typeof content === "string") return clipSummaryText(content)
+  if (!Array.isArray(content)) return content
+  return content.map((block: unknown) => {
+    if (!block || typeof block !== "object") return block
+    const { type, text, input, content: nested } = block as { type?: unknown; text?: unknown; input?: unknown; content?: unknown }
+    if (type === "text" && typeof text === "string") return { ...block, text: clipSummaryText(text) }
+    if (type === "tool_use") return { ...block, input: clipSummaryInput(input) }
+    if (type === "tool_result") return { ...block, content: clipSummaryContent(nested) }
+    return block
+  })
+}
+
+/**
+ * What a progress-summary fork is answered from: the subagent's latest
+ * assistant turn and the message carrying the prompt, with each tool input
+ * and output clipped.
+ *
+ * NOTE: agent-specific (claude-code). The CLI sends the fork with the
+ * subagent's whole transcript so that it reads the subagent's prompt cache.
+ * Through Meridian it is a side call answered from a session of its own, which
+ * shares no cache with the conversation: the transcript was replayed as one
+ * block and written to the cache for every label (measured live: 311K-321K
+ * cache-write tokens for a 14-17 token answer, of which the latest step was
+ * 1-4%). The label names "your most recent action", which that step holds, and
+ * the prompt itself quotes the previous label.
+ *
+ * Undefined when the request is not that fork, or has nothing before its
+ * latest step to leave out; the request is then replayed as sent.
+ */
+export function agentSummaryReplayMessages(body: unknown): Array<{ role: string; content: unknown }> | undefined {
+  if (!body || typeof body !== "object") return undefined
+  const { messages } = body as { messages?: unknown }
+  if (!Array.isArray(messages)) return undefined
+  const prompt = agentSummaryPromptIndex(messages)
+  if (prompt < 0) return undefined
+  const latest = messages.findLastIndex((message: unknown, index: number) =>
+    index < prompt && (message as { role?: unknown } | null)?.role === "assistant")
+  if (latest <= 0) return undefined
+  const step = messages.slice(latest, prompt + 1).flatMap((message: unknown) => {
+    if (!message || typeof message !== "object") return []
+    const { role, content } = message as { role?: unknown; content?: unknown }
+    return typeof role === "string" ? [{ ...message, role, content: clipSummaryContent(content) }] : []
+  })
+  return [
+    {
+      role: "user",
+      content: `[Meridian: this progress summary is answered from the latest step only; ${latest} earlier message${latest === 1 ? "" : "s"} left out.]`,
+    },
+    ...step,
+  ]
 }
 
 /**
@@ -262,6 +378,11 @@ export const claudeCodeAdapter: AgentAdapter = {
   /** See `isClaudeCodeAuxiliaryRequest`. */
   isAuxiliaryRequest(c: Context, body?: unknown): boolean {
     return isClaudeCodeAuxiliaryRequest(c.req.header(CLAUDE_CODE_REQUEST_CLASS_HEADER), body)
+  },
+
+  /** See `agentSummaryReplayMessages`. */
+  getAuxiliaryReplayMessages(_c: Context, body?: unknown): Array<{ role: string; content: unknown }> | undefined {
+    return agentSummaryReplayMessages(body)
   },
 
   /**

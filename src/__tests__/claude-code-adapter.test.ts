@@ -11,7 +11,7 @@
  */
 import { describe, it, expect } from "bun:test"
 import type { Context } from "hono"
-import { CLAUDE_CODE_AGENT_ID_HEADER, claudeCodeAdapter, claudeCodeSessionKey, isClaudeCodeAuxiliaryRequest } from "../proxy/adapters/claudecode"
+import { agentSummaryReplayMessages, CLAUDE_CODE_AGENT_ID_HEADER, claudeCodeAdapter, claudeCodeSessionKey, isClaudeCodeAuxiliaryRequest } from "../proxy/adapters/claudecode"
 
 describe("claudeCodeAdapter — identity", () => {
   it("has name 'claude-code'", () => {
@@ -388,6 +388,295 @@ describe("isClaudeCodeAuxiliaryRequest", () => {
     expect(isClaudeCodeAuxiliaryRequest(undefined, { ...classifier, stop_sequences: "</block>" })).toBe(false)
     expect(isClaudeCodeAuxiliaryRequest(undefined, { ...classifier, stop_sequences: [42, null] })).toBe(false)
     expect(isClaudeCodeAuxiliaryRequest(undefined, { ...classifier, tools: null })).toBe(true)
+  })
+})
+
+describe("isClaudeCodeAuxiliaryRequest — background agent progress summary", () => {
+  // On a 30s timer the CLI forks a background subagent's transcript and asks for
+  // a 3-5 word progress label (`agent_summary`). The fork keeps the subagent's
+  // tools and streams, so nothing in the classifier's shape matches it. The
+  // prompt below is the CLI's own, as captured from a live session.
+  const summaryPrompt = [
+    "Describe your most recent action in 3-5 words using present tense (-ing). Name the file or function, not the branch. Do not use tools.",
+    "",
+    "Previous: \"Searching trail parsers in body-token-scan.ts\" — say something NEW.",
+    "",
+    "Good: \"Reading runAgent.ts\"",
+    "Bad (past tense): \"Analyzed the branch diff\"",
+  ].join("\n")
+  const toolUse = { role: "assistant", content: [{ type: "tool_use", id: "toolu_1", name: "Read", input: { file_path: "a.ts" } }] }
+  const toolResult = { type: "tool_result", tool_use_id: "toolu_1", content: "export const a = 1" }
+  const subagentTurn = {
+    model: "claude-opus-5-5",
+    max_tokens: 32000,
+    stream: true,
+    tools: [{ name: "Read", input_schema: { type: "object" } }],
+    messages: [
+      { role: "user", content: "Review the diff" },
+      toolUse,
+      { role: "user", content: [toolResult] },
+    ],
+    metadata: { user_id: JSON.stringify({ session_id: "conv-1" }) },
+  }
+  // The transcript ends in a tool result, so the CLI merges its prompt into
+  // that message as one more block rather than appending a message.
+  const summaryFork = {
+    ...subagentTurn,
+    messages: [
+      { role: "user", content: "Review the diff" },
+      toolUse,
+      { role: "user", content: [toolResult, { type: "text", text: summaryPrompt }] },
+    ],
+  }
+
+  it("recognises the summary fork even though it declares tools and streams", () => {
+    expect(isClaudeCodeAuxiliaryRequest(undefined, summaryFork)).toBe(true)
+  })
+
+  it("recognises the prompt sent as a message of its own", () => {
+    const history = [{ role: "user", content: "Review the diff" }, { role: "assistant", content: "Reviewing." }]
+    expect(isClaudeCodeAuxiliaryRequest(undefined, {
+      ...subagentTurn,
+      messages: [...history, { role: "user", content: summaryPrompt }],
+    })).toBe(true)
+    expect(isClaudeCodeAuxiliaryRequest(undefined, {
+      ...subagentTurn,
+      messages: [...history, { role: "user", content: [{ type: "text", text: summaryPrompt }] }],
+    })).toBe(true)
+  })
+
+  // Captured from CLI 2.1.289: with mid-conversation system messages on, the
+  // subagent's reminders ride as `system` turns, and one can trail the message
+  // that carries the prompt.
+  it("recognises the fork when a mid-conversation system message trails it", () => {
+    expect(isClaudeCodeAuxiliaryRequest(undefined, {
+      ...subagentTurn,
+      messages: [
+        { role: "user", content: "Review the diff" },
+        { role: "system", content: "# Environment\nYou have been invoked in the following environment:" },
+        toolUse,
+        { role: "user", content: [toolResult, { type: "text", text: summaryPrompt }] },
+        { role: "system", content: "Available agent types for the Agent tool:\n- claude: Catch-all" },
+      ],
+    })).toBe(true)
+  })
+
+  // The CLI attaches reminders to user messages, and nothing fixes their order
+  // against the prompt: a block trailing it must not hide the fork.
+  it("recognises the prompt when another block follows it", () => {
+    expect(isClaudeCodeAuxiliaryRequest(undefined, {
+      ...subagentTurn,
+      messages: [
+        ...subagentTurn.messages.slice(0, 2),
+        { role: "user", content: [
+          toolResult,
+          { type: "text", text: summaryPrompt },
+          { type: "text", text: "<system-reminder>Stay on task.</system-reminder>" },
+        ] },
+      ],
+    })).toBe(true)
+  })
+
+  it("leaves the subagent's own turns alone", () => {
+    expect(isClaudeCodeAuxiliaryRequest(undefined, subagentTurn)).toBe(false)
+    expect(isClaudeCodeAuxiliaryRequest(undefined, {
+      ...subagentTurn,
+      messages: [
+        ...subagentTurn.messages.slice(0, 2),
+        { role: "user", content: [toolResult, { type: "text", text: "<system-reminder>Stay on task.</system-reminder>" }] },
+      ],
+    })).toBe(false)
+  })
+
+  it("ignores the prompt anywhere but the final user message", () => {
+    // A turn that merely has the prompt in its history is still a turn.
+    expect(isClaudeCodeAuxiliaryRequest(undefined, {
+      ...subagentTurn,
+      messages: [
+        ...summaryFork.messages,
+        { role: "assistant", content: "Reading a.ts" },
+        { role: "user", content: "Now review b.ts" },
+      ],
+    })).toBe(false)
+    expect(isClaudeCodeAuxiliaryRequest(undefined, {
+      ...subagentTurn,
+      messages: [...subagentTurn.messages, { role: "assistant", content: summaryPrompt }],
+    })).toBe(false)
+    // Trailing system messages are skipped; an assistant turn after the prompt is not.
+    expect(isClaudeCodeAuxiliaryRequest(undefined, {
+      ...subagentTurn,
+      messages: [
+        ...summaryFork.messages,
+        { role: "assistant", content: "Reading a.ts" },
+        { role: "system", content: "Available agent types for the Agent tool:" },
+      ],
+    })).toBe(false)
+    // Quoting the prompt mid-sentence is not sending it.
+    expect(isClaudeCodeAuxiliaryRequest(undefined, {
+      ...subagentTurn,
+      messages: [{ role: "user", content: `What does this mean: ${summaryPrompt}` }],
+    })).toBe(false)
+    expect(isClaudeCodeAuxiliaryRequest(undefined, {
+      ...subagentTurn,
+      messages: [{ role: "user", content: [{ type: "text", text: `What does this mean: ${summaryPrompt}` }] }],
+    })).toBe(false)
+  })
+
+  it("lets an explicit request class overrule the prompt", () => {
+    expect(isClaudeCodeAuxiliaryRequest("subagent", summaryFork)).toBe(false)
+    expect(isClaudeCodeAuxiliaryRequest("auxiliary", summaryFork)).toBe(true)
+  })
+
+  it("requires a Claude Code session key", () => {
+    const { metadata: _omitted, ...unkeyed } = summaryFork
+    expect(isClaudeCodeAuxiliaryRequest(undefined, unkeyed)).toBe(false)
+  })
+
+  it("rejects malformed message shapes without throwing", () => {
+    for (const messages of [undefined, null, "not an array", [], [null], [{ role: "user" }], [{ role: "user", content: 42 }],
+      [{ role: "user", content: [null, 7, { type: "text" }, { type: "text", text: 42 }] }]]) {
+      expect(isClaudeCodeAuxiliaryRequest(undefined, { ...summaryFork, messages })).toBe(false)
+    }
+  })
+})
+
+describe("agentSummaryReplayMessages — what a progress summary is answered from", () => {
+  // A side call runs in a session of its own, so whatever it replays is sent,
+  // and written to the prompt cache, for that one answer. A 3-5 word label
+  // for the latest step does not need the conversation that led up to it.
+  const summaryPrompt = [
+    "Describe your most recent action in 3-5 words using present tense (-ing). Name the file or function, not the branch. Do not use tools.",
+    "",
+    "Previous: \"Reading a.ts\" — say something NEW.",
+    "",
+    "Good: \"Reading runAgent.ts\"",
+  ].join("\n")
+  const read = (id: string, file: string) =>
+    ({ role: "assistant", content: [{ type: "tool_use", id, name: "Read", input: { file_path: file } }] })
+  const result = (id: string, content: unknown) => ({ type: "tool_result", tool_use_id: id, content })
+  const fork = (messages: unknown[]) => ({
+    model: "claude-opus-5-5",
+    stream: true,
+    tools: [{ name: "Read", input_schema: { type: "object" } }],
+    messages,
+    metadata: { user_id: JSON.stringify({ session_id: "conv-1" }) },
+  })
+  const latestCall = { role: "assistant", content: [
+    { type: "text", text: "Now the second file." },
+    { type: "tool_use", id: "toolu_b", name: "Read", input: { file_path: "b.ts" } },
+  ] }
+  const promptTurn = { role: "user", content: [result("toolu_b", "export const b = 2"), { type: "text", text: summaryPrompt }] }
+  const threeRounds = [
+    { role: "user", content: "Review the diff" },
+    { role: "system", content: "# Environment\nYou have been invoked in the following environment:" },
+    read("toolu_a", "a.ts"),
+    { role: "user", content: [result("toolu_a", "export const a = 1")] },
+    latestCall,
+    promptTurn,
+  ]
+
+  it("keeps the latest assistant turn and the message carrying the prompt", () => {
+    const replay = agentSummaryReplayMessages(fork(threeRounds))
+    expect(replay?.slice(1)).toEqual([latestCall, promptTurn])
+  })
+
+  it("says how much it left out", () => {
+    const replay = agentSummaryReplayMessages(fork(threeRounds))
+    expect(replay?.[0]?.role).toBe("user")
+    expect(replay?.[0]?.content).toContain("4 earlier messages")
+  })
+
+  // Captured from CLI 2.1.289: reminders ride as mid-conversation `system`
+  // messages and one can trail the turn. A label has no use for them.
+  it("drops system messages trailing the prompt", () => {
+    const replay = agentSummaryReplayMessages(fork([
+      ...threeRounds,
+      { role: "system", content: "Available agent types for the Agent tool:\n- claude: Catch-all" },
+    ]))
+    expect(replay?.slice(1)).toEqual([latestCall, promptTurn])
+  })
+
+  it("keeps a prompt sent as a message of its own", () => {
+    const narration = { role: "assistant", content: "Reviewing the second file." }
+    const prompt = { role: "user", content: summaryPrompt }
+    expect(agentSummaryReplayMessages(fork([...threeRounds.slice(0, 4), narration, prompt]))?.slice(1))
+      .toEqual([narration, prompt])
+  })
+
+  it("clips a long tool result and a long tool input, never the prompt", () => {
+    const written = "const x = 1\n".repeat(5_000)
+    const output = "line of output\n".repeat(5_000)
+    // Longer than any one clipped field: the instruction itself must survive whole.
+    const longPrompt = `${summaryPrompt}\n${"Good: \"Reading runAgent.ts\"\n".repeat(120)}`
+    const image = { type: "image", source: { type: "base64", media_type: "image/png", data: "A".repeat(8_000) } }
+    const messages = [
+      ...threeRounds.slice(0, 4),
+      { role: "assistant", content: [
+        { type: "text", text: "Rewriting both files. ".repeat(500) },
+        { type: "tool_use", id: "toolu_w", name: "Write", input: { file_path: "big.ts", content: written } },
+        { type: "tool_use", id: "toolu_m", name: "MultiEdit", input: { file_path: "c.ts", edits: [{ old_string: "a", new_string: written }] } },
+      ] },
+      { role: "user", content: [
+        result("toolu_w", output),
+        result("toolu_m", [{ type: "text", text: output }, image]),
+        { type: "text", text: longPrompt },
+      ] },
+    ]
+    const before = JSON.stringify(messages)
+    const replay = agentSummaryReplayMessages(fork(messages))
+    const rendered = JSON.stringify(replay)
+    expect(before.length).toBeGreaterThan(250_000)
+    expect(rendered.length).toBeLessThan(26_000)
+    // What the step was stays readable; only its bulk goes.
+    expect(rendered).toContain("Rewriting both files.")
+    expect(rendered).toContain("big.ts")
+    expect(rendered).toContain("c.ts")
+    expect(rendered).toContain("line of output")
+    expect(rendered).toContain("more characters omitted")
+    expect(longPrompt.length).toBeGreaterThan(3_000)
+    expect(rendered).toContain(JSON.stringify(longPrompt).slice(1, -1))
+    // Clipping an image's bytes would corrupt it.
+    expect(rendered).toContain(JSON.stringify(image))
+    // The request body still feeds lineage and logging: it must not change.
+    expect(JSON.stringify(messages)).toBe(before)
+  })
+
+  it("replays the request as sent when there is nothing before the latest step", () => {
+    expect(agentSummaryReplayMessages(fork([latestCall, promptTurn]))).toBeUndefined()
+    expect(agentSummaryReplayMessages(fork([{ role: "user", content: "Review the diff" }, { role: "user", content: summaryPrompt }])))
+      .toBeUndefined()
+  })
+
+  it("leaves every request that is not a progress summary alone", () => {
+    // The subagent's own turn, and the same history with a reminder attached.
+    expect(agentSummaryReplayMessages(fork(threeRounds.slice(0, 4)))).toBeUndefined()
+    expect(agentSummaryReplayMessages(fork([
+      ...threeRounds.slice(0, 5),
+      { role: "user", content: [result("toolu_b", "export const b = 2"), { type: "text", text: "<system-reminder>Stay on task.</system-reminder>" }] },
+    ]))).toBeUndefined()
+    // The auto-mode classifier is a side call too, and needs its whole transcript.
+    expect(agentSummaryReplayMessages({
+      stream: false,
+      stop_sequences: ["</block>"],
+      messages: [{ role: "user", content: "<transcript>…</transcript>" }, { role: "assistant", content: "<block>" }],
+      metadata: { user_id: JSON.stringify({ session_id: "conv-1" }) },
+    })).toBeUndefined()
+  })
+
+  it("rejects malformed shapes without throwing", () => {
+    expect(agentSummaryReplayMessages(undefined)).toBeUndefined()
+    expect(agentSummaryReplayMessages("not an object")).toBeUndefined()
+    for (const messages of [undefined, null, "not an array", [], [null], [{ role: "user" }], [null, promptTurn],
+      [{ role: "assistant", content: 42 }, promptTurn]]) {
+      expect(() => agentSummaryReplayMessages(fork(messages as unknown[]))).not.toThrow()
+    }
+  })
+
+  it("is what the adapter offers the proxy for an auxiliary request", () => {
+    const ctx = { req: { header: () => undefined } } as unknown as Parameters<typeof claudeCodeAdapter.getSessionId>[0]
+    expect(claudeCodeAdapter.getAuxiliaryReplayMessages?.(ctx, fork(threeRounds)))
+      .toEqual(agentSummaryReplayMessages(fork(threeRounds)))
+    expect(claudeCodeAdapter.getAuxiliaryReplayMessages?.(ctx, fork(threeRounds.slice(0, 4)))).toBeUndefined()
   })
 })
 

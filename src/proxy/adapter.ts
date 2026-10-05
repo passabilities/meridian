@@ -94,6 +94,17 @@ export interface AgentIdentity {
   isAuxiliaryRequest?(c: Context, body?: unknown): boolean
 
   /**
+   * Optional: the messages an auxiliary request's answer depends on, when
+   * that is less than the history the request carries.
+   *
+   * An auxiliary request is answered from a session of its own, so whatever it
+   * replays is sent, and written to the prompt cache, for that one answer.
+   * Asked only about a request `isAuxiliaryRequest` accepted. Undefined, or no
+   * method, replays the request as sent.
+   */
+  getAuxiliaryReplayMessages?(c: Context, body?: unknown): Array<{ role: string; content: unknown }> | undefined
+
+  /**
    * Optional trusted identity for a visible human turn.
    *
    * This is deliberately a positive, normalized assertion. Callers must treat

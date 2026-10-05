@@ -329,7 +329,8 @@ Agent-specific behavior is isolated behind the `AgentAdapter` interface (`adapte
 | `getSessionId(c)` | Extract session ID from request headers |
 | `getAgentMode(c, body)` | Normalize an adapter-specific primary/subagent declaration |
 | `getRootSessionId(c, body)` | Optional conversation root for account routing (sticky and priority assignment): a subagent with a session key of its own stays on its parent's account (Claude Code's Agent tool) |
-| `isAuxiliaryRequest(c, body)` | Declare a side call that shares the conversation's session key: it skips session lookup, publication and the turn lease (Claude Code's auto-mode classifier) |
+| `isAuxiliaryRequest(c, body)` | Declare a side call that shares the conversation's session key: it skips session lookup, publication and the turn lease (Claude Code's auto-mode classifier and background-agent progress summary) |
+| `getAuxiliaryReplayMessages(c, body)` | Optional: the messages such a side call's answer depends on, when that is less than the history it carries; only those are replayed into its session (Claude Code's progress summary: the latest step) |
 | `extractWorkingDirectory(body)` | Parse working directory from request body |
 | `normalizeContent(content)` | Normalize message content for hashing |
 | `getBlockedBuiltinTools()` | SDK tools replaced by agent's MCP equivalents |
@@ -371,6 +372,23 @@ priority routing. Known limitation: a backgrounded main session (and a
 fork-of-main subagent) gets a fresh agent id but carries the whole
 transcript, so its first request under the new key is one full-history
 replay; later turns resume normally.
+
+A subagent's key is still shared by one side call. While a subagent runs in
+the background, the CLI forks its transcript on a 30-second timer, whenever
+that transcript has changed, to ask for a progress label (`agent_summary`),
+under that subagent's own agent id. `isAuxiliaryRequest` recognises the fork
+by its prompt and keeps it off the subagent's mapping and turn lease;
+committed as a turn, it replaced the mapping and the subagent's next real turn
+replayed its whole history — and a replayed turn has lost the model's earlier
+reasoning, so it re-plans before it acts.
+
+An isolated fork is answered from a session of its own, which shares no prompt
+cache with the subagent's. Replaying the transcript it carries wrote the
+subagent's whole context to the cache for every label, so
+`getAuxiliaryReplayMessages` hands the replay only the latest step: the last
+assistant turn and the message carrying the prompt, with each tool input and
+output clipped. Lineage, logging and the stored mapping still see the request
+as sent.
 
 **A session header is identity, never authentication.** Polytoken's native
 `X-Polytoken-Session` header is the cleanest example: the trimmed header value

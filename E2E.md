@@ -6025,6 +6025,95 @@ logged `lineage=continuation`, no request collided, and the longest
 session-lease wait across all 9 requests was 1ms. The gate imports `src/`
 directly rather than the built bundle.
 
+### Background progress summaries
+
+While a subagent runs in the background the CLI forks its transcript on a
+30-second timer to ask for a 3-5 word progress label (`agent_summary`), under
+that subagent's own agent id. The gate above runs foreground subagents that
+finish within seconds, so it never sees one. Read as a turn, the fork replaced
+the subagent's mapping, and the subagent's next real turn replayed its whole
+history. `isClaudeCodeAuxiliaryRequest` now isolates it: by the CLI's request
+class when the hint headers carry one, otherwise by its prompt. An isolated
+fork runs in a session of its own, so `agentSummaryReplayMessages` has it
+answered from its latest step rather than the transcript it carries.
+
+```bash
+bun scripts/e2e-claude-code-agent-summary.mjs
+```
+
+The real CLI against a scripted stand-in for the Messages API: no model calls,
+no proxy, no credentials. The stand-in plays a main agent that launches one
+background subagent and a subagent that runs `sleep 1`, then `sleep 45`, so
+the timer fires while the second tool call is pending. The fork is identified
+structurally — a second request for a tool round already answered — never by
+its prompt, so a CLI that rewords the prompt fails the detection check. Runs
+twice, without and with `CLAUDE_CODE_GATEWAY_HINT_HEADERS=1`.
+
+**Pass criteria** (asserted on both runs, non-zero exit on any):
+
+- A background subagent ran at least two turns and the CLI forked it. A run
+  where the timer never fires fails rather than passing vacuously.
+- The fork carries the subagent's own agent id, and repeats the subagent's
+  messages with exactly one more block on its final user message.
+- The fork streams and declares tools.
+- Without hint headers the fork carries no request class; with them, its class
+  is `auxiliary`.
+- The adapter isolates every fork, and none of the main or subagent turns.
+- The adapter answers the fork from its latest step: exactly the client's
+  last assistant turn through the message carrying the prompt, which still
+  holds the prompt and the tool call it asks about. No turn's history is cut
+  down.
+
+**Before/after (2026-10-04, macOS 26.5 arm64, Bun 1.3.14, Claude Code
+2.1.289).** Baseline `50d4a59`: FAIL, 1 check. Without hint headers the fork
+(`stream=true tools=13`, final user message `[tool_result,text]`, one `system`
+message trailing it, at +30.4s) was not isolated; with them it was, by its
+`auxiliary` class. Branch: PASS. The fork is isolated on both runs and 0 of 6
+main and subagent turns are. This run used Bun 1.3.14 (not the
+`packageManager` 1.3.11), which does not affect the adapter under test.
+
+**Latest-step replay, before/after (2026-10-04, same host, Bun and client).**
+With `agentSummaryReplayMessages` switched off: FAIL, 2 checks on each run —
+the fork's 5 messages are replayed as sent. Branch: PASS, 10 checks on each
+run. Of the fork's 5 messages (9,964 bytes) the adapter replays 2 (916 bytes):
+the `assistant[tool_use]` turn and the `user[tool_result,text]` message, with
+the 2 before them left out and the trailing `system` message dropped. 0 of 6
+main and subagent turns are cut down.
+
+**Live observation (2026-10-04, a working proxy built from `50d4a59`, macOS
+26.5 arm64, Agent SDK 0.2.141, `opus[1m]`; one background subagent, 60
+requests over 26 minutes).** All 24 forks were accepted as a parallel
+tool-result continuation, replayed the whole history and replaced the
+subagent's mapping. Each of the 24 subagent turns that followed one then
+diverged `modified-history` (trailing message only, one stored block
+`dropped`) and replayed too. The 22 of those that finished on the same account
+read 7% of their input from cache and wrote 3.13M cache tokens; the forks
+wrote another 3.42M, on a context that peaked near 209k tokens. The 11
+subagent turns no fork preceded resumed at 93%. Forks waited a median 27s and
+up to 124s on the subagent's lease; subagent turns waited up to 7.9s behind a
+fork.
+
+**Live observation, replay cost and re-planning (2026-10-04 22:38–23:15, the
+same proxy rebuilt from `50d4a59` and restarted, `opus[1m]`, one background
+subagent, 32 requests).** Ten forks each replayed the subagent's history as
+one text block (746K–768K characters in the three read) and wrote 300K–349K
+tokens to the 1-hour cache for a 14–170 token label; in those three, the last
+assistant turn and the live message were 1.4–3.7% of the block. Forks waited a
+median 171s and up to 322s on the subagent's lease. Nine of the ten subagent
+turns were replayed and produced a median 25,435 output tokens over 234s —
+33.4 of the 37 minutes — against 2,682 tokens in 24s for the one that resumed.
+In the six replayed turns whose transcripts were read, text and tool input
+came to 0.8K–3.5K characters; the rest was thinking, and each opened by
+re-establishing its plan ("Picking up where the replay ended", "Nothing has
+been edited yet").
+
+**Not covered.** The proxy path with the fix. That a subagent resumes across a
+fork, that the fork skips the lease, and that the fork is replayed from its
+latest step, are asserted only through the mocked SDK
+(`proxy-concurrency-coordination.test.ts`); a live run on a working proxy is
+still owed, including what a label answered from the latest step costs and
+says.
+
 ## E73: Unknown thinking display values
 
 **What it proves:** a request whose `thinking.display` the bundled Claude Code
