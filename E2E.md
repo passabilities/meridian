@@ -7786,14 +7786,19 @@ E89), the gate checks that every request went through priority dispatch:
   (`processIncarnation.ts`) outlasting its 2 s under that load. The gate now
   records what the client is answered, and tells a summary the client
   dropped from one that failed.
+- That probe is now awaited (`captureProcessIncarnationAsync`): it holds no
+  other request while it runs, and has 10 s rather than 2. 4 subagents, at a
+  load average near 11: PASS, 28 of 28 requests dispatched, no replay. Not
+  repeated at a load near 40, which would have slowed the owner's running
+  sessions.
 
 ### Not covered
 
 The client's interactive mode, a subagent's own subagents, compaction while
-subagents run, and accounts switching mid-run (E85). The `ps` probe above
-can fail a request when many SDK children start at once on a saturated host;
-the client asks again, and nothing reaches the API. It was not in the owner's
-working proxy's log (500 lines, 2026-10-06).
+subagents run, and accounts switching mid-run (E85). The awaited probe at a
+load near 40: one that outlasts its 10 s still fails the request before any
+Messages call, and the client asks again. The 2 s probe's failure was not in
+the owner's working proxy's log (500 lines, 2026-10-06).
 
 ## E85: A conversation that moves between accounts
 

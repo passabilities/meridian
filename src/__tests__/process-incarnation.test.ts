@@ -2,6 +2,7 @@ import { describe, expect, it, spyOn } from "bun:test"
 import * as childProcess from "node:child_process"
 import {
   captureProcessIncarnation,
+  captureProcessIncarnationAsync,
   evaluateProcessIncarnation,
   parseLinuxProcStatStartId,
   parseProcessIncarnation,
@@ -160,6 +161,36 @@ describe("process incarnation protocol", () => {
     } finally {
       spawned.mockRestore()
     }
+  }, 25_000)
+
+  // The SDK gate captures each request's wrapper while other requests stream:
+  // a synchronous probe held them all, and gave up after 2 s on a loaded host.
+  it("captures another process's incarnation, as the synchronous capture does, without holding the event loop", async () => {
+    if (!(["darwin", "linux", "win32"] as string[]).includes(process.platform)) return
+    captureCurrentProcessIncarnation()
+    const child = childProcess.spawn(process.execPath, ["-e", "setTimeout(() => {}, 30_000)"])
+    try {
+      const synchronous = spyOn(childProcess, "spawnSync")
+      let captured: ProcessIncarnation | undefined
+      try {
+        captured = await captureProcessIncarnationAsync(child.pid!)
+        expect(synchronous).not.toHaveBeenCalled()
+      } finally {
+        synchronous.mockRestore()
+      }
+      expect(captured).toBeDefined()
+      expect(captured).toEqual(captureProcessIncarnation(child.pid!))
+    } finally {
+      child.kill()
+    }
+  }, 25_000)
+
+  it("captures nothing of a process that has exited", async () => {
+    if (!(["darwin", "linux", "win32"] as string[]).includes(process.platform)) return
+    captureCurrentProcessIncarnation()
+    const child = childProcess.spawn(process.execPath, ["-e", ""])
+    await new Promise(resolve => child.once("exit", resolve))
+    expect(await captureProcessIncarnationAsync(child.pid!)).toBeUndefined()
   }, 25_000)
 })
 

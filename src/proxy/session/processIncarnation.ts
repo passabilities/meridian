@@ -1,4 +1,4 @@
-import { spawnSync } from "node:child_process"
+import { execFile, spawnSync } from "node:child_process"
 import { createHash } from "node:crypto"
 import { readFileSync, readlinkSync } from "node:fs"
 
@@ -47,6 +47,9 @@ const PROBE_TIMEOUT_MS = 2_000
 // path runs before the SDK command opens, so wait long enough to capture the
 // durable writer identity instead of failing every first launch closed.
 const WINDOWS_PROBE_TIMEOUT_MS = 10_000
+// A probe awaited rather than run synchronously holds nothing else meanwhile,
+// so it can wait out a loaded host (captureProcessIncarnationAsync).
+const ASYNC_PROBE_TIMEOUT_MS = 10_000
 
 /**
  * How long a single capture may block before it gives up. Callers that gate a
@@ -172,15 +175,39 @@ function linuxLocalBootIdentity(): LocalBootIdentity | undefined {
   }
 }
 
+function darwinProbeEnv(): NodeJS.ProcessEnv {
+  return { ...process.env, LC_ALL: "C", LANG: "C", TZ: "UTC0" }
+}
+
 function runDarwin(command: string, args: readonly string[]): string | undefined {
   const result = spawnSync(command, args, {
     encoding: "utf8",
-    env: { ...process.env, LC_ALL: "C", LANG: "C", TZ: "UTC0" },
+    env: darwinProbeEnv(),
     timeout: PROBE_TIMEOUT_MS,
     maxBuffer: 1024 * 1024,
   })
   if (result.error || result.status !== 0 || typeof result.stdout !== "string") return undefined
   return result.stdout
+}
+
+/** As the synchronous runners: exit status (null when it did not exit on its own) and output. */
+function runAsync(
+  command: string,
+  args: readonly string[],
+  env?: NodeJS.ProcessEnv,
+): Promise<{ status: number | null; stdout?: string }> {
+  return new Promise((resolve) => {
+    execFile(command, [...args], {
+      encoding: "utf8",
+      ...(env ? { env } : {}),
+      timeout: ASYNC_PROBE_TIMEOUT_MS,
+      maxBuffer: 1024 * 1024,
+      windowsHide: true,
+    }, (error, stdout) => {
+      const status = error === null ? 0 : typeof error.code === "number" ? error.code : null
+      resolve({ status, ...(typeof stdout === "string" ? { stdout } : {}) })
+    })
+  })
 }
 
 function darwinLocalBootIdentity(): LocalBootIdentity | undefined {
@@ -201,14 +228,16 @@ function uuidFromIdentity(value: string): string {
   return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`
 }
 
+const POWERSHELL_ARGS = [
+  "-NoLogo",
+  "-NoProfile",
+  "-NonInteractive",
+  "-ExecutionPolicy", "Bypass",
+  "-Command",
+] as const
+
 function runWindowsPowerShell(script: string): { status: number | null; stdout?: string } {
-  const result = spawnSync("powershell.exe", [
-    "-NoLogo",
-    "-NoProfile",
-    "-NonInteractive",
-    "-ExecutionPolicy", "Bypass",
-    "-Command", script,
-  ], {
+  const result = spawnSync("powershell.exe", [...POWERSHELL_ARGS, script], {
     encoding: "utf8",
     windowsHide: true,
     timeout: WINDOWS_PROBE_TIMEOUT_MS,
@@ -377,8 +406,12 @@ function linuxProcessStart(pid: number): ProcessStartObservation {
   return pidPresence(pid) === "missing" ? { status: "missing" } : { status: "indeterminate" }
 }
 
-function darwinProcessStart(pid: number): ProcessStartObservation {
-  const output = runDarwin("/bin/ps", ["-p", String(pid), "-o", "lstart="])
+function darwinStartArgs(pid: number): string[] {
+  return ["-p", String(pid), "-o", "lstart="]
+}
+
+/** `ps -o lstart=` output, or undefined when it did not exit 0. */
+function darwinStartFrom(output: string | undefined, pid: number): ProcessStartObservation {
   if (output !== undefined) {
     const startId = output.trimEnd().trimStart()
     if (DARWIN_START_PATTERN.test(startId)) {
@@ -388,8 +421,12 @@ function darwinProcessStart(pid: number): ProcessStartObservation {
   return pidPresence(pid) === "missing" ? { status: "missing" } : { status: "indeterminate" }
 }
 
-function windowsProcessStart(pid: number): ProcessStartObservation {
-  const result = runWindowsPowerShell(String.raw`
+function darwinProcessStart(pid: number): ProcessStartObservation {
+  return darwinStartFrom(runDarwin("/bin/ps", darwinStartArgs(pid)), pid)
+}
+
+function windowsStartScript(pid: number): string {
+  return String.raw`
 $ErrorActionPreference = 'Stop'
 try {
   $process = Get-Process -Id ${pid} -ErrorAction Stop
@@ -399,13 +436,20 @@ try {
 } catch {
   exit 4
 }
-`)
+`
+}
+
+function windowsStartFrom(result: { status: number | null; stdout?: string }, pid: number): ProcessStartObservation {
   const startId = result.stdout?.trim()
   if (result.status === 0 && startId && WINDOWS_START_PATTERN.test(startId)) {
     return { status: "found", startId, startIdKind: "windows-start-ticks" }
   }
   if (result.status === 3) return { status: "missing" }
   return pidPresence(pid) === "missing" ? { status: "missing" } : { status: "indeterminate" }
+}
+
+function windowsProcessStart(pid: number): ProcessStartObservation {
+  return windowsStartFrom(runWindowsPowerShell(windowsStartScript(pid)), pid)
 }
 
 function observeProcessStart(pid: number): ProcessStartObservation {
@@ -445,6 +489,40 @@ export function captureProcessIncarnation(pid = process.pid): ProcessIncarnation
   }
   if (pid === process.pid) cachedCurrentProcessIncarnation = identity
   return { ...identity }
+}
+
+async function observeProcessStartAsync(pid: number): Promise<ProcessStartObservation> {
+  if (process.platform === "darwin") {
+    const result = await runAsync("/bin/ps", darwinStartArgs(pid), darwinProbeEnv())
+    return darwinStartFrom(result.status === 0 ? result.stdout : undefined, pid)
+  }
+  if (process.platform === "win32") {
+    return windowsStartFrom(await runAsync("powershell.exe", [...POWERSHELL_ARGS, windowsStartScript(pid)]), pid)
+  }
+  // Linux reads /proc: a file, with no child process to wait for.
+  return observeProcessStart(pid)
+}
+
+/**
+ * `captureProcessIncarnation` of another process, without holding the event
+ * loop while the probe runs. On darwin and win32 the probe is a child process:
+ * run synchronously it holds every other request, and on a host loaded near 40
+ * it outran PROBE_TIMEOUT_MS. The SDK gate captures each request's wrapper this
+ * way (sdkProcessGate.ts). Same probe and output as the synchronous capture.
+ */
+export async function captureProcessIncarnationAsync(pid: number): Promise<ProcessIncarnation | undefined> {
+  if (!isPositivePid(pid) || pid === process.pid) return captureProcessIncarnation(pid)
+  const localBoot = getLocalBootIdentity()
+  if (!localBoot) return undefined
+  const start = await observeProcessStartAsync(pid)
+  if (start.status !== "found") return undefined
+  return {
+    version: PROCESS_INCARNATION_VERSION,
+    pid,
+    ...localBoot,
+    startId: start.startId,
+    startIdKind: start.startIdKind,
+  }
 }
 
 /** Probe one stored owner. Recovery callers must act only on `dead`. */

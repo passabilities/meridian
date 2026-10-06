@@ -1,10 +1,11 @@
 import { afterEach, describe, expect, it, spyOn } from "bun:test"
+import * as childProcess from "node:child_process"
 import { existsSync, mkdtempSync, readdirSync, rmSync } from "node:fs"
 import { open, type FileHandle } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { basename, isAbsolute, join } from "node:path"
 import { createSdkProcessGate, getSdkGateNodeExecutable } from "../proxy/session/sdkProcessGate"
-import type { ProcessIncarnation } from "../proxy/session/processIncarnation"
+import { captureProcessIncarnation, type ProcessIncarnation } from "../proxy/session/processIncarnation"
 
 describe("SDK process gate", () => {
   const roots: string[] = []
@@ -41,6 +42,28 @@ describe("SDK process gate", () => {
     child.stdin.end()
     expect(await gate.closeAndJoin()).toBe(true)
   })
+
+  // Every request opens a gate. A synchronous probe of the wrapper held every
+  // other request while it ran, and gave up after 2 s: on a host loaded near
+  // 40, a request failed before any call with "cannot capture SDK writer
+  // process incarnation" (E84).
+  it("captures the wrapper's incarnation without holding the event loop", async () => {
+    const root = mkdtempSync(join(tmpdir(), "meridian-sdk-gate-"))
+    roots.push(root)
+    // What a running proxy captured of its host at start.
+    expect(captureProcessIncarnation()).toBeDefined()
+    const synchronous = spyOn(childProcess, "spawnSync")
+    let gate: Awaited<ReturnType<typeof createSdkProcessGate>> | undefined
+    try {
+      gate = await createSdkProcessGate(root, async () => undefined)
+      expect(synchronous).not.toHaveBeenCalled()
+    } finally {
+      synchronous.mockRestore()
+    }
+    expect(gate.executor.pid).toBeGreaterThan(0)
+    expect(await gate.closeAndJoin()).toBe(true)
+  })
+
   it("drains large stderr output and forwards it without stalling stdout", async () => {
     const root = mkdtempSync(join(tmpdir(), "meridian-sdk-gate-"))
     roots.push(root)
