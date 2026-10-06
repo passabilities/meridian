@@ -24,6 +24,9 @@
 // cannot read them again yet: what the run before it read is all it has.
 // Nothing else may read these accounts' usage in the minute before a run (the
 // profile page of a proxy already running does, while it is open).
+// REFUSED=1 then reads the fallbacks' usage again before the restart until
+// the endpoint refuses a read, as it refuses a restarted proxy's when
+// something read those accounts moments before (usage reads spend no tokens).
 //
 // Costs one refused request on ACTIVE (no tokens) and one short MODEL request
 // on the account that serves it; more refused ones if the accounts ahead of it
@@ -78,17 +81,33 @@ async function startRestarted(env) {
     const proxy = await startProxyServer({ port: 0, host: "127.0.0.1", silent: true, profiles: ${JSON.stringify(pool)}, defaultProfile: ${JSON.stringify(ACTIVE)} })
     console.log("PORT " + proxy.server.address().port)
   `)
-  const child = Bun.spawn(["bun", script], { cwd: root, env, stdout: "pipe", stderr: "pipe" })
-  const reader = child.stdout.getReader()
-  let out = ""
+  // Its debug log says what it read of the accounts' usage, and what came of it.
+  const logs = { out: join(root, "restarted.out"), err: join(root, "restarted.err") }
+  const child = Bun.spawn(["bun", script], {
+    cwd: root, env: { ...env, OPENCODE_CLAUDE_PROVIDER_DEBUG: "1" }, stdout: Bun.file(logs.out), stderr: Bun.file(logs.err),
+  })
   const deadline = Date.now() + 60_000
-  while (!/PORT (\d+)/.test(out)) {
-    if (Date.now() > deadline) throw new Error(`the restarted proxy did not start: ${out.slice(-300)}`)
-    const { value, done } = await reader.read()
-    if (done) throw new Error(`the restarted proxy exited: ${out.slice(-300)} ${(await new Response(child.stderr).text()).slice(-300)}`)
-    out += new TextDecoder().decode(value)
+  for (;;) {
+    const port = existsSync(logs.out) ? readFileSync(logs.out, "utf8").match(/^PORT (\d+)$/m)?.[1] : undefined
+    if (port) return { child, logs, url: `http://127.0.0.1:${port}` }
+    if (child.exitCode !== null || Date.now() > deadline) {
+      throw new Error(`the restarted proxy did not start: ${existsSync(logs.err) ? readFileSync(logs.err, "utf8").slice(-300) : ""}`)
+    }
+    await new Promise(resolve => setTimeout(resolve, 100))
   }
-  return { child, url: `http://127.0.0.1:${out.match(/PORT (\d+)/)[1]}` }
+}
+
+/** The restarted proxy's usage reads and failover decisions, from its debug log. */
+function restartedUsageLog(logs) {
+  const text = [logs.out, logs.err].filter(file => existsSync(file)).map(file => readFileSync(file, "utf8")).join("\n")
+  return text.split("\n").flatMap(line => {
+    const json = line.match(/\[opencode-claude-code-provider\] (\{.*\})$/)?.[1]
+    if (!json) return []
+    const entry = JSON.parse(json)
+    if (!/^(oauth_usage|priority\.|profile\.)/.test(entry.event)) return []
+    const { ts, event, ...fields } = entry
+    return [`${ts.slice(11, 23)} ${event} ${JSON.stringify(fields).slice(0, 300)}`]
+  })
 }
 
 let restarted
@@ -128,8 +147,25 @@ try {
     .filter(w => ["five_hour", "seven_day", `seven_day_${model}`].includes(w.type) && !(w.resetsAt !== null && w.resetsAt <= now))
     .map(w => w.utilization ?? 0))
   if (room(roomOrder[0]) <= 0.05) { say(`SKIP: no account behind ${ACTIVE} has room for ${MODEL}`); process.exit(1) }
+  // The request is spent on whichever account serves it: ACTIVE must refuse it.
+  if (room(ACTIVE) > 0) { say(`SKIP: ${ACTIVE} has room for ${MODEL} and would serve the request`); process.exit(1) }
 
   let serving = proxyUrl
+  const readsRefused = []
+  if (restart && process.env.REFUSED === "1") {
+    const { fetchOAuthUsageResult } = await import("../src/proxy/oauthUsage.ts")
+    for (const profile of pool.filter(p => p.id !== ACTIVE)) {
+      let refused = false
+      for (let read = 1; read <= 12 && !refused; read++) {
+        const result = await fetchOAuthUsageResult({ profileId: profile.id, claudeConfigDir: profile.claudeConfigDir, force: true })
+        refused = result.failure?.reason === "rate_limited"
+        if (!refused) await new Promise(resolve => setTimeout(resolve, 2_000))
+      }
+      readsRefused.push(refused)
+      say(`  REFUSED: ${profile.id} ${refused ? "has a read refused (429)" : "had no read refused in 12"}`)
+    }
+    check(readsRefused.every(Boolean), "the endpoint refuses a read of each fallback before the restart")
+  }
   if (restart) {
     await proxy.close?.()
     restarted = await startRestarted({ ...process.env })
@@ -149,6 +185,11 @@ try {
   const tried = rows.map(row => `${row.profileId}:${row.status}`).join(" -> ")
   const served = rows.find(row => row.status === 200)?.profileId
   say(`  tried: ${tried}`)
+  if (restarted) {
+    const lines = restartedUsageLog(restarted.logs)
+    say(`  the restarted proxy's usage reads and refusals (${lines.length}):`)
+    for (const line of lines) say(`    ${line}`)
+  }
   check(response.status === 200, "the request is answered", `${response.status} ${JSON.stringify(body).slice(0, 120)}`)
   check(rows[0]?.profileId === ACTIVE, "the active profile is tried first and refuses", rows[0] ? `${rows[0].profileId}:${rows[0].status}` : "no rows")
   const expected = roomOrder.find(id => rows.some(row => row.profileId === id && row.status === 200)) === served && roomOrder.filter(id => id !== served)

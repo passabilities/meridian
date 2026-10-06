@@ -1037,7 +1037,7 @@ curl -s -X PUT -H 'Content-Type: application/json' -d '{"checkForUpdates":false}
 | E85 | [A conversation that moves between accounts](#e85-a-conversation-that-moves-between-accounts) | **Automated**: `bun test src/__tests__/account-return-trip.test.ts`. **No model calls, not in CI**: `bun scripts/e2e-session-carry-cli.mjs [claude]` — a session copied into another config directory resumes in the real CLI with its turns structured and its system prompt; `bun scripts/e2e-session-carry-proxy.mjs [model]` — through the proxy, SDK and CLI, a client with no session key and one that compacted on the other account each come back with the other account's answers as messages. **Live, needs two Claude Max profiles**: `FROM=<profile> TO=<profile> bun scripts/e2e-session-carry-live.mjs` — there and back, each move resumed, nothing replayed. **Run before releases touching session mapping, routing, the session lifecycle or the CLI version** | 2026-10-06 |
 | E86 | [A conversation across a proxy restart](#e86-a-conversation-across-a-proxy-restart) | **Automated, no model calls, not in CI**: `bun scripts/e2e-claude-code-proxy-restart.mjs [model]` — turn 1 through one proxy process, turn 2 through a new one sharing its session store: a resume, no replay, turn 1's messages unchanged. **Run before releases touching session persistence or startup** | 2026-10-06 |
 | E87 | [A client that goes away stops the model](#e87-a-client-that-goes-away-stops-the-model) | **Automated**: `bun test src/__tests__/priority-client-cancel.test.ts`. **No model calls, not in CI, needs a build**: `npm run build && bun scripts/e2e-claude-code-priority-cancel.mjs [model]` — the real client killed before any output, the built proxy under Node: the SDK child's request closed within 5 s, manual and active+priority. **Run before releases touching request cancellation, priority dispatch or the HTTP server** | 2026-10-06 |
-| E88 | [Where a failover goes before anything is read, and back to where the conversation was](#e88-where-a-failover-goes-before-anything-is-read-and-back-to-where-the-conversation-was) | **Automated**: `bun test src/__tests__/routing.test.ts src/__tests__/active-priority-integration.test.ts` — the first move after a restart waits up to 3 s for the fallbacks' usage reads and goes by room; a conversation refused again goes back to the fallback it used, across a restart too. **Live, needs a Claude Max profile out of one model's allowance and two others**: `COLD=1 ACTIVE=<profile> bun scripts/e2e-fallback-order-live.mjs` — E82's gate with nothing read in the proxy before the request. **Run before releases touching routing, failover, usage reads or startup** | 2026-10-06 |
+| E88 | [Where a failover goes before anything is read, and back to where the conversation was](#e88-where-a-failover-goes-before-anything-is-read-and-back-to-where-the-conversation-was) | **Automated**: `bun test src/__tests__/routing.test.ts src/__tests__/active-priority-integration.test.ts src/__tests__/oauth-usage.test.ts src/__tests__/proxy-usage-kept.test.ts` — the first move after a restart waits up to 3 s for the fallbacks' usage reads and goes by room, or by what the run before it read when the endpoint refuses those reads; a conversation refused again goes back to the fallback it used, across a restart too. **Live, needs a Claude Max profile out of one model's allowance and two others**: `RESTART=1 REFUSED=1 ACTIVE=<profile> bun scripts/e2e-fallback-order-live.mjs` — E82's gate sent to a proxy restarted while the endpoint refuses its reads. **Run before releases touching routing, failover, usage reads or startup** | 2026-10-06 |
 | E89 | [A request waiting for an SDK slot is not timed as the model's silence](#e89-a-request-waiting-for-an-sdk-slot-is-not-timed-as-the-models-silence) | **Automated**: `bun test src/__tests__/stream-idle-guard.test.ts src/__tests__/proxy-concurrency-coordination.test.ts`. **No model calls, not in CI**: `bun scripts/e2e-slot-wait-idle.mjs [model]` — one SDK slot held 25 s by a streaming turn: a queued progress summary and a queued streamed turn each wait past their limits and are answered, not "Upstream stalled". **Run before releases touching the SDK slot queue, the upstream idle limits or streaming** | 2026-10-06 |
 
 | P1 | [Profile: List & Auth Status](#p1-profile-list--auth-status) | `/profiles/list` returns profiles with emails, login status, auth timestamps | - |
@@ -8047,20 +8047,41 @@ conversation used comes right after the active account, or first while the
 active account is out. After a restart, the fallback whose copy of the
 conversation was used last, within the hour a prompt stays cached, stands in.
 
+The usage endpoint refuses a read that comes soon after others of the same
+account. Measured 2026-10-06: nine reads about 2 s apart were answered, the
+tenth was refused with `Retry-After: 300`, and a new process reading that
+account in the next five minutes was refused too. A proxy restarted moments
+after the run before it read the accounts (as the profile page reads them
+while it is open) could not read them, and moved by the configured order.
+Now a started proxy keeps each account's last reading in `usage.json` in its
+session directory, and the proxy started after it takes those as its own. A
+move still waits for a fresh read of an account known only from before the
+restart, unless that reading is from the last five minutes; the kept reading
+places it when the read is refused.
+
 ### Run it
 
 ```bash
-bun test src/__tests__/routing.test.ts src/__tests__/active-priority-integration.test.ts
-COLD=1 ACTIVE=<profile out of MODEL's allowance> bun scripts/e2e-fallback-order-live.mjs
+bun test src/__tests__/routing.test.ts src/__tests__/active-priority-integration.test.ts src/__tests__/oauth-usage.test.ts src/__tests__/proxy-usage-kept.test.ts
+RESTART=1 REFUSED=1 ACTIVE=<profile out of MODEL's allowance> bun scripts/e2e-fallback-order-live.mjs
 ```
 
-`COLD=1` reads the order in a process of its own, so the proxy has read
-nothing of any account's usage when the request comes, as after a restart.
+`RESTART=1` stops the proxy that read the accounts' usage and sends the
+request to one started after it, in a process of its own on the same session
+directory. `REFUSED=1` first reads the fallbacks' usage until the endpoint
+refuses a read (usage reads spend no tokens), as it refuses a restarted
+proxy's when something read the accounts moments before. That leaves them
+unreadable for five minutes, so leave five minutes between runs, and let
+nothing else read these accounts' usage in the minutes before one. The
+restarted proxy's usage reads and failover decisions are printed from its
+debug log. The run is skipped, before any request, when the active profile
+has room for MODEL or no fallback has.
 
 ### Pass criteria
 
-E82's, with nothing read before the request; and no account behind the one
-that serves it in the room order is tried on the way.
+E82's, sent to the restarted proxy while the endpoint refuses its reads of
+the fallbacks; and no account behind the one that serves it in the room order
+is tried on the way.
 
 ### Verified
 
@@ -8081,6 +8102,52 @@ before the change:
 Unit (`routing.test.ts`), 2 tests: the previous fallback comes right after the
 active account, and not once it is out itself.
 
+What the run before a restart read, 12 tests:
+
+- HTTP, mocked SDK (`active-priority-integration.test.ts`, "after a restart"),
+  3: the first move is placed by readings the run before kept moments earlier,
+  with no read; by a ten-minute-old kept reading when the reads that would
+  replace it are refused (429); and by reads that work rather than a
+  ten-minute-old kept reading. The first two were RED before the change
+  (served by the configured order's first, at 97% of its weekly limit); the
+  third was RED with the readings kept but a restored one not read again.
+- Unit (`oauth-usage.test.ts`), 7: a kept reading is what the restarted proxy
+  knows of the account; stands in for a read the endpoint refuses; gives way
+  to the next reading, which is kept in its place; keeps the reading another
+  proxy kept meanwhile; is readable by its owner only (0600); is not kept
+  unless the proxy keeps readings; and a file that cannot be read restores
+  nothing and is replaced. Six RED before; the "not kept" case passes either
+  way.
+- Started proxy (`proxy-usage-kept.test.ts`), 2: `startProxyServer` keeps
+  readings in its session directory for the proxy started after it, and keeps
+  none taken after it closed. Both RED before.
+
+Live, owner's accounts, Haiku 4.5, `ACTIVE=eamonbachari` (out of its weekly
+limit), `POOL=eamonbachari,engineering,engineering3`: engineering at 11-16% of
+its five-hour and 92-93% of its weekly limit, engineering3 at its weekly limit;
+room order engineering, engineering3; configured order the reverse.
+
+- Before (9e506b5b), `RESTART=1 REFUSED=1`, 16:07: **FAIL**. Both fallbacks
+  had a read refused before the restart; the restarted proxy's reads of them
+  were refused too (`oauth_usage.upstream_error` 429 in its log), and it moved
+  by the configured order: eamonbachari 429, engineering3 429, engineering
+  200.
+- After (50ff9e3 and this gate), `RESTART=1 REFUSED=1`, 16:14: **PASS**.
+  Both fallbacks had a read refused before the restart. The restarted proxy
+  read neither (its log has no usage read of them), placed the move by the
+  readings the proxy before it kept, and went straight to engineering:
+  eamonbachari 429, engineering 200.
+- Here the account the configured order put first was at its cap, so the old
+  order cost one refused attempt, which spends no tokens. Where it has room
+  but less than another, the old order lands conversations on it, and they
+  move again sooner, each move writing its whole prompt to another cache.
+- Two earlier runs of the before code passed. With `RESTART=1` alone, the
+  restarted proxy's reads were answered. One with `REFUSED=1` at 10:02 also
+  passed, and is unexplained: its restarted proxy's log was not captured yet.
+- The `COLD=1` run this gate replaces (09:28, 9e506b5b) failed the same way,
+  but its own read in another process had made the endpoint refuse the
+  proxy's reads.
+
 ### Not covered
 
 - A conversation goes back to the fallback it used whatever that account's
@@ -8090,8 +8157,11 @@ active account, and not once it is out itself.
   move again, writing its prompt twice.
 - After a restart, a fallback used more than an hour before: the order is the
   room order.
-- An account whose usage cannot be read (an API-key profile, a read that
-  fails) is placed as E82 places one with no usage known.
+- An account whose usage cannot be read and that has no reading kept from
+  before (an API-key profile; one never read by a started proxy on that
+  session directory) is placed as E82 places one with no usage known.
+- Proxies sharing a session directory share the kept readings; one of two
+  written at the same moment can be lost, until the next read.
 
 ## E89: A request waiting for an SDK slot is not timed as the model's silence
 
