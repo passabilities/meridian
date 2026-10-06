@@ -550,7 +550,7 @@ async function loadRouting() {
   h += '<div id="routing-order-wrap" style="'+(usesPool?'':'display:none')+'">'
     + '<div style="color:var(--muted);font-size:13px;margin-bottom:8px">'
     + (cfg.routing === 'active+priority'
-        ? 'Fallback order - used when the active profile runs out. The active profile always goes first, wherever it sits in this list.'
+        ? 'Fallback order - used when the active profile runs out. Accounts are tried by the room they have left (one whose weekly limit resets within a day first, then the most room, any near a cap last); this order breaks ties and places accounts whose usage is not known yet, and MERIDIAN_FALLBACK_ORDER=configured uses it as it stands. The active profile always goes first, wherever it sits in this list.'
         : 'Pool order — highest priority first. Drained top to bottom.')
     + envNote(cfg.envOverride.profileOrder) + '</div>'
     + '<ol id="routing-order" style="margin:0;padding-left:22px">'

@@ -16,6 +16,8 @@ import {
   resolvePriorityOrder,
   choosePriorityProfile,
   chooseActivePriorityCandidates,
+  orderFallbacksByRoom,
+  usedShare,
   ProfileExhaustion,
   RENDEZVOUS_STABLE_GUARD,
   AssignmentStore,
@@ -541,5 +543,91 @@ describe("chooseActivePriorityCandidates", () => {
     const order = ["corp1", "corp2", "corp1"]
     const candidates = chooseActivePriorityCandidates("corp2", order, none)
     expect(new Set(candidates).size).toBe(candidates.length)
+  })
+})
+
+describe("orderFallbacksByRoom", () => {
+  const NOW = Date.UTC(2026, 9, 6, 12)
+  const HOUR = 60 * 60_000
+  type W = { type: string; utilization: number | null; resetsAt: number | null }
+  /** An account's windows: five-hour and weekly use as shares, the weekly reset in hours from now. */
+  const usage = (fiveHour: number, weekly: number, weeklyResetHours = 100, extra: W[] = []): W[] => [
+    { type: "five_hour", utilization: fiveHour, resetsAt: NOW + 2 * HOUR },
+    { type: "seven_day", utilization: weekly, resetsAt: NOW + weeklyResetHours * HOUR },
+    ...extra,
+  ]
+  const order = (windows: Record<string, W[] | undefined>, model?: string) =>
+    orderFallbacksByRoom(Object.keys(windows), id => windows[id], { now: NOW, model })
+
+  it("puts the account with the most room first", () => {
+    expect(order({ a: usage(0.1, 0.8), b: usage(0.1, 0.2), c: usage(0.1, 0.5) })).toEqual(["b", "c", "a"])
+  })
+
+  it("reads room as the closest window to its cap, five-hour included", () => {
+    expect(order({ a: usage(0.9, 0.1), b: usage(0.2, 0.4) })).toEqual(["b", "a"])
+  })
+
+  it("puts an account with capacity whose weekly limit resets within a day ahead of one with more room", () => {
+    expect(order({ roomy: usage(0, 0.1), expiring: usage(0.1, 0.7, 20) })).toEqual(["expiring", "roomy"])
+  })
+
+  it("takes the soonest weekly reset first among those resetting within a day", () => {
+    expect(order({ later: usage(0, 0.2, 23), sooner: usage(0, 0.6, 3), roomy: usage(0, 0) })).toEqual(["sooner", "later", "roomy"])
+  })
+
+  it("does not count a weekly reset a day or more away as soon", () => {
+    expect(order({ dayAway: usage(0, 0.7, 24), roomy: usage(0, 0.1) })).toEqual(["roomy", "dayAway"])
+  })
+
+  it("does not lift an account near its cap for a weekly reset within a day", () => {
+    expect(order({ nearCap: usage(0, 0.97, 5), roomy: usage(0, 0.5) })).toEqual(["roomy", "nearCap"])
+  })
+
+  it("puts accounts near a cap last and accounts with no usage known between, in their configured order", () => {
+    expect(order({ capped: usage(0.96, 0.1), unknown1: undefined, roomy: usage(0, 0.3), unknown2: [] }))
+      .toEqual(["roomy", "unknown1", "unknown2", "capped"])
+  })
+
+  it("keeps the configured order for accounts with the same room", () => {
+    expect(order({ x: usage(0, 0.4), y: usage(0, 0.4), z: usage(0, 0.4) })).toEqual(["x", "y", "z"])
+  })
+
+  it("counts the requested model's own weekly window, and no other model's", () => {
+    const fableSpent = usage(0, 0.1, 100, [{ type: "seven_day_fable", utilization: 0.99, resetsAt: NOW + 50 * HOUR }])
+    const windows = { fableSpent, other: usage(0, 0.5) }
+    expect(order(windows, "fable")).toEqual(["other", "fableSpent"])
+    expect(order(windows, "opus")).toEqual(["fableSpent", "other"])
+  })
+
+  it("takes the requested model's weekly window resetting within a day as a weekly limit resetting within a day", () => {
+    const fableExpiring = usage(0, 0.6, 100, [{ type: "seven_day_fable", utilization: 0.3, resetsAt: NOW + 10 * HOUR }])
+    expect(order({ roomy: usage(0, 0.1), fableExpiring }, "fable")).toEqual(["fableExpiring", "roomy"])
+  })
+
+  it("reads a window whose reset has passed since it was read as unspent", () => {
+    const turnedOver: W[] = [{ type: "seven_day", utilization: 0.99, resetsAt: NOW - HOUR }]
+    expect(order({ halfUsed: usage(0, 0.5), turnedOver })).toEqual(["turnedOver", "halfUsed"])
+  })
+
+  it("takes an account whose windows say nothing of use as unknown", () => {
+    expect(order({ blank: [{ type: "seven_day", utilization: null, resetsAt: NOW + HOUR }], roomy: usage(0, 0.9) }))
+      .toEqual(["roomy", "blank"])
+  })
+})
+
+describe("usedShare", () => {
+  const NOW = Date.UTC(2026, 9, 6, 12)
+  const HOUR = 60 * 60_000
+  const window = (type: string, utilization: number | null, resetsAt: number | null = NOW + HOUR) => ({ type, utilization, resetsAt })
+
+  it("is the share spent of the window nearest its cap among those that apply", () => {
+    expect(usedShare([window("five_hour", 0.3), window("seven_day", 0.85), window("seven_day_opus", 0.99)], { now: NOW })).toBe(0.85)
+    expect(usedShare([window("five_hour", 0.3), window("seven_day_opus", 0.99)], { now: NOW, model: "opus" })).toBe(0.99)
+  })
+
+  it("counts a window whose reset has passed as unspent, and is null when nothing is known", () => {
+    expect(usedShare([window("seven_day", 0.99, NOW - HOUR)], { now: NOW })).toBe(0)
+    expect(usedShare([window("seven_day", null)], { now: NOW })).toBeNull()
+    expect(usedShare(undefined, { now: NOW })).toBeNull()
   })
 })

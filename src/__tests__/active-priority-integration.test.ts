@@ -822,3 +822,106 @@ describe("routing settings", () => {
     expect(res.status).toBe(400)
   })
 })
+
+describe("the fallback a refused request moves to", () => {
+  // Every move writes the conversation's whole prompt to the new account's
+  // cache, so the fallback should be the account likeliest to keep it: by room
+  // left, an account whose weekly limit resets within a day first.
+  const HOUR = 60 * 60_000
+  /** A usage read in the cache the fallback order reads, as a quota poll leaves one. Shares in percent. */
+  async function seedUsage(profileId: string, usage: { fiveHour?: number; weekly: number; weeklyResetsInMs?: number }) {
+    const store: CredentialStore = {
+      read: async () => ({ claudeAiOauth: { accessToken: "token", refreshToken: "refresh", expiresAt: Date.now() + HOUR } }),
+      write: async () => true,
+    }
+    const snapshot = await fetchOAuthUsage({
+      profileId, store, force: true,
+      fetchImpl: async () => new Response(JSON.stringify({
+        five_hour: { utilization: usage.fiveHour ?? 5, resets_at: new Date(Date.now() + HOUR).toISOString() },
+        seven_day: { utilization: usage.weekly, resets_at: new Date(Date.now() + (usage.weeklyResetsInMs ?? 120 * HOUR)).toISOString() },
+      }), { status: 200, headers: { "content-type": "application/json" } }),
+    })
+    expect(snapshot?.windows.find(w => w.type === "seven_day")?.utilization).toBe(usage.weekly / 100)
+  }
+  const servedBy = () => capturedEnvs.map(dir => dir.replace(/.*ap-/, ""))
+  /** The profiles the proxy read usage for, beyond what the tests seeded. */
+  let usageReads: string[] = []
+
+  beforeEach(() => {
+    usageReads = []
+    __setFetchOAuthUsageOverride(async opts => {
+      usageReads.push(String(opts?.profileId))
+      return null
+    })
+    savedEnv.MERIDIAN_FALLBACK_ORDER = process.env.MERIDIAN_FALLBACK_ORDER
+    delete process.env.MERIDIAN_FALLBACK_ORDER
+  })
+
+  it("is the one with the most room, ahead of the configured order", async () => {
+    await seedUsage("personal", { weekly: 90 })
+    await seedUsage("spare", { weekly: 10 })
+    const app = createTestApp()
+    await setActive(app, "work")
+    failingDirs.add("ap-work")
+    expect((await post(app)).status).toBe(200)
+    expect(servedBy()).toEqual(["work", "spare"])
+  })
+
+  it("is one with capacity whose weekly limit resets within a day, ahead of one with more room", async () => {
+    // personal comes first by the configured order and by room alike.
+    await seedUsage("personal", { weekly: 10 })
+    await seedUsage("spare", { weekly: 60, weeklyResetsInMs: 10 * HOUR })
+    const app = createTestApp()
+    await setActive(app, "work")
+    failingDirs.add("ap-work")
+    expect((await post(app)).status).toBe(200)
+    expect(servedBy()).toEqual(["work", "spare"])
+  })
+
+  it("is not one near its weekly cap while another may have room", async () => {
+    await seedUsage("personal", { weekly: 97 })
+    const app = createTestApp()
+    await setActive(app, "work")
+    failingDirs.add("ap-work")
+    expect((await post(app)).status).toBe(200)
+    expect(servedBy()).toEqual(["work", "spare"])
+  })
+
+  it("follows the configured order under MERIDIAN_FALLBACK_ORDER=configured", async () => {
+    process.env.MERIDIAN_FALLBACK_ORDER = "configured"
+    await seedUsage("personal", { weekly: 90 })
+    await seedUsage("spare", { weekly: 10 })
+    const app = createTestApp()
+    await setActive(app, "work")
+    failingDirs.add("ap-work")
+    expect((await post(app)).status).toBe(200)
+    expect(servedBy()).toEqual(["work", "personal"])
+  })
+
+  // A usage read is a GET on the account's usage endpoint, not a model call:
+  // it spends no tokens. It still runs only while a move is near, and at most
+  // once in five minutes a profile.
+  it("reads no account's usage while the active one is far from its caps", async () => {
+    await seedUsage("work", { fiveHour: 20, weekly: 30 })
+    const app = createTestApp()
+    await setActive(app, "work")
+    for (const turn of ["one", "two", "three"]) expect((await post(app, {}, turn)).status).toBe(200)
+    expect(usageReads).toEqual([])
+  })
+
+  it("reads each fallback's usage once when the active account passes 80% of a window", async () => {
+    await seedUsage("work", { fiveHour: 85, weekly: 30 })
+    const app = createTestApp()
+    await setActive(app, "work")
+    for (const turn of ["one", "two", "three"]) expect((await post(app, {}, turn)).status).toBe(200)
+    expect([...usageReads].sort()).toEqual(["personal", "spare"])
+  })
+
+  it("reads each fallback's usage once when the active account refuses, however many requests follow", async () => {
+    const app = createTestApp()
+    await setActive(app, "work")
+    failingDirs.add("ap-work")
+    for (const turn of ["one", "two", "three"]) expect((await post(app, {}, turn)).status).toBe(200)
+    expect(usageReads.filter(id => id !== "work").sort()).toEqual(["personal", "spare"])
+  })
+})

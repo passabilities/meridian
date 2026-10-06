@@ -210,7 +210,8 @@ export function choosePriorityProfile(
 
 /**
  * Candidate order for `active+priority`: the active profile first, then the
- * priority order behind it as fallbacks.
+ * order given behind it as fallbacks. The server gives the fallbacks ordered
+ * by room (`orderFallbacksByRoom`) unless MERIDIAN_FALLBACK_ORDER=configured.
  *
  * The active profile OUTRANKS an existing session assignment, which is the one
  * place this mode deliberately disagrees with `priority`. In `priority` the
@@ -247,6 +248,87 @@ export function chooseActivePriorityCandidates(
     first = pool.find(id => !isExhausted(id)) ?? activeId
   }
   return [first, ...pool.filter(id => id !== first && !isExhausted(id))]
+}
+
+/** A usage window as fallback ordering reads it: the share spent (0..1) and when it turns over. */
+export interface RoomWindow {
+  readonly type: string
+  readonly utilization: number | null
+  readonly resetsAt: number | null
+}
+
+/**
+ * Past this share of any window that applies, an account is near its cap: a
+ * conversation moved onto it writes its whole prompt to that account's cache
+ * and is refused again soon after, which is what moved it in the first place.
+ */
+export const NEAR_CAP_UTILIZATION = 0.95
+
+/** A weekly limit resetting sooner than this has allowance that is used now or not at all. */
+export const WEEKLY_RESET_SOON_MS = 24 * 60 * 60_000
+
+/** The windows a request draws on: five-hour, weekly, and its model's own weekly window. */
+function appliesTo(model: string | undefined): (window: RoomWindow) => boolean {
+  const types = new Set(["five_hour", "seven_day", ...(model ? [`seven_day_${model}`] : [])])
+  return window => types.has(window.type)
+}
+
+/**
+ * The share spent of the window nearest its cap, among those a request for
+ * `model` draws on; a window whose reset has passed since it was read counts
+ * as unspent. Null when none of them says.
+ */
+export function usedShare(
+  windows: readonly RoomWindow[] | undefined,
+  options: { now: number; model?: string },
+): number | null {
+  const used = (windows ?? []).filter(appliesTo(options.model)).flatMap(window => {
+    if (window.resetsAt !== null && window.resetsAt <= options.now) return [0]
+    return window.utilization === null ? [] : [window.utilization]
+  })
+  return used.length > 0 ? Math.max(...used) : null
+}
+
+/**
+ * The fallbacks behind the active profile, best first, by what is known of
+ * their usage:
+ *   1. accounts with capacity whose weekly limit resets within a day, soonest
+ *      first: allowance otherwise lost, on an account that refills soon;
+ *   2. other accounts with capacity, most room first;
+ *   3. accounts nothing is known of yet;
+ *   4. accounts near a cap, most room first.
+ * The order given breaks every tie. Room is what is left of the window nearest
+ * its cap among those that apply: the five-hour window, the weekly one, and the
+ * requested model's own weekly window (`model` is its word: "opus", "fable").
+ * A window whose reset has passed since it was read counts as unspent.
+ *
+ * Every move to another account writes the conversation's whole prompt to that
+ * account's cache, so the account a conversation lands on should be the one
+ * likeliest to keep it until it is done.
+ *
+ * Pure: `windowsOf` reads what the caller already holds and never fetches.
+ */
+export function orderFallbacksByRoom(
+  ids: readonly string[],
+  windowsOf: (id: string) => readonly RoomWindow[] | undefined,
+  options: { now: number; model?: string },
+): string[] {
+  const { now } = options
+  const applies = appliesTo(options.model)
+  const ranked = ids.map((id, index) => {
+    const windows = (windowsOf(id) ?? []).filter(applies)
+    const used = usedShare(windows, options)
+    if (used === null) return { id, index, tier: 2, reset: 0, room: 0 }
+    const room = 1 - used
+    if (room < 1 - NEAR_CAP_UTILIZATION) return { id, index, tier: 3, reset: 0, room }
+    const soon = windows.flatMap(window => window.type !== "five_hour" && window.resetsAt !== null &&
+      window.resetsAt > now && window.resetsAt - now < WEEKLY_RESET_SOON_MS ? [window.resetsAt] : [])
+    return soon.length > 0
+      ? { id, index, tier: 0, reset: Math.min(...soon), room }
+      : { id, index, tier: 1, reset: 0, room }
+  })
+  ranked.sort((a, b) => a.tier - b.tier || a.reset - b.reset || b.room - a.room || a.index - b.index)
+  return ranked.map(entry => entry.id)
 }
 
 export interface ExhaustionEntry {

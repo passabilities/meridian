@@ -120,6 +120,8 @@ import {
   resolvePriorityOrder,
   choosePriorityProfile,
   chooseActivePriorityCandidates,
+  orderFallbacksByRoom,
+  usedShare,
   isPoolRouting,
   ACTIVE_PRIORITY,
   ROUTING_MODES,
@@ -130,6 +132,7 @@ import {
   findCooldownReset,
   type CooldownWindow,
   type PriorityAssignment,
+  type RoomWindow,
   type RoutingMode,
 } from "./routing"
 import { diagnoseLimit, limitModelScope, spentAllowanceResetAt, windowedModel, type LimitDiagnosis } from "./limitDetection"
@@ -1378,6 +1381,57 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
       })
   }
 
+  /**
+   * What the fallback order reads of an account's usage (`orderFallbacksByRoom`):
+   * its last usage read, with any window its own responses reported since laid
+   * over it. Never fetches: this runs on the request path.
+   */
+  function fallbackRoomWindows(profileId: string): RoomWindow[] | undefined {
+    const snapshot = peekOAuthUsage(profileId)
+    const byType = new Map<string, RoomWindow>()
+    for (const window of snapshot?.windows ?? []) byType.set(window.type, window)
+    for (const entry of rateLimitStore.getAll(profileId)) {
+      if (!entry.rateLimitType || (snapshot && entry.observedAt <= snapshot.fetchedAt)) continue
+      const utilization = entry.status === "rejected" ? 1 : entry.utilization ?? null
+      if (utilization === null) continue
+      byType.set(entry.rateLimitType, { type: entry.rateLimitType, utilization, resetsAt: entry.resetsAt ?? null })
+    }
+    return byType.size > 0 ? [...byType.values()] : undefined
+  }
+
+  /** MERIDIAN_FALLBACK_ORDER=configured keeps active+priority's fallbacks in the configured order. */
+  function fallbacksByRoom(): boolean {
+    return process.env.MERIDIAN_FALLBACK_ORDER?.trim().toLowerCase() !== "configured"
+  }
+
+  // Keeping what the fallback order reads current. A usage read is a GET on
+  // the account's usage endpoint (oauthUsage.ts), not a model call, and spends
+  // no tokens; it still runs only while a move is near (the active account has
+  // refused, is out, or is past FALLBACK_USAGE_WATCH_SHARE of a window), in the
+  // background, and at most once in FALLBACK_USAGE_REFRESH_MS a profile on top
+  // of that endpoint's own 30-second cache. A request never waits on one.
+  const FALLBACK_USAGE_REFRESH_MS = 5 * 60_000
+  const FALLBACK_USAGE_WATCH_SHARE = 0.8
+  const fallbackUsageReadAt = new Map<string, number>()
+  function refreshFallbackUsage(profileIds: readonly string[]): void {
+    const now = Date.now()
+    const profiles = getEffectiveProfiles(finalConfig.profiles)
+    for (const profileId of profileIds) {
+      const target = profiles.find(p => p.id === profileId)
+      // Only claude-max profiles have a usage endpoint (refinePriorityCooldown).
+      if ((target?.type ?? "claude-max") !== "claude-max") continue
+      const last = Math.max(fallbackUsageReadAt.get(profileId) ?? 0, peekOAuthUsage(profileId)?.fetchedAt ?? 0)
+      if (now - last < FALLBACK_USAGE_REFRESH_MS) continue
+      fallbackUsageReadAt.set(profileId, now)
+      void fetchOAuthUsage({ profileId, claudeConfigDir: target?.claudeConfigDir }).catch(err => {
+        claudeLog("priority.fallback_usage_read_failed", {
+          profile: profileId,
+          error: err instanceof Error ? err.message : String(err),
+        })
+      })
+    }
+  }
+
   /** Inspect an inner response for an account-level failure without destroying
    *  it. Non-stream: an error body on a non-OK status. Stream: an
    *  `event: error` frame BEFORE any content frame (mid-content errors pass
@@ -1616,6 +1670,9 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
         ...(scoped ? { model: scoped.model } : {}),
       })
       if (quotaRefusal) refinePriorityCooldown(candidate, scoped)
+      // The moves this refusal starts are placed by what the fallback order
+      // reads of the others; have it current for the requests that follow.
+      if (options.routing === ACTIVE_PRIORITY) refreshFallbackUsage(options.poolIds.filter(id => id !== candidate))
       lastError = sniffed.errorPayload
       lastStatus = inner.status
       previous = candidate
@@ -2188,11 +2245,23 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
               if (routingMode === ACTIVE_PRIORITY) {
                 const activeId = resolveProfile(finalConfig.profiles, finalConfig.defaultProfile).id
                 if (!order.includes(activeId)) pool = [activeId, ...order]
+                const fallbacks = order.filter(id => id !== activeId)
+                const now = Date.now()
+                // The active account out, or close to a cap: a move is near.
+                if (isBenched(activeId) || (usedShare(fallbackRoomWindows(activeId), { now, model: requestedModel }) ?? 0) >= FALLBACK_USAGE_WATCH_SHARE) {
+                  refreshFallbackUsage(fallbacks)
+                }
+                // Where a refused request goes next, and where a conversation
+                // lands while the active account is out: the fallback with the
+                // most room, one whose weekly limit resets within a day first.
+                const ranked = fallbacksByRoom()
+                  ? orderFallbacksByRoom(fallbacks, fallbackRoomWindows, { now, model: requestedModel })
+                  : fallbacks
                 candidates = retainOnlyProfile
                   ? [retainOnlyProfile]
                   : chooseActivePriorityCandidates(
                       activeId,
-                      order,
+                      [activeId, ...ranked],
                       isBenched,
                       assignedProfile,
                     )
