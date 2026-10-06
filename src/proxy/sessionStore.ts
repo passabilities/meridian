@@ -2092,10 +2092,12 @@ export function evictSharedSession(
 }
 
 /**
- * How long a superseded copy stays resumable. A conversation that moves to
- * another account and comes back - typically once the first account's 5-hour
- * usage window has reset - resumes that account's own SDK session while its
- * copy exists, and is replayed as flattened, window-trimmed history after.
+ * How long a superseded copy is kept. A conversation that moves to another
+ * account and comes back - typically once the first account's 5-hour usage
+ * window has reset - is served from its newest copy, carried to the account it
+ * comes back to (sessionCarry.ts): the copy it left there lacks the turns it
+ * took since. An older copy is resumed only where the newest no longer holds
+ * the history the client sends (a client that rewound past those turns).
  */
 export const DEFAULT_PROFILE_COPY_GRACE_MS = 24 * 60 * 60_000
 

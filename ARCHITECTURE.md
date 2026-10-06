@@ -221,6 +221,7 @@ src/
 │   │   ├── processIncarnation.ts ← Process/host identity for lock ownership
 │   │   └── durableFileSystem.ts ← Durable file operations
 │   ├── sessionStore.ts        ← Shared file store (cross-proxy session resume)
+│   ├── sessionCarry.ts        ← Finds an SDK transcript and copies it into another account's config directory (leaf, I/O)
 │   ├── profiles.ts            ← Multi-profile support: resolve, list, switch auth contexts (leaf)
 │   ├── profileCli.ts          ← CLI commands for profile management (leaf, I/O)
 │   ├── profileConfigStore.ts  ← cross-process profile writer lock and atomic snapshots (leaf, I/O)
@@ -572,6 +573,8 @@ E2E tests (`E2E.md`) should be run before releases or after major refactors.
 `sessionLifecycle.ts` persists a publication lease atomically with each new request target before SDK launch. The lease survives physical SDK writer shutdown and commit until the synchronous durable mapping CAS succeeds, or the request abandons its target. Failed publication restores the lease. Collectors in other processes cannot depend on a proxy instance's private request pins, so they consult these durable leases as well as durable mappings.
 
 Publication leases use the existing unarmed active-lease representation with `purpose: "publication"`. Older collectors also retain them while the owner process is alive; exact process-incarnation death permits recovery. They do not count as exclusive SDK writers, and abandoning publication never removes an actual writer lease. Published transcripts are retained by their durable mappings and become collectible after eviction.
+
+A conversation that moves to another account has its newest session carried there (`sessionCarry.ts`): the copy is a new target in that account's config directory, prepared with a publication lease before the file is written and published by the same synchronous mapping CAS, as that account's copy of the conversation. The turn then resumes it like any other. A copy that cannot be published is abandoned to GC, and the turn replays the history instead.
 
 An SDK writer lease is released once its writer has been joined. If the lifecycle lock is busy at that point, the next GC sweep, including the shutdown sweep, retries the release; the completed turn does not fail. On win32 an executor's death does not prove its descendants gone, so a writer lease left by a crashed proxy is recovered only after the host reboots.
 

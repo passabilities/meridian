@@ -172,6 +172,7 @@ import { getConversationFingerprint, getPriorityAssignmentKey } from "./session/
 
 import {
   lookupSession,
+  newestCopyElsewhere,
   storeSession,
   rollbackPrioritySessionPublication,
   finalizePrioritySessionPublication,
@@ -180,6 +181,7 @@ import {
   evictSession as evictCachedSession,
   getSessionByClaudeId,
   warnHeaderlessToolLoopOnce,
+  type CopyElsewhere,
   type PrioritySessionPublication,
 } from "./session/cache"
 import { processSessionTurns, type SessionTurnLease } from "./session/turnCoordinator"
@@ -201,9 +203,11 @@ import {
   listStoredSessions,
   readSessionStoreSnapshot,
   readSessionStoreGenerationSnapshot,
+  storeSharedSession,
   type StoredSessionGeneration,
   DEFAULT_PROFILE_COPY_GRACE_MS,
 } from "./sessionStore"
+import { copyTranscriptAs, findTranscriptFile } from "./sessionCarry"
 import {
   abandonFork,
   acquireActiveTranscriptLease,
@@ -2872,6 +2876,95 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
         if (lineageResult.type === "undo" && adapterBase === "opencode" && !agentSessionId) {
           lineageResult = { type: "diverged", reason: "missing-session-header" }
         }
+        // A copy of this conversation on another account, used since the one
+        // here and still holding this history: copies are kept per account
+        // and outlive a move, so the one here can be older than the
+        // conversation (newestCopyElsewhere).
+        const ownCopy = durableMappingAtTurn.status === "found" ? durableMappingAtTurn.session : undefined
+        const elsewhere = agentSessionId && profileSessionId && !isIndependentSession
+          ? newestCopyElsewhere(
+              getEffectiveProfiles(finalConfig.profiles)
+                .filter(other => other.id !== profile.id)
+                .map(other => other.id !== "default" ? `${other.id}:${agentSessionId}` : agentSessionId),
+              lineageMessages,
+              ownCopy?.lastUsedAt ?? 0,
+            )
+          : undefined
+        // A conversation that comes back to this account after turns on
+        // another finds the copy it left here: a session that ends where the
+        // conversation was then. Resumed, it would be sent the turns taken
+        // elsewhere as a delta, which keeps only the user's side of them, so
+        // the model would answer without the replies it gave there.
+        if (lineageResult.type !== "diverged" && ownCopy && elsewhere) {
+          diagnosticLog.lineage(`${requestMeta.requestId} the copy of this conversation on ${profile.id} is older than the one on ${elsewhere.key.slice(0, Math.max(0, elsewhere.key.indexOf(":"))) || "the default account"}: it took turns there since.`)
+          lineageResult = { type: "diverged", reason: "moved-on-elsewhere" }
+        }
+        /**
+         * Copy the transcript of `copy` under this account and make it this
+         * account's copy of the conversation (sessionCarry.ts). Returns the
+         * mapping generation stored, or undefined when it could not be done,
+         * and the history is then replayed as before.
+         */
+        const carryConversation = async (copy: CopyElsewhere, key: string): Promise<StoredSessionGeneration | undefined> => {
+          const from = copy.session
+          const source = from.currentTranscript
+          // Only a session written where this request's SDK child works: the
+          // copy goes to the same project folder under this account.
+          if (!source || source.sessionId !== from.claudeSessionId || !source.projectDir) return undefined
+          if (canonicalizeTranscriptLocator(source).projectDir !== canonicalizeTranscriptLocator(transcriptLocator(source.sessionId)).projectDir) return undefined
+          let target: TranscriptLocator | undefined
+          try {
+            const sourcePath = await findTranscriptFile(source.configDir, source.sessionId, source.projectDir)
+            if (!sourcePath) return undefined
+            const prepared = await prepareForkForPublication(transcriptLocator(randomUUID()), admissionLifecycleOptions)
+            target = prepared
+            await copyTranscriptAs(sourcePath, prepared.configDir, prepared.sessionId)
+            const stored = await publishPinnedTranscript(prepared, () => storeSharedSession(
+              key, prepared.sessionId, from.messageCount, from.lineageHash, from.messageHashes, from.sdkMessageUuids,
+              from.contextUsage, from.messageBlockHashes, from.passthroughToolCallAssistantUuid ?? null,
+              from.passthroughToolCallIds ?? null, prepared, undefined, mappingExpectedGeneration,
+            ), admissionLifecycleOptions)
+            if (stored === false) throw new Error("this account's copy of the conversation changed while it was carried")
+            // What was decided for the session and told to it goes with it:
+            // its tool deferral, and the deferred tools named in its turns.
+            const deferPin = sessionDeferPin.get(copy.key)
+            if (deferPin !== undefined) sessionDeferPin.set(key, deferPin)
+            const announced = deferredToolAnnouncements.get(from.claudeSessionId)
+            if (announced) deferredToolAnnouncements.set(prepared.sessionId, announced)
+            claudeLog("session.carried", { fromConfigDir: source.configDir, toConfigDir: prepared.configDir, messageCount: from.messageCount })
+            diagnosticLog.lineage(`${requestMeta.requestId} carried the conversation's session to ${profile.id} (${from.messageCount} messages); resuming it there.`)
+            return stored
+          } catch (error) {
+            const message = error instanceof Error ? error.message : String(error)
+            claudeLog("session.carry_failed", { error: message })
+            diagnosticLog.lineage(`${requestMeta.requestId} carrying the conversation's session to ${profile.id} failed (${message}); replaying its history instead.`)
+            if (target) {
+              await abandonFork(target, admissionLifecycleOptions).catch((abandonError: unknown) => {
+                claudeLog("session.carry_abandon_failed", { error: abandonError instanceof Error ? abandonError.message : String(abandonError) })
+              })
+            }
+            return undefined
+          }
+        }
+        // Where this account has no current copy of its own, carry the newest
+        // one here rather than replay the history flattened: the session then
+        // resumes as it would have on its own account, and the move costs
+        // this account its prompt cache, as switching accounts costs a direct
+        // client, and nothing more. MERIDIAN_SESSION_CARRY=0 replays instead.
+        if (
+          lineageResult.type === "diverged"
+          && (lineageResult.reason === "not-found" || lineageResult.reason === "moved-on-elsewhere")
+          && elsewhere && elsewhere.lineage.type === "continuation"
+          && profileSessionId && durableMappingKey === profileSessionId
+          && !options.forceFreshPriorityReplay
+          && env("SESSION_CARRY") !== "0"
+        ) {
+          const carried = await carryConversation(elsewhere, profileSessionId)
+          if (carried) {
+            mappingExpectedGeneration = carried
+            lineageResult = lookupSession(profileSessionId, lineageMessages, profileScopedCwd)
+          }
+        }
         // Clients that declare a concurrent flow (a fork source or either
         // subagent signal) knowingly run parallel turns under one session key — see
         // the keyed fork/subagent note above. Serializing them is still worth
@@ -5217,7 +5310,6 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
                         if (stored) {
                           mappingExpectedGeneration = stored
                           if (managedForkTarget?.sessionId === currentSessionId) managedForkPublished = true
-                        noteDeferredToolsAnnounced(currentSessionId)
                           noteDeferredToolsAnnounced(currentSessionId)
                         }
                         return stored

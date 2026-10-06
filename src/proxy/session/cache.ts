@@ -417,6 +417,48 @@ export function lookupSession(
   return { type: "diverged", reason: "not-found" }
 }
 
+/** A copy of a conversation's session kept under another account's key. */
+export interface CopyElsewhere {
+  readonly key: string
+  readonly session: StoredSession
+  /** The copy against the history at hand: what resuming it would be. */
+  readonly lineage: LineageResult
+}
+
+/**
+ * The most recently used copy of this conversation on another account that
+ * was used after `newerThan` and still holds the history at hand (its lineage
+ * is not diverged), with that lineage. Undefined when there is none.
+ *
+ * Copies are kept per account and outlive a move (DEFAULT_PROFILE_COPY_GRACE_MS),
+ * so a conversation that comes back to an account finds the session it left
+ * there, which ends where the conversation was then. A newer copy elsewhere
+ * says where the conversation went on since: resumed, the old one would be
+ * sent those turns as a delta, and a resume delta keeps only the user's side
+ * of them, taking the assistant's for turns the session wrote itself.
+ *
+ * Reads the shared store only; a copy it cannot read does not count. Only
+ * copies newer than `newerThan` are checked against the history, so a
+ * conversation whose own copy is the newest costs a store read per account.
+ */
+export function newestCopyElsewhere(
+  otherKeys: readonly string[],
+  messages: Array<{ role: string; content: any }>,
+  newerThan = 0,
+): CopyElsewhere | undefined {
+  const newer = otherKeys.flatMap(key => {
+    const found = lookupSharedSessionResult(key)
+    return found.status === "found" && found.session.lastUsedAt > newerThan ? [{ key, session: found.session }] : []
+  }).sort((left, right) => right.session.lastUsedAt - left.session.lastUsedAt)
+  for (const copy of newer) {
+    const lineage = verifyLineage(stateFromSharedSession(copy.session), messages, {
+      compactionSurvival: process.env.MERIDIAN_COMPACTION_SURVIVAL === "1",
+    })
+    if (lineage.type !== "diverged") return { ...copy, lineage }
+  }
+  return undefined
+}
+
 /** Look up a session by the Claude SDK session ID returned in responses.
  *  Searches both in-memory caches and the shared file store, returning the
  *  freshest matching state if multiple cache keys point to the same Claude session. */
