@@ -322,18 +322,27 @@ try {
   } else {
     check(upstreamCalls.every(call => call.cache.includes("1h")), "the conversation's prompt cache is written for an hour", lifetimes(upstreamCalls))
   }
-  // The client's system prompt is the prompt. What the proxy adds to it are
-  // its own notes (2.1K characters when this was written); the preset was 10K.
-  // The list of deferred tools' names is the one part that follows the tool
-  // set (E76), so it is left out of the measure.
-  const systemSize = body => (Array.isArray(body?.system) ? body.system.map(block => block.text ?? "").join("\n") : String(body?.system ?? ""))
-    .replace(/\n<available-deferred-tools>\n[\s\S]*?<\/available-deferred-tools>/, "").length
+  // The client's system prompt is the prompt. The proxy adds its replay note
+  // (640 characters) and nothing else for a client on this host working in
+  // the directory the child runs in: not the note separating the client's
+  // environment from the child's (1.3K characters, naming one path four
+  // times), not the scratchpad counter-instruction, not the deferred tools'
+  // names (in the turn now), not a second copy of the identity line the child
+  // puts first itself. The preset, before that, was 10K.
+  const systemText = body => Array.isArray(body?.system) ? body.system.map(block => block.text ?? "").join("\n") : String(body?.system ?? "")
+  const IDENTITY = "You are a Claude agent, built on Anthropic's Claude Agent SDK."
   const conversations = [[SUBAGENT ? "the subagent" : "the conversation", clientRequests[0], upstreamCalls[0]?.body],
     ...(SUBAGENT ? [["the main thread", parentRequests[0], parentCalls[0]?.body]] : [])]
   for (const [name, sent, received] of conversations) {
-    const added = systemSize(received) - systemSize(sent)
-    check(Boolean(sent && received) && added < 4000, `the system prompt the API receives for ${name} is the client's and the proxy's notes`,
-      `${systemSize(sent)} characters from the client, ${systemSize(received)} to the API`)
+    const text = systemText(received)
+    const added = text.length - systemText(sent).length
+    const extras = [["<env>", "the working-directory note"], ["passes through a proxy", "the working-directory note"],
+      ["Do not use any scratchpad directory", "the scratchpad counter-instruction"], ["available-deferred-tools", "the deferred tools' names"]]
+      .filter(([marker]) => text.includes(marker)).map(([, what]) => what)
+    const identities = text.split(IDENTITY).length - 1
+    check(Boolean(sent && received) && extras.length === 0 && identities <= 1 && added < 800,
+      `the system prompt the API receives for ${name} is the client's and the replay note`,
+      `${systemText(sent).length} characters from the client, ${text.length} to the API; identity line ${identities}x${extras.length > 0 ? `; also: ${[...new Set(extras)].join(", ")}` : ""}`)
   }
   // And its tools are its tools: the SDK child cuts an MCP tool's description
   // at 2,048 characters, which several of Claude Code's own run past. The
@@ -377,6 +386,12 @@ try {
     check(upstreamCalls.every(row => deferredOnDirect.every(name => !declares(row, name)) && kept.every(name => declares(row, name))),
       "the client's own tools that it defers on a direct connection are out of every request, and no other of its own",
       `out: ${deferredOnDirect.join(", ") || "none"}; loaded: ${kept.join(", ")}`)
+    // Named in the turn, as the client names them with its own tool search on.
+    const firstTurn = (upstreamCalls[0]?.messages ?? []).filter(message => message.role === "user")
+      .map(message => typeof message.content === "string" ? message.content : blocksOf(message).map(block => block.text ?? "").join("\n")).join("\n")
+    const named = [...deferredOnDirect, ...(MCP_TOOLS > 0 ? ["inventory_report_00"] : [])]
+    check(firstTurn.includes("The following deferred tools are now available via ToolSearch.") && named.every(name => firstTurn.includes(`__${name}\n`)),
+      "the deferred tools are named in the first turn, as the client names them", `${named.length} checked`)
   } else {
     check(main.every(query => query.maxTurns === 1), "without deferred tools every round is held to the one-turn cap", `maxTurns ${[...new Set(main.map(query => query.maxTurns))].join(",")}`)
   }

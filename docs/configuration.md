@@ -50,7 +50,7 @@ Environment variables, endpoints, authentication, SDK feature toggles, passthrou
 | `MERIDIAN_UPSTREAM_AUXILIARY_IDLE_MS` | `CLAUDE_PROXY_UPSTREAM_AUXILIARY_IDLE_MS` | `30000` | The same limit for a client's side calls — Claude Code's auto-mode permission check and background-agent progress summary. They answer in seconds or not at all, and the conversation waits on them either way, so they are given up on sooner and the client's retry goes out sooner. Never longer than `MERIDIAN_UPSTREAM_IDLE_MS`; `0` puts side calls back on that limit. Read when a request arrives, so a change needs no restart. |
 | `MERIDIAN_UPSTREAM_IDLE_MAX_CONSECUTIVE` | `CLAUDE_PROXY_UPSTREAM_IDLE_MAX_CONSECUTIVE` | `3` | Consecutive idle stalls for the same request and session before returning a terminal error. Identical retries are then rejected before another SDK query for one idle window (at least 60 seconds). A changed request or completed turn resets the streak; rejected retries do not extend the pause. `0` disables this ceiling. Tracking is bounded and local to the proxy instance; requests without a correlatable session are not pooled. |
 | `MERIDIAN_AUXILIARY_PROMPT_CACHE` | `CLAUDE_PROXY_AUXILIARY_PROMPT_CACHE` | `1` | Set to `0` to send a side call's growing prompt as one text block again. Claude Code's auto-mode permission check re-sends the conversation's transcript on every check; by default Meridian cuts that prompt at fixed points and places its own two cache breakpoints, so each check reads back what the last one wrote instead of writing the whole transcript again. The entries live as long as the SDK child's own writes do: an hour on a subscription profile, five minutes on an API-key profile. The SDK child's own prompt caching is switched off for that one call, and so is the `git status` of the proxy's working directory it would otherwise write ahead of the prompt: whenever a file there changed, the next check found none of the cached prompt. If the API ever refuses those breakpoints, the prompt is resent as plain text and the layout stays off until restart. |
-| `MERIDIAN_SUPPRESS_SCRATCHPAD` | — | `1` | Set to `0` to disable prompt-level scratchpad suppression in passthrough mode (#627, #1049) |
+| `MERIDIAN_SUPPRESS_SCRATCHPAD` | — | *(unset)* | Prompt-level scratchpad suppression in passthrough mode (#627, #1049). Unset: on, except for Claude Code, whose own scratchpad directory it would countermand and whose SDK child names none. `0`: off for every client. `1`: on for every client, Claude Code included. |
 | `MERIDIAN_SUPPRESS_SCRATCHPAD_ENV` | — | `0` | Set to `1` to also pass `CLAUDE_CODE_SESSION_KIND=bg` to the SDK subprocess. Disabled by default to prevent CLI 2.1.274+ from registering persistent phantom background jobs under `~/.claude/jobs/` (#1049) |
 | `MERIDIAN_SUPPRESS_IMPLICIT_ATTACHMENTS` | — | `1` | Set to `0` to stop defaulting `CLAUDE_CODE_DISABLE_ATTACHMENTS=1` in passthrough mode. Does not clear an explicitly inherited CLI setting. See [known limitations](#known-limitations). |
 | `MERIDIAN_COMPACTION_SURVIVAL` | — | `0` | Set to `1` to resume the old SDK session after a client shortens its history head into a summary. By default Meridian replays the supplied summary in a fresh SDK session so the removed context is released. Equal-length pruning still resumes. |
@@ -717,9 +717,19 @@ and each now follows the client. The figures are from the real client
 `claude-code` adapter by default. With it on, a main conversation carried the
 preset's text ahead of the same text from the client, and a subagent, the
 permission check and every other side call carried a main conversation's
-prompt ahead of their own: 10.2K characters on every call. Meridian's own
-notes, about 2K characters, are still appended. To have the preset back, turn
-**Claude Code Prompt** on for `claude-code` at `/settings`.
+prompt ahead of their own: 10.2K characters on every call. To have the preset
+back, turn **Claude Code Prompt** on for `claude-code` at `/settings`.
+
+**Meridian adds one note to it.** For a client on the proxy's host working
+in the directory the SDK child runs in, the system prompt the API receives is
+the client's and Meridian's replay note (640 characters). The note that
+separated the client's environment from the child's (1.3K characters, naming
+one path four times) is left out there, since the child's own environment
+lines then describe the client's; a request from another host, a forwarded
+one, or one whose directory the child does not run in still gets it. The
+scratchpad counter-instruction is left out for Claude Code (see
+[known limitations](#known-limitations)), and so is the client's copy of the
+identity line the child puts first itself, which a `claude -p` client sends.
 
 **The SDK child runs where the client works.** Claude Code states its working
 directory in an environment block. Older clients put that block in the system
@@ -1200,7 +1210,7 @@ Coverage: `E38` in [E2E.md](../E2E.md), with `MERIDIAN_DEBUG_FORCE_SILENT_TURN=1
 
   Set `MERIDIAN_SUPPRESS_IMPLICIT_ATTACHMENTS=0` to disable Meridian's default. An inherited `CLAUDE_CODE_DISABLE_ATTACHMENTS` value still wins: an empty string permits expansion, while nonempty `"0"` or `"false"` still disable it because the CLI checks truthiness. Existing attachments in resumed history are not scrubbed.
 - **Subagent extraction** — Meridian parses the client's Task tool description to extract subagent names and build SDK AgentDefinitions. If the client's agent framework uses a non-standard format, subagent routing may not work automatically.
-- **Scratchpad suppression (passthrough)** — the Claude CLI advertises a proxy-host scratchpad directory that clients can't use; OpenCode 1.18+ permission-blocks writes to it. Meridian suppresses it in passthrough mode (`CLAUDE_CODE_SESSION_KIND=bg` on the subprocess). Kill switch: `MERIDIAN_SUPPRESS_SCRATCHPAD=0`.
+- **Scratchpad suppression (passthrough)** — the Claude CLI can advertise a proxy-host scratchpad directory that clients can't use; OpenCode 1.18+ permission-blocks writes to it. Meridian tells the model to keep off scratchpad directories in passthrough mode (a prompt note; `CLAUDE_CODE_SESSION_KIND=bg` on the subprocess only with `MERIDIAN_SUPPRESS_SCRATCHPAD_ENV=1`). Not for Claude Code: the note also countermands the scratchpad directory the client names for its own tools, and the SDK child, with the preset off, names none (a subscription profile's child sent no scratchpad line, CLI 2.1.284, 2026-10-06). `MERIDIAN_SUPPRESS_SCRATCHPAD=1` gives it to Claude Code too; `0` to nobody.
 - **`max_tokens` is not enforced by default** — the Anthropic contract makes `max_tokens` a hard cap on total output (thinking and response text combined), with a truncated response reporting `stop_reason: "max_tokens"`. Meridian ignores it unless you opt in, so a small value does not bound the answer and a long answer still reports `end_turn`.
 
   The reason is that the Agent SDK exposes no output cap at all: its options carry `maxBudgetUsd`, `maxThinkingTokens`, `maxTurns` and `taskBudget`, and nothing for output tokens. The only lever is the CLI's own cap, which counts thinking *plus* text — so applying a client's answer-sized budget to a whole agentic turn can leave no room for an answer. Measured: a 128-token cap could not complete a turn whose visible answer was ~15 tokens, and a 16-token cap produced no text at all.

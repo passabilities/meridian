@@ -128,6 +128,12 @@ export interface QueryContext {
    * child's MCP tools are the proxy's own and third parties'.
    */
   wholeToolDescriptions?: boolean
+  /**
+   * False when the client says the counter-instruction about scratchpad
+   * directories is not wanted (`RequestContext.scratchpadCounterInstruction`).
+   * MERIDIAN_SUPPRESS_SCRATCHPAD decides when set.
+   */
+  scratchpadCounterInstruction?: boolean
   /** Whether any passthrough tools use deferred loading */
   hasDeferredTools: boolean
   /**
@@ -397,6 +403,23 @@ function pathsEquivalent(left: string, right: string): boolean {
   return a.flavor === b.flavor && a.value === b.value
 }
 
+/**
+ * Whether the SDK child runs in the client's own environment: a request from
+ * this host (`isLoopbackPeer`), for an adapter that opted in
+ * (`AgentAdapter.sharesEnvironmentOnLoopback`), whose declared working
+ * directory is the one the child runs in. The child's own environment lines
+ * then describe the client's environment, and `buildCwdNote` has nothing to
+ * separate.
+ */
+export function childSharesClientEnvironment(input: {
+  optedIn: boolean
+  clientCwd: string | undefined
+  sdkCwd: string
+  fromThisHost: boolean
+}): boolean {
+  return input.optedIn && input.fromThisHost && !!input.clientCwd && pathsEquivalent(input.clientCwd, input.sdkCwd)
+}
+
 function escapePromptPath(value: string): string {
   return value
     .replace(/&/g, "&amp;")
@@ -586,6 +609,33 @@ export const SCRATCHPAD_COUNTER_INSTRUCTION =
   `</meridian-note>`
 
 /**
+ * Whether a query's system prompt carries SCRATCHPAD_COUNTER_INSTRUCTION:
+ * MERIDIAN_SUPPRESS_SCRATCHPAD=0 never, =1 always, and otherwise unless the
+ * client said it needs none (`RequestContext.scratchpadCounterInstruction`).
+ */
+function wantsScratchpadNote(passthrough: boolean, clientSays: boolean | undefined): boolean {
+  if (!passthrough) return false
+  const operator = process.env.MERIDIAN_SUPPRESS_SCRATCHPAD
+  if (operator === "0") return false
+  return operator === "1" || clientSays !== false
+}
+
+/**
+ * The line the SDK child puts ahead of a system prompt it is given as text
+ * (CLI 2.1.284, a block of its own). A client that is an Agent SDK session
+ * itself, as `claude -p` is, sends the same line as its own first block.
+ */
+export const SDK_IDENTITY_LINE = "You are a Claude agent, built on Anthropic's Claude Agent SDK."
+
+/** The client's text without a first line the child puts ahead of it anyway. */
+function withoutRepeatedIdentity(clientContext: string | undefined): string | undefined {
+  if (!clientContext?.startsWith(SDK_IDENTITY_LINE)) return clientContext
+  const rest = clientContext.slice(SDK_IDENTITY_LINE.length)
+  if (rest === "") return undefined
+  return rest.startsWith("\n") ? rest.slice(1) : clientContext
+}
+
+/**
  * What `CLAUDE_CODE_MAX_MCP_DESCRIPTION_LENGTH` is set to for a client whose
  * tool descriptions are to arrive whole. The CLI reads a positive integer of
  * digits and has no way to say "no limit" (2.1.284); its default is 2,048.
@@ -635,13 +685,14 @@ function resolveSystemPrompt(
   /** The deferred tools' names, when ToolSearch is on offer; else empty. Last
    *  in every branch: it is the one part that follows the client's tool set. */
   deferredNote: string,
+  /** `QueryContext.scratchpadCounterInstruction`. */
+  scratchpadCounterInstruction: boolean | undefined,
 ): { systemPrompt?: string | { type: "preset"; preset: "claude_code"; append?: string } } {
   const hasSettings = settingSources != null && settingSources.length > 0
   const usePreset = codeSystemPrompt ?? (hasSettings || (!passthrough && !!systemContext))
   const includeClient = clientSystemPrompt ?? true
   const clientContext = includeClient ? systemContext : undefined
-  const scratchpadNote =
-    passthrough && process.env.MERIDIAN_SUPPRESS_SCRATCHPAD !== "0" ? SCRATCHPAD_COUNTER_INSTRUCTION : ""
+  const scratchpadNote = wantsScratchpadNote(passthrough, scratchpadCounterInstruction) ? SCRATCHPAD_COUNTER_INSTRUCTION : ""
 
   if (usePreset) {
     // Always non-empty: the gitStatus correction applies to every preset
@@ -649,7 +700,8 @@ function resolveSystemPrompt(
     const append = [clientContext, cwdNote, GIT_STATUS_PROVENANCE_NOTE, REPLAY_PROVENANCE_NOTE, scratchpadNote, deferredNote].filter(Boolean).join("")
     return { systemPrompt: { type: "preset" as const, preset: "claude_code" as const, append } }
   }
-  const append = [clientContext, cwdNote].filter(Boolean).join("") || undefined
+  // Given as text, the system prompt follows the child's own identity block.
+  const append = [withoutRepeatedIdentity(clientContext), cwdNote].filter(Boolean).join("") || undefined
   if (append) return { systemPrompt: append + REPLAY_PROVENANCE_NOTE + scratchpadNote + deferredNote }
   // Transport provenance is separate from the optional client prompt and
   // Claude Code persona. A plain string keeps an explicitly disabled preset
@@ -718,7 +770,7 @@ export function buildQueryOptions(ctx: QueryContext, abortController?: AbortCont
       ...(stream || passthrough ? { includePartialMessages: true } : {}),
       permissionMode: "bypassPermissions" as const,
       allowDangerouslySkipPermissions: true,
-      ...resolveSystemPrompt(systemContext, passthrough, settingSources, codeSystemPrompt, clientSystemPrompt, cwdNote, deferredNote),
+      ...resolveSystemPrompt(systemContext, passthrough, settingSources, codeSystemPrompt, clientSystemPrompt, cwdNote, deferredNote, ctx.scratchpadCounterInstruction),
       ...(passthrough
         ? {
             // Strip the SDK's ~25k-token built-in tool catalog from the

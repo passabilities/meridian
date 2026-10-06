@@ -19,6 +19,13 @@ describe("claudeCodeAdapter — identity", () => {
   })
 })
 
+describe("claudeCodeAdapter — where its environment is", () => {
+  it("may run elsewhere than the proxy, and shares the child's environment when it is on this host in the child's directory", () => {
+    expect(claudeCodeAdapter.clientEnvironmentMayDifferFromProxy).toBe(true)
+    expect(claudeCodeAdapter.sharesEnvironmentOnLoopback).toBe(true)
+  })
+})
+
 describe("claudeCodeAdapter.getSessionId", () => {
   it("extracts a session ID from Claude Code's JSON-string metadata", () => {
     // Any unrelated header value is ignored; only the agent-id header keys.

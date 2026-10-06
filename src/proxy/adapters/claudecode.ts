@@ -490,6 +490,15 @@ export const claudeCodeAdapter: AgentAdapter = {
   clientEnvironmentMayDifferFromProxy: true,
 
   /**
+   * Unless it is on this host, in the directory the SDK child runs in: the
+   * child runs in the client's directory whenever that exists here, and on a
+   * request from this host the child's environment lines then describe the
+   * client's. The note separating the two named one path four times, about
+   * 1.3K characters on every call.
+   */
+  sharesEnvironmentOnLoopback: true,
+
+  /**
    * Claude Code embeds its conversation ID in metadata.user_id rather than a
    * session-affinity header; an Agent-tool subagent adds its agent id (see
    * `claudeCodeSessionKey`). Fall back to fingerprint resume when absent.

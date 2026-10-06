@@ -102,7 +102,7 @@ import { layoutGrowingPrompt } from "./promptCacheLayout"
 import { requireAuth, authEnabled } from "./auth"
 import { detectAdapter } from "./adapters/detect"
 import { rootSessionIdOf } from "./adapter"
-import { buildQueryOptions, isCliThinkingDisplay, pinnedPassthroughTurnBudget, resolveQueryConfigDir, singleTurnCapLiftRaisesBudget, type QueryContext } from "./query"
+import { buildQueryOptions, childSharesClientEnvironment, isCliThinkingDisplay, pinnedPassthroughTurnBudget, resolveQueryConfigDir, singleTurnCapLiftRaisesBudget, type QueryContext } from "./query"
 import { normalizeEffort } from "./effort"
 import { parseOutputFormat, structuredOutputText } from "./structuredOutput"
 import { runTransformHook, buildPipeline, createRequestContext } from "./transform"
@@ -596,6 +596,18 @@ function buildFreshPrompt(
 let proxyLogSilent = false
 function plog(message: string): void {
   if (!proxyLogSilent) console.error(message)
+}
+
+/** The request came from this host: a loopback peer, and not forwarded (`isLoopbackPeer`). */
+function requestFromThisHost(c: Context): boolean {
+  let remoteAddress: string | undefined
+  try {
+    remoteAddress = getConnInfo(c).remote.address
+  } catch {
+    // Served by something other than @hono/node-server: no peer to trust.
+    remoteAddress = undefined
+  }
+  return isLoopbackPeer(remoteAddress, c.req.raw.headers)
 }
 
 function upstreamIdleOf(meta: RequestMeta): UpstreamIdleLimit {
@@ -2411,7 +2423,15 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
         // may-differ client (per-task pi sessions send no system prompt) needs
         // the distinction asserted most. Gating it on extraction left those
         // requests with nothing countering the SDK's own environment lines.
+        // Except a client on this host whose own directory the child runs in,
+        // for an adapter that says so: there the child's lines are its own.
         const clientEnvironmentMayDifferFromProxy = adapter.clientEnvironmentMayDifferFromProxy === true
+          && !childSharesClientEnvironment({
+            optedIn: adapter.sharesEnvironmentOnLoopback === true,
+            clientCwd: extractedClientWorkingDirectory,
+            sdkCwd: workingDirectory,
+            fromThisHost: requestFromThisHost(c),
+          })
         // Prompt-facing client cwd. When a may-differ adapter extracted
         // nothing, do NOT relabel the proxy's fallback directory as the
         // client's — buildCwdNote would assert the proxy's checkout as the
@@ -3556,6 +3576,8 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
       // Whether the client's tool descriptions go to the model whole, past
       // the length the SDK child cuts an MCP tool's at. Every query, as above.
       const wholeToolDescriptions = pipelineCtx.wholeToolDescriptions === true
+      // Whether the client wants the scratchpad counter-instruction left out.
+      const scratchpadCounterInstruction = pipelineCtx.scratchpadCounterInstruction
 
       function rebuildReplayPrompt(): void {
         structuredMessages = undefined
@@ -4317,7 +4339,7 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
                 try {
                   if (resumeSessionId) resumedMappingMayBeAdvanced = true
                   const attemptQuery = buildQueryOptions({
-                    prompt: makePrompt(), ownsCacheBreakpoints: promptCacheLayout !== undefined, promptCacheLifetime, wholeToolDescriptions, model, workingDirectory, clientWorkingDirectory: promptClientWorkingDirectory, clientEnvironmentMayDifferFromProxy, systemContext, claudeExecutable,
+                    prompt: makePrompt(), ownsCacheBreakpoints: promptCacheLayout !== undefined, promptCacheLifetime, wholeToolDescriptions, scratchpadCounterInstruction, model, workingDirectory, clientWorkingDirectory: promptClientWorkingDirectory, clientEnvironmentMayDifferFromProxy, systemContext, claudeExecutable,
                     passthrough, stream: false, sdkAgents, passthroughMcp, cleanEnv: profileEnv, envOverrides, hasDeferredTools, toolSearch: toolSearch.active, earlyStop: earlyStopEnabled, liftSingleTurnCap: singleTurnCapLifted, deferredToolsInTurns, deferredToolsAnnounced: deferredToolsAnnouncedTo(resumeSessionId, sdkUndo),
                     resumeSessionId, isUndo: sdkUndo, resumeSessionAtUuid: undoRollbackUuid ?? passthroughToolCallAssistantUuid, forkSession: busySessionFork || undefined, forkSessionId: managedForkTarget?.sessionId, sdkHooks, blockedTools: pipelineCtx.blockedTools, incompatibleTools: pipelineCtx.incompatibleTools, mcpServerName: adapter.getMcpServerName(), allowedMcpTools: pipelineCtx.allowedMcpTools, onStderr,
                     effort, thinking, taskBudget, outputFormat, betas, settingSources,
@@ -4424,7 +4446,7 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
                     for (let i = 0; i < allMessages.length; i++) sdkUuidMap.push(null)
                     yield* runSdkQueryAttempt(buildQueryOptions({
                       prompt: buildFreshPrompt(allMessages, sanitizeOpts, renderReplayToolName, replayBudgetFor(model), "non_stream_resume_replay"),
-                      promptCacheLifetime, wholeToolDescriptions, model, workingDirectory, clientWorkingDirectory: promptClientWorkingDirectory, clientEnvironmentMayDifferFromProxy, systemContext, claudeExecutable,
+                      promptCacheLifetime, wholeToolDescriptions, scratchpadCounterInstruction, model, workingDirectory, clientWorkingDirectory: promptClientWorkingDirectory, clientEnvironmentMayDifferFromProxy, systemContext, claudeExecutable,
                       passthrough, stream: false, sdkAgents, passthroughMcp, cleanEnv: profileEnv, envOverrides, hasDeferredTools, toolSearch: toolSearch.active, earlyStop: earlyStopEnabled, deferredToolsInTurns,
                       resumeSessionId: undefined, isUndo: false, resumeSessionAtUuid: undefined, forkSessionId: managedForkTarget?.sessionId, sdkHooks, blockedTools: pipelineCtx.blockedTools, incompatibleTools: pipelineCtx.incompatibleTools, mcpServerName: adapter.getMcpServerName(), allowedMcpTools: pipelineCtx.allowedMcpTools, onStderr,
                       effort, thinking, taskBudget, outputFormat, betas, settingSources,
@@ -4485,7 +4507,7 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
                     for (let i = 0; i < allMessages.length; i++) sdkUuidMap.push(null)
                     yield* runSdkQueryAttempt(buildQueryOptions({
                       prompt: buildFreshPrompt(allMessages, sanitizeOpts, renderReplayToolName, replayBudgetFor(model), "non_stream_model_fallback"),
-                      promptCacheLifetime, wholeToolDescriptions, model, workingDirectory, clientWorkingDirectory: promptClientWorkingDirectory, clientEnvironmentMayDifferFromProxy, systemContext, claudeExecutable,
+                      promptCacheLifetime, wholeToolDescriptions, scratchpadCounterInstruction, model, workingDirectory, clientWorkingDirectory: promptClientWorkingDirectory, clientEnvironmentMayDifferFromProxy, systemContext, claudeExecutable,
                       passthrough, stream: false, sdkAgents, passthroughMcp, cleanEnv: profileEnv, envOverrides, hasDeferredTools, toolSearch: toolSearch.active, earlyStop: earlyStopEnabled, deferredToolsInTurns,
                       resumeSessionId: undefined, isUndo: false, resumeSessionAtUuid: undefined, forkSessionId: managedForkTarget?.sessionId, sdkHooks, blockedTools: pipelineCtx.blockedTools, incompatibleTools: pipelineCtx.incompatibleTools, mcpServerName: adapter.getMcpServerName(), allowedMcpTools: pipelineCtx.allowedMcpTools, onStderr,
                       effort, thinking, taskBudget, outputFormat, betas, settingSources,
@@ -5532,7 +5554,7 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
                   try {
                     if (resumeSessionId) resumedMappingMayBeAdvanced = true
                     const attemptQuery = buildQueryOptions({
-                      prompt: makePrompt(), ownsCacheBreakpoints: promptCacheLayout !== undefined, promptCacheLifetime, wholeToolDescriptions, model, workingDirectory, clientWorkingDirectory: promptClientWorkingDirectory, clientEnvironmentMayDifferFromProxy, systemContext, claudeExecutable,
+                      prompt: makePrompt(), ownsCacheBreakpoints: promptCacheLayout !== undefined, promptCacheLifetime, wholeToolDescriptions, scratchpadCounterInstruction, model, workingDirectory, clientWorkingDirectory: promptClientWorkingDirectory, clientEnvironmentMayDifferFromProxy, systemContext, claudeExecutable,
                       passthrough, stream: true, sdkAgents, passthroughMcp, cleanEnv: profileEnv, envOverrides, hasDeferredTools, toolSearch: toolSearch.active, earlyStop: earlyStopEnabled, liftSingleTurnCap: singleTurnCapLifted, deferredToolsInTurns, deferredToolsAnnounced: deferredToolsAnnouncedTo(resumeSessionId, sdkUndo),
                       resumeSessionId, isUndo: sdkUndo, resumeSessionAtUuid: undoRollbackUuid ?? passthroughToolCallAssistantUuid, forkSession: busySessionFork || undefined, forkSessionId: managedForkTarget?.sessionId, sdkHooks, blockedTools: pipelineCtx.blockedTools, incompatibleTools: pipelineCtx.incompatibleTools, mcpServerName: adapter.getMcpServerName(), allowedMcpTools: pipelineCtx.allowedMcpTools, onStderr,
                       effort, thinking, taskBudget, outputFormat, betas, settingSources,
@@ -5619,7 +5641,7 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
                       for (let i = 0; i < allMessages.length; i++) sdkUuidMap.push(null)
                       yield* runSdkQueryAttempt(buildQueryOptions({
                         prompt: buildFreshPrompt(allMessages, sanitizeOpts, renderReplayToolName, replayBudgetFor(model), "stream_resume_replay"),
-                        promptCacheLifetime, wholeToolDescriptions, model, workingDirectory, clientWorkingDirectory: promptClientWorkingDirectory, clientEnvironmentMayDifferFromProxy, systemContext, claudeExecutable,
+                        promptCacheLifetime, wholeToolDescriptions, scratchpadCounterInstruction, model, workingDirectory, clientWorkingDirectory: promptClientWorkingDirectory, clientEnvironmentMayDifferFromProxy, systemContext, claudeExecutable,
                         passthrough, stream: true, sdkAgents, passthroughMcp, cleanEnv: profileEnv, envOverrides, hasDeferredTools, toolSearch: toolSearch.active, earlyStop: earlyStopEnabled, deferredToolsInTurns,
                         resumeSessionId: undefined, isUndo: false, resumeSessionAtUuid: undefined, forkSessionId: managedForkTarget?.sessionId, sdkHooks, blockedTools: pipelineCtx.blockedTools, incompatibleTools: pipelineCtx.incompatibleTools, mcpServerName: adapter.getMcpServerName(), allowedMcpTools: pipelineCtx.allowedMcpTools, onStderr,
                         effort, thinking, taskBudget, outputFormat, betas, settingSources,
@@ -5676,7 +5698,7 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
                       for (let i = 0; i < allMessages.length; i++) sdkUuidMap.push(null)
                       yield* runSdkQueryAttempt(buildQueryOptions({
                         prompt: buildFreshPrompt(allMessages, sanitizeOpts, renderReplayToolName, replayBudgetFor(model), "stream_model_fallback"),
-                        promptCacheLifetime, wholeToolDescriptions, model, workingDirectory, clientWorkingDirectory: promptClientWorkingDirectory, clientEnvironmentMayDifferFromProxy, systemContext, claudeExecutable,
+                        promptCacheLifetime, wholeToolDescriptions, scratchpadCounterInstruction, model, workingDirectory, clientWorkingDirectory: promptClientWorkingDirectory, clientEnvironmentMayDifferFromProxy, systemContext, claudeExecutable,
                         passthrough, stream: true, sdkAgents, passthroughMcp, cleanEnv: profileEnv, envOverrides, hasDeferredTools, toolSearch: toolSearch.active, earlyStop: earlyStopEnabled, deferredToolsInTurns,
                         resumeSessionId: undefined, isUndo: false, resumeSessionAtUuid: undefined, forkSessionId: managedForkTarget?.sessionId, sdkHooks, blockedTools: pipelineCtx.blockedTools, incompatibleTools: pipelineCtx.incompatibleTools, mcpServerName: adapter.getMcpServerName(), allowedMcpTools: pipelineCtx.allowedMcpTools, onStderr,
                         effort, thinking, taskBudget, outputFormat, betas, settingSources,
@@ -6594,7 +6616,7 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
                   // had already produced a deliverable turn.
                   for await (const event of runSdkQueryAttempt(buildQueryOptions({
                     prompt: SILENT_TURN_NUDGE,
-                    promptCacheLifetime, wholeToolDescriptions, model, workingDirectory, clientWorkingDirectory: promptClientWorkingDirectory, clientEnvironmentMayDifferFromProxy, systemContext, claudeExecutable,
+                    promptCacheLifetime, wholeToolDescriptions, scratchpadCounterInstruction, model, workingDirectory, clientWorkingDirectory: promptClientWorkingDirectory, clientEnvironmentMayDifferFromProxy, systemContext, claudeExecutable,
                     // The nudge asks for prose, but a tool call is an equally
                     // valid answer — so the tool surface has to stay identical.
                     passthrough, stream: true, sdkAgents, passthroughMcp,
@@ -8735,14 +8757,7 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
   // /health (no API key), but answered only to a loopback peer: the counts say
   // when this machine is being used, which nobody off the host needs to know.
   app.get("/inflight", (c) => {
-    let remoteAddress: string | undefined
-    try {
-      remoteAddress = getConnInfo(c).remote.address
-    } catch {
-      // Served by something other than @hono/node-server: no peer to trust.
-      remoteAddress = undefined
-    }
-    if (!isLoopbackPeer(remoteAddress, c.req.raw.headers)) {
+    if (!requestFromThisHost(c)) {
       return c.json({ error: { type: "forbidden", message: "/inflight is answered only to loopback clients" } }, 403)
     }
     c.header("Cache-Control", "no-store")

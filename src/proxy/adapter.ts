@@ -183,6 +183,15 @@ export interface AgentIdentity {
   readonly clientEnvironmentMayDifferFromProxy?: boolean
 
   /**
+   * A request from this host (a loopback peer, not forwarded) whose declared
+   * working directory is the one the SDK child runs in shares the child's
+   * environment, `clientEnvironmentMayDifferFromProxy` notwithstanding: the
+   * child's own environment lines then describe the client's, and the note
+   * that would separate the two is left out (`childSharesClientEnvironment`).
+   */
+  readonly sharesEnvironmentOnLoopback?: boolean
+
+  /**
    * Content normalization — convert message content to a stable string
    * for hashing. Agents may send content in different formats.
    */

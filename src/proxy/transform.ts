@@ -96,6 +96,14 @@ export interface RequestContext {
    * request and resends as recorded, so tools connecting later go unnamed.
    */
   deferredToolsInTurns?: boolean
+  /**
+   * False: the SDK child is not told to keep off scratchpad directories. That
+   * counter-instruction (#627, #1049) is for a scratchpad the child itself
+   * names, on the proxy's host; it also countermands one the client names for
+   * its own tools. Unset: given in passthrough. MERIDIAN_SUPPRESS_SCRATCHPAD
+   * decides when set.
+   */
+  scratchpadCounterInstruction?: boolean
   sdkAgents: Record<string, any>
   sdkHooks?: any
   passthrough?: boolean

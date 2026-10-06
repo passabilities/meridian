@@ -1,8 +1,8 @@
 /**
  * Tests for the SDK query options builder.
  */
-import { describe, it, expect } from "bun:test"
-import { buildQueryOptions, GIT_STATUS_PROVENANCE_NOTE, REPLAY_PROVENANCE_NOTE, SCRATCHPAD_COUNTER_INSTRUCTION, resolveQueryConfigDir, singleTurnCapLiftRaisesBudget, type QueryContext } from "../proxy/query"
+import { afterEach, beforeEach, describe, it, expect } from "bun:test"
+import { buildQueryOptions, childSharesClientEnvironment, GIT_STATUS_PROVENANCE_NOTE, REPLAY_PROVENANCE_NOTE, SCRATCHPAD_COUNTER_INSTRUCTION, SDK_IDENTITY_LINE, resolveQueryConfigDir, singleTurnCapLiftRaisesBudget, type QueryContext } from "../proxy/query"
 import { BLOCKED_BUILTIN_TOOLS, CLAUDE_CODE_ONLY_TOOLS, MCP_SERVER_NAME, ALLOWED_MCP_TOOLS } from "../proxy/tools"
 import { CHERRY_BLOCKED_BUILTIN_TOOLS, CHERRY_INCOMPATIBLE_TOOLS, CHERRY_WEB_TOOLS } from "../proxy/adapters/cherry"
 import { TOOL_SEARCH_TURN_BUDGET, deferredToolsAnnouncement, deferredToolsNote } from "../proxy/passthroughToolSearch"
@@ -1138,6 +1138,81 @@ describe("buildQueryOptions", () => {
   })
 })
 
+
+describe("what the SDK child already says, left out of the client's system prompt", () => {
+  const textOf = (overrides: Partial<QueryContext>): string => {
+    const { systemPrompt } = buildQueryOptions(makeContext({ passthrough: true, codeSystemPrompt: false, ...overrides })).options
+    return typeof systemPrompt === "string" ? systemPrompt : (systemPrompt as { append?: string } | undefined)?.append ?? ""
+  }
+
+  // The SDK child puts this line ahead of a system prompt given as text. A
+  // client that is an Agent SDK session itself (`claude -p`) sends it first
+  // too, and passing it on said it twice.
+  it("drops the client's copy of the identity line the child puts first itself", () => {
+    // The client's identity block and its prompt block ("\nCLIENT PROMPT"),
+    // joined as extractSystemText joins them: the prompt block is left as sent.
+    const text = textOf({ systemContext: `${SDK_IDENTITY_LINE}\n\nCLIENT PROMPT` })
+    expect(text).not.toContain(SDK_IDENTITY_LINE)
+    expect(text.startsWith("\nCLIENT PROMPT")).toBe(true)
+  })
+
+  it("keeps an identity line the child does not send, and the line anywhere but first", () => {
+    const claudeCode = "You are Claude Code, Anthropic's official CLI for Claude."
+    expect(textOf({ systemContext: `${claudeCode}\nCLIENT PROMPT` }).startsWith(`${claudeCode}\nCLIENT PROMPT`)).toBe(true)
+    expect(textOf({ systemContext: `CLIENT PROMPT\n${SDK_IDENTITY_LINE}` })).toContain(`CLIENT PROMPT\n${SDK_IDENTITY_LINE}`)
+  })
+
+  it("keeps it under the preset, whose own text the child sends", () => {
+    expect(textOf({ codeSystemPrompt: true, systemContext: `${SDK_IDENTITY_LINE}\nCLIENT PROMPT` })).toContain(`${SDK_IDENTITY_LINE}\nCLIENT PROMPT`)
+  })
+})
+
+describe("the scratchpad counter-instruction", () => {
+  let saved: string | undefined
+  beforeEach(() => {
+    saved = process.env.MERIDIAN_SUPPRESS_SCRATCHPAD
+    delete process.env.MERIDIAN_SUPPRESS_SCRATCHPAD
+  })
+  afterEach(() => {
+    if (saved === undefined) delete process.env.MERIDIAN_SUPPRESS_SCRATCHPAD
+    else process.env.MERIDIAN_SUPPRESS_SCRATCHPAD = saved
+  })
+  const systemOf = (overrides: Partial<QueryContext>): string => {
+    const { systemPrompt } = buildQueryOptions(makeContext({ passthrough: true, codeSystemPrompt: false, systemContext: "CLIENT", ...overrides })).options
+    return typeof systemPrompt === "string" ? systemPrompt : ""
+  }
+
+  it("is given to a passthrough query unless the client says it needs none", () => {
+    expect(systemOf({})).toContain(SCRATCHPAD_COUNTER_INSTRUCTION)
+    expect(systemOf({ scratchpadCounterInstruction: false })).not.toContain(SCRATCHPAD_COUNTER_INSTRUCTION)
+  })
+
+  it("is given whatever the client says when the operator sets MERIDIAN_SUPPRESS_SCRATCHPAD=1", () => {
+    process.env.MERIDIAN_SUPPRESS_SCRATCHPAD = "1"
+    expect(systemOf({ scratchpadCounterInstruction: false })).toContain(SCRATCHPAD_COUNTER_INSTRUCTION)
+  })
+
+  it("is given to nobody under MERIDIAN_SUPPRESS_SCRATCHPAD=0", () => {
+    process.env.MERIDIAN_SUPPRESS_SCRATCHPAD = "0"
+    expect(systemOf({})).not.toContain(SCRATCHPAD_COUNTER_INSTRUCTION)
+  })
+})
+
+describe("childSharesClientEnvironment", () => {
+  const base = { optedIn: true, clientCwd: "/Users/me/project", sdkCwd: "/Users/me/project", fromThisHost: true }
+
+  it("holds for a client on this host whose own directory the child runs in", () => {
+    expect(childSharesClientEnvironment(base)).toBe(true)
+    expect(childSharesClientEnvironment({ ...base, sdkCwd: "/Users/me/project/" })).toBe(true)
+  })
+
+  it("does not hold for a client elsewhere, a child in another directory, an undeclared directory, or an adapter that has not opted in", () => {
+    expect(childSharesClientEnvironment({ ...base, fromThisHost: false })).toBe(false)
+    expect(childSharesClientEnvironment({ ...base, sdkCwd: "/srv/meridian" })).toBe(false)
+    expect(childSharesClientEnvironment({ ...base, clientCwd: undefined })).toBe(false)
+    expect(childSharesClientEnvironment({ ...base, optedIn: false })).toBe(false)
+  })
+})
 
 describe("replay provenance in the SDK preset", () => {
   it("keeps the protocol note stable between fresh and resumed queries", () => {

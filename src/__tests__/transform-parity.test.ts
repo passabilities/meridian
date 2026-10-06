@@ -74,6 +74,11 @@ describe("OpenCode transform parity", () => {
     expect(ctx.deferredToolsInTurns).toBeUndefined()
   })
 
+  it("keeps the scratchpad counter-instruction", () => {
+    const ctx = runTransformHook(openCodeTransforms, "onRequest", makeCtx("opencode"), "opencode")
+    expect(ctx.scratchpadCounterInstruction).toBeUndefined()
+  })
+
   it("matches supportsThinking", () => {
     const ctx = runTransformHook(openCodeTransforms, "onRequest", makeCtx("opencode"), "opencode")
     expect(ctx.supportsThinking).toBe(openCodeAdapter.supportsThinking!())
@@ -375,6 +380,11 @@ describe("Claude Code transform parity", () => {
   it("names deferred tools in the conversation, as the client does with its own tool search on", () => {
     const ctx = runTransformHook(claudeCodeTransforms, "onRequest", makeCtx("claude-code"), "claude-code")
     expect(ctx.deferredToolsInTurns).toBe(true)
+  })
+
+  it("leaves its own scratchpad directory to it, without the counter-instruction", () => {
+    const ctx = runTransformHook(claudeCodeTransforms, "onRequest", makeCtx("claude-code"), "claude-code")
+    expect(ctx.scratchpadCounterInstruction).toBe(false)
   })
 
   it("matches passthrough (default on)", () => {

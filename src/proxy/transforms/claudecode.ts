@@ -105,6 +105,12 @@ export const claudeCodeTransforms: Transform[] = [
         // there never named a tool that connected later and went on naming
         // ones that had gone.
         deferredToolsInTurns: true,
+        // Claude Code names a scratchpad directory of its own and runs its
+        // own tools, which may write there. The counter-instruction told the
+        // model to keep off it. The child, its preset off, names none: a
+        // subscription profile's child sent no scratchpad line (CLI 2.1.284,
+        // a scripted API, 2026-10-06).
+        scratchpadCounterInstruction: false,
         // Claude Code owns tool execution client-side. Mirrors
         // claudeCodeAdapter.usesPassthrough().
         passthrough: resolvePassthrough(true),
