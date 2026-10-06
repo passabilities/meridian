@@ -22,9 +22,12 @@
 // environment is scrubbed of `CLAUDE*`, `ANTHROPIC_*` and `MERIDIAN_*`.
 //
 // The proxy's working directory is a git repository, as a checkout's is, and a
-// tracked file in it changes half-way through each conversation. The SDK child
-// opens every prompt with `git status` of that directory, so a prompt cached
-// behind it is lost to the next check when the status moves.
+// tracked file in it changes half-way through each conversation. Under the
+// SDK's claude_code preset the SDK child opens every prompt with `git status`
+// of that directory, so a prompt cached behind it is lost to the next check
+// when the status moves. The preset is off for Claude Code by default (E80)
+// and the status with it; E2E_PRESET=1 turns it back on, as an operator may,
+// to hold the layout against the very thing it keeps out.
 //
 // Three runs: the layout on, the layout off (`MERIDIAN_AUXILIARY_PROMPT_CACHE=0`,
 // the prompt as it was always sent), and the layout on against an API that
@@ -77,6 +80,11 @@ Object.assign(process.env, {
   MERIDIAN_CONFIG_DIR: join(root, 'config'), MERIDIAN_SESSION_DIR: join(root, 'sessions'),
   MERIDIAN_WORKDIR: workdir, MERIDIAN_TELEMETRY_PERSIST: '0', MERIDIAN_CLAUDE_PATH: sdkCli,
 })
+const PRESET = process.env.E2E_PRESET === '1'
+if (PRESET) {
+  mkdirSync(join(root, 'config'), { recursive: true })
+  writeFileSync(join(root, 'config', 'sdk-features.json'), JSON.stringify({ 'claude-code': { codeSystemPrompt: true } }))
+}
 
 const ROUNDS = 9
 /** The tracked file changes once this many checks have been answered. */
@@ -331,10 +339,16 @@ check(on.clientChecks.length >= ROUNDS && on.clientChecks.every(body => body.mes
 
 // 2. Before: one block, the CLI's breakpoints only, nothing read back but the system prompt.
 const offStatus = offChecks.map(call => gitStatusOf(call.body))
-check(offStatus.length > CHANGE_AFTER && offStatus.every(status => status !== undefined)
-  && offStatus[CHANGE_AFTER - 1] === '(clean)' && offStatus[CHANGE_AFTER] !== '(clean)',
-  "layout off: the SDK child opens every prompt with `git status` of the proxy's directory, as it is when the check is made",
-  `check ${CHANGE_AFTER}: ${JSON.stringify(offStatus[CHANGE_AFTER - 1])}, check ${CHANGE_AFTER + 1}: ${JSON.stringify(offStatus[CHANGE_AFTER])}`)
+if (PRESET) {
+  check(offStatus.length > CHANGE_AFTER && offStatus.every(status => status !== undefined)
+    && offStatus[CHANGE_AFTER - 1] === '(clean)' && offStatus[CHANGE_AFTER] !== '(clean)',
+    "layout off, preset on: the SDK child opens every prompt with `git status` of the proxy's directory, as it is when the check is made",
+    `check ${CHANGE_AFTER}: ${JSON.stringify(offStatus[CHANGE_AFTER - 1])}, check ${CHANGE_AFTER + 1}: ${JSON.stringify(offStatus[CHANGE_AFTER])}`)
+} else {
+  check(offStatus.length > CHANGE_AFTER && offStatus.every(status => status === undefined),
+    'layout off: with the claude_code preset off, as it is by default, the SDK child puts no `git status` ahead of the prompt',
+    `${offStatus.filter(status => status === undefined).length} of ${offStatus.length} checks without one`)
+}
 const offLate = offChecks.slice(-4)
 check(offChecks.every(call => promptBlocks(call.body).length === 1),
   'layout off: the prompt goes upstream as one text block', `${offChecks.map(call => promptBlocks(call.body).length).join(',')}`)

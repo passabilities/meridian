@@ -88,6 +88,16 @@ const ADAPTER_DEFAULTS: Record<string, Partial<AdapterFeatures>> = {
   passthrough: {
     codeSystemPrompt: false,
   },
+  // Claude Code sends its own system prompt with every request, and for its
+  // main conversation that is the preset's text. With the preset on, the main
+  // conversation carried it twice, and a subagent, the permission check and
+  // every other side call carried the main conversation's prompt ahead of
+  // their own: 12.2K characters on each Messages call (real client against a
+  // scripted API, 2026-10-05). The client's prompt is the prompt, as it is on
+  // a direct connection.
+  "claude-code": {
+    codeSystemPrompt: false,
+  },
   // The OpenAI-compatible endpoint (/v1/chat/completions) serves generic chat
   // clients (Open WebUI, LibreChat, curl) that bring their own system prompt.
   // Default the claude_code preset OFF so their prompt isn't overridden by the
