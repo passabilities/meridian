@@ -4,7 +4,7 @@
  * copying it into another's, as a new session.
  */
 import { describe, it, expect, beforeEach, afterEach } from "bun:test"
-import { mkdirSync, mkdtempSync, readdirSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs"
+import { mkdirSync, mkdtempSync, readdirSync, readFileSync, realpathSync, rmSync, statSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { copyTranscriptAs, findTranscriptFile, projectFolderName, transcriptAs } from "../proxy/sessionCarry"
@@ -80,6 +80,16 @@ describe("copyTranscriptAs", () => {
     // Nothing half-written is left beside it, and the source is untouched.
     expect(readdirSync(join(root, "to", "projects", "-work-repo"))).toEqual(["s-2.jsonl"])
     expect(readFileSync(source, "utf8")).toContain("\"sessionId\":\"s-1\"")
+  })
+
+  it("is readable by its owner alone, as the CLI keeps its own transcripts", async () => {
+    const source = join(root, "from", "projects", "-work-repo", "s-1.jsonl")
+    mkdirSync(join(source, ".."), { recursive: true })
+    writeFileSync(source, `${record({ sessionId: "s-1" })}\n`, { mode: 0o600 })
+    const target = await copyTranscriptAs(source, join(root, "to"), "s-2")
+    expect(statSync(target).mode & 0o777).toBe(0o600)
+    expect(statSync(join(root, "to", "projects")).mode & 0o777).toBe(0o700)
+    expect(statSync(join(root, "to", "projects", "-work-repo")).mode & 0o777).toBe(0o700)
   })
 
   it("leaves only the whole file, even written twice under one id", async () => {

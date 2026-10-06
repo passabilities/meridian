@@ -87,17 +87,18 @@ export function transcriptAs(text: string, sessionId: string): string {
 
 /**
  * Copy a transcript into another config directory, into the same project
- * folder, as session `sessionId`. The file appears whole or not at all.
- * Returns its path.
+ * folder, as session `sessionId`. The file appears whole or not at all, and
+ * only its owner can read it, as the CLI keeps its own (0600): it holds the
+ * conversation. Returns its path.
  */
 export async function copyTranscriptAs(sourcePath: string, targetConfigDir: string, sessionId: string): Promise<string> {
   const folder = join(targetConfigDir, "projects", basename(dirname(sourcePath)))
   const target = join(folder, `${sessionId}.jsonl`)
   const text = transcriptAs(await readFile(sourcePath, "utf8"), sessionId)
-  await mkdir(folder, { recursive: true })
+  await mkdir(folder, { recursive: true, mode: 0o700 })
   const partial = `${target}.${randomUUID()}.partial`
   try {
-    await writeFile(partial, text, { flag: "wx" })
+    await writeFile(partial, text, { flag: "wx", mode: 0o600 })
     await rename(partial, target)
   } catch (error) {
     await rm(partial, { force: true })
