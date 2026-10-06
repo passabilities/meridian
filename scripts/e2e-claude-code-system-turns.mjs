@@ -39,10 +39,22 @@
 // the shape of the live failure: Fable subagents under a main thread.
 //
 // E2E_MCP_TOOLS=<n> gives the client a stdio MCP server with n tools it never
-// calls. Past the auto-defer threshold the proxy defers them (E76), and the
-// same rounds then have to resume with ToolSearch on offer, the server's tools
-// out of every request and the query ended by the hook instead of the cap.
+// calls. The proxy defers them (E76) beside the tools of its own the client
+// defers on a direct connection, which it defers without them too (E80): the
+// same rounds then have to resume with ToolSearch on offer, those tools out of
+// every request and the query ended by the hook instead of the cap.
+//
+// The proxy runs in a git repository of its own, apart from the client's
+// directory, and with no MERIDIAN_WORKDIR, as an installed proxy does. The gate
+// also holds what a request carries (E80): the SDK child runs in the client's
+// directory, which the client states among its messages; the system prompt
+// the API receives is the client's with the proxy's notes and nothing more;
+// every tool description is whole; and nothing of the directory the proxy
+// runs in is in a request. With the SDK's claude_code preset on and the
+// client's directory not found, every call carried that preset ahead of the
+// client's own prompt, and the path and git status of the proxy's directory.
 import assert from "node:assert/strict"
+import { execFileSync } from "node:child_process"
 import { mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs"
 import { randomUUID } from "node:crypto"
 import { tmpdir } from "node:os"
@@ -57,6 +69,17 @@ const CLIENT = process.env.E2E_CLAUDE_CLIENT?.includes("/") ? resolve(process.en
 const root = realpathSync(mkdtempSync(join(tmpdir(), "meridian-cc-system-turns-")))
 const work = join(root, "work")
 mkdirSync(work)
+// Where the proxy runs: a repository with a commit and an untracked file, so
+// that its git status would be recognised in a request.
+const proxyDir = join(root, "proxy")
+const PROXY_COMMIT = "PROXY-REPOSITORY-COMMIT"
+const PROXY_FILE = "PROXY-REPOSITORY-UNTRACKED.txt"
+mkdirSync(proxyDir)
+writeFileSync(join(proxyDir, "tracked.txt"), "tracked\n")
+for (const args of [["init", "-q"], ["add", "tracked.txt"], ["commit", "-q", "-m", PROXY_COMMIT]]) {
+  execFileSync("git", ["-c", "user.name=gate", "-c", "user.email=gate@example.invalid", "-c", "commit.gpgsign=false", ...args], { cwd: proxyDir, stdio: "pipe" })
+}
+writeFileSync(join(proxyDir, PROXY_FILE), "untracked\n")
 const fixtures = Array.from({ length: ROUNDS + 1 }, (_, index) => join(work, `fixture-${index}.txt`))
 for (const [index, file] of fixtures.entries()) writeFileSync(file, `fixture ${index} ${randomUUID()}\n`)
 
@@ -95,7 +118,7 @@ for (const key of Object.keys(process.env)) {
 }
 Object.assign(process.env, {
   MERIDIAN_CONFIG_DIR: join(root, "config"), MERIDIAN_SESSION_DIR: join(root, "sessions"),
-  MERIDIAN_WORKDIR: root, MERIDIAN_PASSTHROUGH: "1", MERIDIAN_TELEMETRY_PERSIST: "0",
+  MERIDIAN_PASSTHROUGH: "1", MERIDIAN_TELEMETRY_PERSIST: "0",
   // The scripted API is a base URL that is not Anthropic's own, where deferral
   // stays off unless the operator vouches for the upstream (E76). It only
   // comes into play with E2E_MCP_TOOLS.
@@ -149,14 +172,14 @@ const upstream = Bun.serve({ hostname: "127.0.0.1", port: 0, async fetch(request
     if (!readName) return sse([{ type: "text", text: "ok" }], "end_turn", body.model, 100)
     cliVersion ??= JSON.stringify(body.system ?? "").match(/cc_version=([0-9.]+[0-9])/)?.[1]
     if (SUBAGENT && !JSON.stringify(body.messages[0] ?? "").includes("SUBAGENT-TASK")) {
-      parentCalls.push({ messages: body.messages, cache: cacheLifetimes(body) })
+      parentCalls.push({ messages: body.messages, cache: cacheLifetimes(body), body })
       const agentName = (body.tools ?? []).map(tool => tool.name).find(name => name.endsWith("Agent"))
       if (parentCalls.length > 1 || !agentName) return sse([{ type: "text", text: "ALL-FIXTURES-READ" }], "end_turn", body.model, 9000)
       return sse([{ type: "tool_use", id: `toolu_delegate_${randomUUID().replaceAll("-", "").slice(0, 12)}`, name: agentName,
         input: { description: "Read fixtures", prompt: SUBAGENT_TASK, subagent_type: "general-purpose" } }], "tool_use", body.model, 4000)
     }
     const call = upstreamCalls.length + 1
-    upstreamCalls.push({ call, messages: body.messages, tools: (body.tools ?? []).map(tool => tool.name), cache: cacheLifetimes(body) })
+    upstreamCalls.push({ call, messages: body.messages, tools: (body.tools ?? []).map(tool => tool.name), cache: cacheLifetimes(body), body })
     const read = index => ({ type: "tool_use", id: `toolu_round${call}_${index}_${randomUUID().replaceAll("-", "").slice(0, 12)}`, name: readName, input: { file_path: fixtures[index] } })
     if (call === 1) return sse([{ type: "text", text: "Reading two." }, read(0), read(1)], "tool_use", body.model, 100 + 5000 * call)
     if (call <= ROUNDS) return sse([read(call)], "tool_use", body.model, 100 + 5000 * call)
@@ -170,16 +193,20 @@ const upstream = Bun.serve({ hostname: "127.0.0.1", port: 0, async fetch(request
 const queries = []
 const realQuery = sdk.query
 const observer = spyOn(sdk, "query").mockImplementation(input => {
-  queries.push({ model: input.options?.model, sessionId: input.options?.sessionId, resume: input.options?.resume,
+  queries.push({ model: input.options?.model, cwd: input.options?.cwd, sessionId: input.options?.sessionId, resume: input.options?.resume,
     resumeSessionAt: input.options?.resumeSessionAt, maxTurns: input.options?.maxTurns,
     sdkTools: input.options?.tools ?? [], clientTools: input.options?.allowedTools?.length ?? 0,
     textPrompt: typeof input.prompt === "string" ? input.prompt : undefined })
   return realQuery(input)
 })
 
+// Where the proxy process is, and so where its SDK children run when a
+// request names no directory of its own that exists here.
+process.chdir(proxyDir)
 const { startProxyServer } = await import("../src/proxy/server.ts")
 const { telemetryStore } = await import("../src/telemetry/index.ts")
 const { TOOL_SEARCH_TURN_BUDGET } = await import("../src/proxy/passthroughToolSearch.ts")
+const { CLAUDE_CODE_DEFERRED_TOOLS } = await import("../src/proxy/transforms/claudecode.ts")
 const proxy = await startProxyServer({ port: 0, host: "127.0.0.1", silent: true,
   profiles: [{ id: "fixture", type: "api", apiKey: "local-test-key", baseUrl: `http://127.0.0.1:${upstream.port}` }] })
 const address = proxy.server.address()
@@ -295,13 +322,61 @@ try {
   } else {
     check(upstreamCalls.every(call => call.cache.includes("1h")), "the conversation's prompt cache is written for an hour", lifetimes(upstreamCalls))
   }
+  // The client's system prompt is the prompt. What the proxy adds to it are
+  // its own notes (2.1K characters when this was written); the preset was 10K.
+  // The list of deferred tools' names is the one part that follows the tool
+  // set (E76), so it is left out of the measure.
+  const systemSize = body => (Array.isArray(body?.system) ? body.system.map(block => block.text ?? "").join("\n") : String(body?.system ?? ""))
+    .replace(/\n<available-deferred-tools>\n[\s\S]*?<\/available-deferred-tools>/, "").length
+  const conversations = [[SUBAGENT ? "the subagent" : "the conversation", clientRequests[0], upstreamCalls[0]?.body],
+    ...(SUBAGENT ? [["the main thread", parentRequests[0], parentCalls[0]?.body]] : [])]
+  for (const [name, sent, received] of conversations) {
+    const added = systemSize(received) - systemSize(sent)
+    check(Boolean(sent && received) && added < 4000, `the system prompt the API receives for ${name} is the client's and the proxy's notes`,
+      `${systemSize(sent)} characters from the client, ${systemSize(received)} to the API`)
+  }
+  // And its tools are its tools: the SDK child cuts an MCP tool's description
+  // at 2,048 characters, which several of Claude Code's own run past. The
+  // child writes an ellipsis as three full stops; nothing else may differ.
+  for (const [name, sent, received] of conversations) {
+    const received_ = new Map((received?.tools ?? []).map(tool => [tool.name.replace(/^mcp__[^_]+__/, ""), tool.description ?? ""]))
+    const loaded = (sent?.tools ?? []).filter(tool => received_.has(tool.name))
+    const cut = loaded.filter(tool => received_.get(tool.name) !== (tool.description ?? "").replaceAll("\u2026", "..."))
+    const long = loaded.filter(tool => (tool.description ?? "").length > 2048)
+    check(loaded.length > 0 && cut.length === 0, `every tool description the API receives for ${name} is whole`,
+      `${loaded.length} tool(s) loaded, ${long.length} described at more than 2,048 characters${cut.length > 0 ? `; cut or changed: ${cut.map(tool => `${tool.name} ${(tool.description ?? "").length} -> ${received_.get(tool.name).length}`).join(", ")}` : ""}`)
+  }
+  // The client says where it works (2.1.290: among the messages, not in the
+  // system prompt), and that is where its SDK queries run. Left in the proxy's
+  // own directory, the child describes that one to the model as its
+  // environment.
+  const ofConversation = [...main, ...(SUBAGENT ? queries.filter(query => query.clientTools > 0 && query.clientTools === (parentRequests[0]?.tools ?? []).length) : [])]
+  check(ofConversation.length > 0 && ofConversation.every(query => query.cwd === work), "every SDK query runs in the directory the client works in",
+    [...new Set(ofConversation.map(query => query.cwd === work ? "the client's" : query.cwd === proxyDir ? "the proxy's" : String(query.cwd)))].join(", "))
+  const everyCall = JSON.stringify([...upstreamCalls, ...parentCalls].map(call => call.body))
+  check(!everyCall.includes(proxyDir) && !everyCall.includes(PROXY_COMMIT) && !everyCall.includes(PROXY_FILE),
+    "nothing of the directory the proxy runs in is in a request: not its path, not its git status")
+  const toolsSize = body => JSON.stringify(body?.tools ?? []).length
+  console.log(`  note  tool definitions in the first request: ${toolsSize(clientRequests[0])} characters from the client, ${toolsSize(upstreamCalls[0]?.body)} to the API`)
   const deferred = main.length > 0 && main.every(query => JSON.stringify(query.sdkTools) === '["ToolSearch"]')
   console.log(`  note  ${main[0]?.clientTools ?? 0} client tools; ${upstreamCalls[0]?.tools.length ?? 0} declared to the API; ToolSearch ${deferred ? "on offer, turns ended by the hook" : "not on offer, turns ended by the cap"} (maxTurns ${[...new Set(main.map(query => query.maxTurns))].join(",")})`)
-  if (MCP_TOOLS > 0) {
-    check(deferred && main.every(query => query.maxTurns === TOOL_SEARCH_TURN_BUDGET), "with the MCP server's tools deferred, every round is asked with ToolSearch and the discovery budget",
+  // What the client defers on a direct connection, where its tool search is
+  // on, the proxy defers however few there are (E80): the tools of its MCP
+  // servers and the ones of its own it names. The rest of its own stay.
+  const own = (clientRequests[0]?.tools ?? []).map(tool => tool.name).filter(name => !name.startsWith("mcp__"))
+  const deferredOnDirect = own.filter(name => CLAUDE_CODE_DEFERRED_TOOLS.includes(name))
+  const kept = own.filter(name => !CLAUDE_CODE_DEFERRED_TOOLS.includes(name))
+  if (MCP_TOOLS > 0 || deferredOnDirect.length > 0) {
+    check(deferred && main.every(query => query.maxTurns === TOOL_SEARCH_TURN_BUDGET), "with tools deferred, every round is asked with ToolSearch and the discovery budget",
       `sdk tools ${JSON.stringify(main[0]?.sdkTools)} maxTurns ${main[0]?.maxTurns}`)
-    check(upstreamCalls.every(row => row.tools.includes("ToolSearch") && !row.tools.some(name => name.includes("inventory_report"))),
-      "the server's tools are out of every request", `${upstreamCalls[0]?.tools.length} tool(s) declared, of ${main[0]?.clientTools}`)
+    if (MCP_TOOLS > 0) {
+      check(upstreamCalls.every(row => row.tools.includes("ToolSearch") && !row.tools.some(name => name.includes("inventory_report"))),
+        "the server's tools are out of every request", `${upstreamCalls[0]?.tools.length} tool(s) declared, of ${main[0]?.clientTools}`)
+    }
+    const declares = (row, name) => row.tools.some(declared => declared.endsWith(`__${name}`))
+    check(upstreamCalls.every(row => deferredOnDirect.every(name => !declares(row, name)) && kept.every(name => declares(row, name))),
+      "the client's own tools that it defers on a direct connection are out of every request, and no other of its own",
+      `out: ${deferredOnDirect.join(", ") || "none"}; loaded: ${kept.join(", ")}`)
   } else {
     check(main.every(query => query.maxTurns === 1), "without deferred tools every round is held to the one-turn cap", `maxTurns ${[...new Set(main.map(query => query.maxTurns))].join(",")}`)
   }

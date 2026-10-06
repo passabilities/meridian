@@ -337,11 +337,14 @@ Agent-specific behavior is isolated behind the `AgentAdapter` interface (`adapte
 | `auxiliaryPromptGrows(c, body)` | Optional: true when such a side call repeats the prompt of the one before it and adds to its end; its prompt is then cut into blocks with the proxy's own cache breakpoints so each call reads back what the last wrote (Claude Code's auto-mode classifier: the transcript) |
 | `promptCacheLifetime(c, body)` | Optional: how long the client would have kept this conversation's prompt cache, where the SDK child would choose otherwise; every query the request makes asks the CLI for it, unless the operator's environment already decides (Claude Code's Agent-tool subagents: five minutes, where an SDK query gets the hour of a main conversation) |
 | `extractWorkingDirectory(body)` | Parse working directory from request body |
+| `extractClientWorkingDirectory(body)` | Optional: the directory the client works in, where that is not safe to hand the SDK as given (a client on another machine). The SDK child runs there when the directory exists on the proxy host, and the prompt names it either way (Claude Code: its `# Environment` block, in the system prompt or, from 2.1.290, in a system turn or a reminder block among the messages) |
 | `normalizeContent(content)` | Normalize message content for hashing |
 | `getBlockedBuiltinTools()` | SDK tools replaced by agent's MCP equivalents |
 | `getAgentIncompatibleTools()` | SDK tools with no agent equivalent |
 | `getMcpServerName()` | MCP server name for tool registration |
 | `getAllowedMcpTools()` | MCP tools allowed through the proxy |
+
+What the SDK is asked for per request comes from the adapter's transform (`transforms/<agent>.ts`, fields of `RequestContext`): the tool lists above, `passthrough`, what tool deferral may take out of the prompt (`coreToolNames`, `deferrableToolPrefixes`, `deferrableToolNames`) and how many it takes before it does (`autoDeferThreshold`, 15 unless the adapter says otherwise; `MERIDIAN_DEFER_TOOL_THRESHOLD` overrides both). `wholeToolDescriptions` lifts the SDK child's 2,048-character cut on MCP tool descriptions for a client whose own tools run past it. Claude Code sets the last four: its MCP servers' tools and the tools of its own that it defers on a direct connection are deferred at any count, as the client defers them itself, and its descriptions arrive whole.
 
 ### Remaining OpenCode-Specific Code (Not Yet in Adapter)
 

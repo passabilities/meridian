@@ -56,7 +56,7 @@ Environment variables, endpoints, authentication, SDK feature toggles, passthrou
 | `MERIDIAN_CONFIG_DIR` | — | `~/.config/meridian` | Meridian's own config directory. Moving it moves everything inside it — see [below](#relocating-the-config-directory). |
 | `MERIDIAN_PRICING_CONFIG` | `CLAUDE_PROXY_PRICING_CONFIG` | `~/.config/meridian/model-pricing.json` | Path to the model pricing overrides file used by cost estimation |
 | `MERIDIAN_PROFILES` | — | unset | JSON array of profile configs (overrides disk discovery). See [Multi-Profile Support](profiles.md). |
-| `MERIDIAN_DEFER_TOOL_THRESHOLD` | — | `15` | [Tool deferral](#how-tool-calling-works-in-passthrough) starts when more than this many tools would be deferred. Set to `0` to stop marking tools for deferral. |
+| `MERIDIAN_DEFER_TOOL_THRESHOLD` | — | `15` | [Tool deferral](#how-tool-calling-works-in-passthrough) starts when more than this many tools would be deferred (Claude Code: any one, unless this is set). Set to `0` to stop marking tools for deferral. |
 | `MERIDIAN_PASSTHROUGH_TOOL_SEARCH` | `CLAUDE_PROXY_PASSTHROUGH_TOOL_SEARCH` | `1` | Set to `0` to keep every tool in the prompt: no ToolSearch is offered and a large tool set costs its full definitions on every request, as it did before deferral worked. Set to `force` to defer as well on every profile whose `baseUrl` is not Anthropic's own, once you know those upstreams forward `tool_reference` blocks. |
 | `MERIDIAN_TELEMETRY_PERSIST` | `CLAUDE_PROXY_TELEMETRY_PERSIST` | unset | Enable SQLite telemetry persistence. Data survives proxy restarts. |
 | `MERIDIAN_TELEMETRY_DB` | `CLAUDE_PROXY_TELEMETRY_DB` | `~/.config/meridian/telemetry.db` | SQLite database path (when persistence is enabled) |
@@ -704,6 +704,58 @@ a profile's `env`. Either is passed to the child and wins over the above. An
 API-key profile writes for five minutes in any case, unless the operator has
 set `ENABLE_PROMPT_CACHING_1H`; a subagent's request is five minutes then too.
 
+### What a Claude Code request carries
+
+On a direct connection the model gets Claude Code's own system prompt and its
+own tools. Four things made a request through Meridian carry something else,
+and each now follows the client. The figures are from the real client
+(2.1.290) against a scripted API on 2026-10-05; `E2E.md` E80 has the runs.
+
+**The system prompt is the client's.** The SDK's `claude_code` preset (the
+**Claude Code Prompt** [feature](#available-features)) is off for the
+`claude-code` adapter by default. With it on, a main conversation carried the
+preset's text ahead of the same text from the client, and a subagent, the
+permission check and every other side call carried a main conversation's
+prompt ahead of their own: 10.2K characters on every call. Meridian's own
+notes, about 2K characters, are still appended. To have the preset back, turn
+**Claude Code Prompt** on for `claude-code` at `/settings`.
+
+**The SDK child runs where the client works.** Claude Code states its working
+directory in an environment block. Older clients put that block in the system
+prompt; 2.1.290 sends it among the messages, where Meridian did not look. The
+child then ran in the proxy's own directory and described that one to the
+model as its environment, with that directory's `git status` beside it while
+the preset was on. The block is read from either place now: the child runs in
+the client's directory when it exists on the proxy host and in the proxy's
+when it does not, and the prompt names the client's directory either way.
+`MERIDIAN_WORKDIR` still decides where the child runs when it is set.
+
+**Tool descriptions arrive whole.** A client's tools are registered with the
+SDK child as MCP tools, and the CLI cuts an MCP tool's description at 2,048
+characters. Claude Code's own tools are not MCP tools on a direct connection,
+and several run past that: six of a `claude -p` session's 21 were cut
+(Workflow, SendMessage, ScheduleWakeup, CronCreate, DesignSync,
+EnterWorktree), each losing the end of its instructions. For Claude Code the
+limit is lifted, through the CLI's own
+`CLAUDE_CODE_MAX_MCP_DESCRIPTION_LENGTH`. Set that variable in the proxy's
+environment or in a profile's `env` to keep a limit of your own. The tools of
+the client's MCP servers arrive already cut by the client, as they do on a
+direct connection. Other clients are not changed.
+
+**The tools Claude Code defers are deferred**, with the tools of its MCP
+servers, however few there are, and on Haiku as well: see
+[tool deferral](#how-tool-calling-works-in-passthrough).
+
+Measured live against the same task run directly, a Haiku main thread
+without MCP servers now costs 1.5% to 1.9% more prompt a call and its
+subagent 7%, where they cost 40% and 82% more before; what is left is
+Meridian's own notes, a few hundred tokens a call.
+
+The first request of each open conversation after an upgrade to this writes
+its prompt cache again: the system prompt and the tool definitions the old
+entries sat behind have changed, and a session the SDK filed under the
+proxy's directory is replayed into one under the client's.
+
 ### Client-driven tool loops need a session header
 
 A request whose last message is a `tool_result` is a round of the client's own
@@ -1018,12 +1070,14 @@ subprocess.
 
 The system prompt controls are independent — any combination works:
 
-- **Both enabled** (recommended): Claude Code instructions come first, followed by your agent's specific instructions. This gives Claude the full context it needs for features like memory and tool use to work correctly.
+- **Both enabled**: Claude Code instructions come first, followed by your agent's specific instructions. This gives Claude the full context it needs for features like memory and tool use to work correctly. It is the default for an adapter whose client does not bring a coding agent's prompt of its own.
 - **Claude Code only**: Just the base Claude Code prompt without agent-specific instructions.
 - **Client only**: Just your agent's prompt, passed through as a raw string.
 - **Neither**: No system prompt at all — Claude operates with just the user message.
 
 > **Note:** For features like memory and dreaming to work well, the Claude Code system prompt should be enabled — it contains the instructions Claude needs to read and write memories correctly.
+
+**Claude Code Prompt** is off by default where the client's prompt is the prompt: `claude-code`, `passthrough`, `openai`, `codex`, `jcode`, `letta`, `cherry`, `prime` and `polytoken`. For Claude Code the preset is the client's own prompt over again; see [What a Claude Code request carries](#what-a-claude-code-request-carries).
 
 ## Passthrough Mode and Tool Calling
 
@@ -1052,18 +1106,20 @@ Codex and Polytoken require client-owned tools and cannot be switched to interna
 
 | Client | Stays in the prompt | Deferred |
 |---|---|---|
-| Claude Code | all of its own tools | the tools of its MCP servers (`mcp__…`) |
+| Claude Code | the tools of its own that it keeps loaded on a direct connection | the tools of its MCP servers (`mcp__…`), and the ones of its own that it defers itself on a direct connection: WebFetch, WebSearch, NotebookEdit, SendMessage, the cron, task and worktree tools and others (`CLAUDE_CODE_DEFERRED_TOOLS` in `src/proxy/transforms/claudecode.ts`) |
 | OpenCode | read, write, edit, bash, glob, grep | everything else |
 | any | | a tool the client sends with `defer_loading: true` |
 
 Deferral starts when more than `MERIDIAN_DEFER_TOOL_THRESHOLD` (15) tools would be deferred, and is decided once per session so the prompt does not change shape under it. A tool the client marks itself is deferred whatever the session decided, and decides nothing for the rest. `MERIDIAN_PASSTHROUGH_TOOL_SEARCH=0` switches deferral off.
 
-Measured live on 2026-10-05 (Claude Code 2.1.289 with a 61-tool MCP server beside its own 21 tools, SDK CLI 2.1.284): 50.6K prompt tokens per call with every tool loaded, 26.9K with the server's tools deferred, the same on Sonnet and on `opus[1m]`. A call to one of the client's own tools was still one upstream call; a call to a deferred tool was two, the second read back from the prompt cache. On the session this was built for, a Claude Code roster of 215 tools, the 180 from MCP servers were 73% of the tool definitions by size.
+Claude Code has no threshold of its own: connected directly, it defers these whenever its tool search is on, however few there are, and so does the proxy. That matters most for a session without MCP servers, where a `claude -p` main thread has 11 of them and a general-purpose subagent 7. Set `MERIDIAN_DEFER_TOOL_THRESHOLD` and it applies to Claude Code too, counting its MCP servers' tools and its own deferrable ones together.
+
+Measured live on 2026-10-05, when only the MCP servers' tools were deferred (Claude Code 2.1.289 with a 61-tool MCP server beside its own 21 tools, SDK CLI 2.1.284): 50.6K prompt tokens per call with every tool loaded, 26.9K with the server's tools deferred, the same on Sonnet and on `opus[1m]`. With the client's own deferred as well (2.1.290, the same server, Sonnet): 52.7K loaded, 18.0K deferred. A call to one of the client's own tools that stays loaded was still one upstream call; a call to a deferred tool was two, the second read back from the prompt cache. On the session this was built for, a Claude Code roster of 215 tools, the 180 from MCP servers were 73% of the tool definitions by size.
 
 Every tool stays loaded, as before, when deferral cannot work:
 
 - **The CLI ignores the hook's request to stop.** A deferred session's tool turn is ended by the PreToolUse deny asking the CLI to end the query (see below). Claude Code 2.1.284 and 2.1.289 honour that; 2.1.141, the CLI Agent SDK 0.2.141 bundles, calls the model again. Meridian notices from the first tool turn, logs it once (`tool deferral is off until restart`) and keeps every tool loaded for that CLI from then on.
-- **The model is Haiku**, which the CLI gives no tool search.
+- **The model is a Claude 3 model**, which the CLI gives no tool search. Haiku 4.5, which is what a `haiku` request runs, has it.
 - **The client declares a `ToolSearch` tool of its own** and so defers on its side.
 - **The turn cannot stop at the tool call**: an advisor, structured output, `MERIDIAN_PASSTHROUGH_EARLY_STOP=0`, or `MERIDIAN_PASSTHROUGH_MAX_TURNS=1`.
 - **The profile's upstream is not Anthropic's own**: an `api` profile whose `baseUrl` names any host but `api.anthropic.com` (a gateway, LiteLLM, another proxy). A deferred request carries `defer_loading` tool definitions and `tool_reference` blocks, and an upstream that does not forward them answers with a 400. The CLI keeps its own tool search off for such a base URL and Meridian does the same. If yours does forward them, `MERIDIAN_PASSTHROUGH_TOOL_SEARCH=force` turns deferral on there too. The setting is the proxy's, not one profile's: it vouches for every such profile at once.

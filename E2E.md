@@ -1025,8 +1025,11 @@ curl -s -X PUT -H 'Content-Type: application/json' -d '{"checkForUpdates":false}
 | E73 | [Unknown thinking display values](#e73-unknown-thinking-display-values) | **Automated**: `bun scripts/e2e-thinking-display-interactive.mjs` — actual Claude Code 2.1.287 TUI in a PTY, real proxy/SDK/bundled subprocess. Requires an answer rendered in the client, live-prompt framing, supported-display controls and joined cleanup. The separate HTTP-shaped gate remains a backend smoke test. **Run before releases touching thinking passthrough or the SDK/CLI version** | 2026-10-01 |
 | E74 | [Claude Code permission-check prompt cache](#e74-claude-code-permission-check-prompt-cache) | **Automated, needs the `claude` CLI** (skips cleanly without it), **no model calls**: `bun scripts/e2e-claude-code-permission-check-cache.mjs` — the REAL Claude Code CLI in `--permission-mode auto`, this checkout's proxy running in a git repository, the real SDK driving this checkout's CLI, and a scripted Messages API that keeps a prompt cache as the API documents it. Asserts each check goes upstream as text blocks carrying only Meridian's cache breakpoints, reads back what the check before it wrote — also after a file in the proxy's directory changes — carries the same prompt as with the layout off, and falls back to the plain prompt when the API refuses the breakpoints. **Run before releases touching auxiliary requests, replay framing or the SDK/CLI version** | 2026-10-05 |
 | E75 | [Deferred-tools tool turn](#e75-deferred-tools-tool-turn) | **Automated, no model calls, runs in CI**: `E2E_CLAUDE_PATH=sdk-bundled bun scripts/e2e-deferred-tool-turn.mjs` — real proxy + SDK + CLI against a scripted Messages API, on a CLI that ignores the hook's stop (the fallback mode of E76's gate). Asserts a tool turn on a session whose deferral is not in effect is asked with `maxTurns` 1, costs ONE Messages call, ends on `error_max_turns` and resumes at the tool boundary with the client's real results (non-stream and stream; one call and two parallel calls), with every tool loaded and no ToolSearch. **Run before releases touching the passthrough turn cap, the SDK `tools` option, or the SDK/CLI version** | 2026-10-05 |
-| E76 | [Tool deferral in passthrough](#e76-tool-deferral-in-passthrough) | **Automated, no model calls, runs in CI**: `E2E_EXPECT=deferral bun scripts/e2e-deferred-tool-turn.mjs` — real proxy + SDK + CLI against a scripted Messages API. Asserts ToolSearch is on offer, the deferred tools are absent from the request and named in the system prompt, a call to a loaded tool is ONE Messages call and a ToolSearch round plus its call is two, a ToolSearch beside a client call keeps its result across the resume, a CLI-rejected call reaches the client once, a search past the budget ends as `max_tokens`, and Haiku keeps every tool loaded. **Live, needs the `claude` CLI and Claude Max**: `bun scripts/e2e-deferred-tool-turn-live.mjs` — the REAL Claude Code client with a 61-tool MCP server: prompt size with and without deferral, and a deferred tool found and run. **Live, needs OpenCode**: `bun scripts/e2e-opencode-deferral-live.mjs`. **Needs OpenCode, no model**: `bun scripts/e2e-opencode-deferred-refusal.mjs` — #1192's harness. **Run before releases touching tool deferral, the PreToolUse hook's output, the SDK `tools` option, the adapters' core tool lists, or the SDK/CLI version** | 2026-10-05 |
+| E76 | [Tool deferral in passthrough](#e76-tool-deferral-in-passthrough) | **Automated, no model calls, runs in CI**: `E2E_EXPECT=deferral bun scripts/e2e-deferred-tool-turn.mjs` — real proxy + SDK + CLI against a scripted Messages API. Asserts ToolSearch is on offer, the deferred tools are absent from the request and named in the system prompt, a call to a loaded tool is ONE Messages call and a ToolSearch round plus its call is two, a ToolSearch beside a client call keeps its result across the resume, a CLI-rejected call reaches the client once, a search past the budget ends as `max_tokens`, and Haiku 4.5 defers like any model. **Live, needs the `claude` CLI and Claude Max**: `bun scripts/e2e-deferred-tool-turn-live.mjs` — the REAL Claude Code client with a 61-tool MCP server: prompt size with and without deferral, and a deferred tool found and run, one of the server's and one of the client's own. **Live, needs OpenCode**: `bun scripts/e2e-opencode-deferral-live.mjs`. **Needs OpenCode, no model**: `bun scripts/e2e-opencode-deferred-refusal.mjs` — #1192's harness. **Run before releases touching tool deferral, the PreToolUse hook's output, the SDK `tools` option, the adapters' core tool lists, or the SDK/CLI version** | 2026-10-05 |
 | E77 | [Claude Code system turns across tool rounds](#e77-claude-code-system-turns-across-tool-rounds) | **Automated, no model calls, not in CI**: `bun scripts/e2e-claude-code-system-turns.mjs [model]` — the REAL Claude Code client through a real proxy, SDK and CLI against a scripted Messages API. Runs five tool rounds on `claude-fable-5-1`, in the main thread or with `E2E_SUBAGENT=1` in an Agent-tool subagent, and asserts every request after the first is a `continuation` that resumes its SDK session, reaches the API as structured tool turns and not as a replay, and delivers the request's own reminder. **Run before releases touching lineage, the Claude Code adapter, or the client, SDK or CLI version** | 2026-10-05 |
+| E78 | [An allowance spent for one model](#e78-an-allowance-spent-for-one-model) | **Live, needs two Claude Max profiles, one out of a model's weekly allowance**: `SPENT=<profile> ROOM=<profile> bun scripts/e2e-model-allowance-failover-live.mjs` — this checkout's proxy started in the gate's process. Asserts a request for the spent model is served by the next account (streamed and not), the spent account is benched for that model alone until Anthropic's reset, another model stays on it, and a pool that refuses the model says how long until one serves it. **Run before releases touching limit detection, routing or the `Retry-After`** | 2026-10-05 |
+| E79 | [The prompt cache lifetime of a Claude Code subagent](#e79-the-prompt-cache-lifetime-of-a-claude-code-subagent) | **Automated, no model calls, not in CI**: `E2E_SUBAGENT=1 ROUNDS=2 bun scripts/e2e-claude-code-system-turns.mjs` — E77's gate. Asserts an Agent-tool subagent's prompt cache is written for five minutes and a main conversation's for an hour, as the client writes them connected directly. **Run before releases touching the Claude Code adapter, the SDK child's environment or the SDK/CLI version** | 2026-10-05 |
+| E80 | [What a Claude Code request carries](#e80-what-a-claude-code-request-carries) | **Automated, no model calls, not in CI**: `E2E_SUBAGENT=1 E2E_MCP_TOOLS=20 ROUNDS=2 bun scripts/e2e-claude-code-system-turns.mjs claude-sonnet-5-5` — E77's gate. Asserts the API receives the client's system prompt with Meridian's notes and no preset, every tool description whole, the tools the client defers itself out of the request at any count, and every SDK query running in the client's directory with nothing of the proxy's in a request. **Live, needs two Claude Max profiles**: `SPENT=<profile> ROOM=<profile> bun scripts/e2e-claude-code-account-switch-live.mjs` — the REAL Claude Code client, a main thread on the active account and a Fable subagent that account has no allowance for: the subagent fails over and resumes on the next account, the main thread stays, both run in the client's directory, and the prompt each turn carried is printed beside a direct run's. **Run before releases touching the Claude Code adapter or transform, tool deferral, the SDK child's environment, routing, or the client, SDK or CLI version** | 2026-10-05 |
 
 | P1 | [Profile: List & Auth Status](#p1-profile-list--auth-status) | `/profiles/list` returns profiles with emails, login status, auth timestamps | - |
 | P2 | [Profile: Switch via API](#p2-profile-switch-via-api) | `POST /profiles/active` switches profile; health endpoint reflects new email | - |
@@ -6290,10 +6293,13 @@ child would still have read back.
 The SDK child's own prompt caching is switched off for that query
 (`DISABLE_PROMPT_CACHING=1`): the bundled CLI forwards a prompt's breakpoints
 untouched and adds three of its own, and the API accepts four. So is its git
-status snapshot (`CLAUDE_CODE_DISABLE_GIT_INSTRUCTIONS=1`). Every SDK child
-runs `git status` in the proxy's working directory and writes the result, with
-the branch and the last five commits, at the head of the first user message —
-ahead of the prompt and of both breakpoints. When a file there changed, the
+status snapshot (`CLAUDE_CODE_DISABLE_GIT_INSTRUCTIONS=1`). Under the SDK's
+`claude_code` preset every SDK child runs `git status` in its working
+directory, which was the proxy's, and writes the result, with the branch and
+the last five commits, at the head of the first user message — ahead of the
+prompt and of both breakpoints. (Since E80 the preset is off for Claude Code
+by default, and the snapshot with it; the child also runs in the client's
+directory. The switch still matters to an operator who turns the preset on.) When a file there changed, the
 next check read back none of what they had cached (see the live run below).
 The prompt Meridian sends is unchanged character for character, and so are the
 system prompt and the child's environment note; what the classifier no longer
@@ -6303,6 +6309,7 @@ as before.
 
 ```bash
 bun scripts/e2e-claude-code-permission-check-cache.mjs
+E2E_PRESET=1 bun scripts/e2e-claude-code-permission-check-cache.mjs   # with the claude_code preset on
 ```
 
 The REAL Claude Code CLI in `--permission-mode auto`, this checkout's proxy,
@@ -6331,10 +6338,11 @@ Meridian's.
 - Every run's client exits 0 with its conversation finished, and all nine
   writes go to the classifier. A run where it never fires fails rather than
   passing vacuously.
-- Layout off: each check goes upstream as one text block behind the SDK
-  child's `git status` of the proxy's directory (clean through check 5, the
-  changed file from check 6), reads back the same fixed part every time, and
-  writes all the rest again, more each time.
+- Layout off: each check goes upstream as one text block, reads back the same
+  fixed part every time, and writes all the rest again, more each time. With
+  `E2E_PRESET=1` the block stands behind the SDK child's `git status` of the
+  proxy's directory (clean through check 5, the changed file from check 6); by
+  default, the preset off, no `git status` stands ahead of it.
 - Layout on: each check goes upstream as text blocks whose only breakpoints
   are Meridian's (one or two, never one on a system block, never more than
   four). Its prompt matches the layout-off run character for character, and so
@@ -6433,6 +6441,9 @@ half a second later, and that one was answered in 3.8s: 35.1s from first
 attempt to verdict, where each of the nine stalls earlier that night cost 90s
 before the retry went out. The other 87 were answered in 1.7–15.6s, 84 of them
 within 5s.
+
+Re-run 2026-10-05 on E80's changes, client 2.1.290: 26 of 26 by default and
+26 of 26 with `E2E_PRESET=1`.
 
 **Not covered.** A live run of the git status switch itself: the gate shows
 the bundled CLI honouring it, and the 2.1.289 client binary was probed with the
@@ -6648,7 +6659,8 @@ sessions, and four things had to change with it.
   proxy's transcripts went to the client's own tools (Bash 270, Write 21, Read
   10, SubagentHandback 10, Edit 8, SendMessage 3, AskUserQuestion 1), so the
   old list would have put a ToolSearch round in front of 14 of them and the
-  new rule in front of none.
+  new rule in front of none. (Since E80 the tools of its own that Claude Code
+  defers itself are deferred too, at any count and on Haiku.)
 - **A ToolSearch beside a client call.** The next request resumes at that
   message with the client's results only; the ToolSearch result sat after the
   resume point, and the CLI fills the gap with `[Tool result missing due to
@@ -6738,7 +6750,8 @@ both deferred tools. Then, non-stream and stream:
   the registered name): the client receives the rejected call once; the turn
   is two Messages calls; the executable is not marked as ignoring the stop;
   the follow-up resumes at the call.
-- **haiku** (stream): every tool loaded, no ToolSearch, `maxTurns` 1, one call.
+- **haiku** (stream): the same as direct, on Haiku 4.5. (Until E80 the proxy
+  kept every tool loaded on Haiku, and this case asserted that.)
 - **unvouched** (stream, the same session with
   `MERIDIAN_PASSTHROUGH_TOOL_SEARCH` unset): the scripted API is an upstream
   nobody vouched for, so every tool is loaded, there is no ToolSearch,
@@ -6753,7 +6766,11 @@ The live gate drives the real client (`claude -p`, its own
 `CLAUDE_CONFIG_DIR`, `--mcp-config` naming a fixture stdio server with one
 answering tool and 60 that only take up room) through this checkout's proxy to
 the real model, three times: every tool loaded (the kill switch), the same
-exchange deferred, and a question only the MCP tool can answer. It asserts the
+exchange deferred, and a question only the MCP tool can answer. Since E80 a
+fourth run asks for something only `CronList` can answer, one of the client's
+own tools that it defers itself: the model has to load it with ToolSearch, and
+the deferred runs have to announce exactly the server's tools and those of the
+client's own. It asserts the
 loaded run has no ToolSearch and the cap; the deferred run offers ToolSearch,
 names exactly the server's 61 tools, makes one Messages call for a `Bash`
 call, has a prompt under 80% of the loaded one and reads it back from the
@@ -6773,7 +6790,9 @@ exactly once with no error, and the follow-up resumed the session.
 
 Scripted gate: 188 checks pass in deferral mode on the checkout's CLI
 2.1.284 and on the 2.1.289 client binary; 42 pass in fallback mode on the
-SDK's bundled 2.1.141, where the first tool turn made 2 Messages calls. Before
+SDK's bundled 2.1.141, where the first tool turn made 2 Messages calls. Again
+on E80's changes: 189 in deferral mode on 2.1.284, its haiku case now a
+deferred turn like direct's, and 42 in fallback mode on 2.1.141. Before
 the change the gate that stood here asserted the opposite premise (no
 ToolSearch, every tool loaded) and passed on all three.
 
@@ -6823,6 +6842,24 @@ The deferred prompt is 23,631 tokens smaller (47%). The call after the
 ToolSearch round read 26,923 of its 27,174 prompt tokens from the cache, so
 loading a tool does not rewrite the prefix. Both discovery runs answered with
 the server's receipt.
+
+Live gate again on E80's changes, 2026-10-05, Claude Code 2.1.290 client, SDK
+child CLI 2.1.284, `sonnet`, 82 tools (21 of the client's own, 61 of the
+server's), every check passing:
+
+| Run | Proxy log | Prompt tokens per call | Messages calls |
+| --- | --- | --- | --- |
+| loaded | `deferred=72/82 tools marked, all loaded (disabled)` | 52,657 | 1 and 1 |
+| deferred | `deferred=72/82 tools via ToolSearch` | 18,007 | 1 and 1 |
+| discover | `deferred=72/82 tools via ToolSearch` | 17,989 then 18,238 | 2 (`ToolSearch`, then `mcp__oc__mcp__fixture__order_receipt`) and 1 |
+| own | `deferred=72/82 tools via ToolSearch` | 17,988 then 18,214 | 2 (`ToolSearch`, then `mcp__oc__CronList`) and 1 |
+
+The deferred runs announced the server's 61 tools and 11 of the client's own
+(CronCreate, CronDelete, CronList, DesignSync, EnterWorktree, ExitWorktree,
+NotebookEdit, SendMessage, TaskStop, WebFetch, WebSearch). The prompt is 66%
+smaller than with every tool loaded, where it was 47% with only the server's
+tools deferred. Every follow-up resumed and read its prompt back from the
+cache (the `own` follow-up read 18,210 tokens and wrote 73).
 
 OpenCode live gate, OpenCode 1.18.33, `claude-sonnet-5-5`, SDK child CLI
 2.1.284: `deferred=85/91 tools via ToolSearch`; the `read` call was one
@@ -6973,7 +7010,9 @@ No model calls and no credentials: the client talks to the proxy with a dummy
 token, and the proxy's one profile is an API key against the scripted API.
 `ROUNDS` sets the number of tool rounds (default 5), `E2E_CLAUDE_CLIENT` the
 client (default `claude` on PATH) and `E2E_CLAUDE_PATH` the CLI the SDK
-drives. Not in CI: it has not been run on Linux.
+drives. Not in CI: it has not been run on Linux. Since E80 the proxy runs in a
+git repository of its own with no `MERIDIAN_WORKDIR`, and the gate also holds
+what each request carries; see there.
 
 `E2E_SUBAGENT=1` is the shape of the live failure. The scripted main thread
 calls the client's Agent tool, the client starts a real subagent, and the
@@ -7199,7 +7238,8 @@ started proxy resolves the path first; the gate starts one now.
 
 - The real Claude Code client as the caller. The gate sends plain Messages
   requests; a subagent's Fable rounds failing over through the Claude Code
-  adapter have only the mocked suite behind them.
+  adapter have only the mocked suite behind them. (Covered since: E80's live
+  gate runs the real client's Fable subagent through the switch.)
 - What a client does with the refusal frame of a streamed request.
 - An account pinned or alone. Outside the pool a refusal of one model's
   allowance is a `429` now, with the 60-second default for a wait: the reset
@@ -7318,6 +7358,204 @@ into a fresh session after a refused resume, streamed and not.
 - What a direct subagent is given under an API key with
   `ENABLE_PROMPT_CACHING_1H`. Through Meridian it is five minutes.
 - Other clients. No other adapter declares a lifetime.
+- Linux and Windows.
+
+## E80: What a Claude Code request carries
+
+**What it proves:** a Claude Code conversation through Meridian reaches the
+model with what the client would have sent it directly: the client's system
+prompt, its tool descriptions whole, the tools it defers itself deferred, and
+an SDK child working in the client's directory. And the real client keeps all
+of that through an account switch.
+
+Meridian exists to switch accounts, so the bar is a direct connection. The
+real client (2.1.290) was pointed at a scripted Messages API through the proxy,
+and its first request was set beside the request the SDK child sent upstream
+for it, section by section. Six differences came out of that and of the live
+runs below. Each cost prompt on every call, or put the wrong directory in
+front of the model:
+
+| | Before | Now |
+|---|---|---|
+| System prompt | The SDK's `claude_code` preset ahead of the client's own prompt, which for a main conversation is the preset's text again: 24,551 characters to the API where the client sent 12,247, and 15,320 for a subagent's 3,059. | The client's, with Meridian's notes (about 2.1K characters). The preset is off for the `claude-code` adapter by default (`sdkFeatures.ts`). |
+| Working directory | 2.1.290 sends its `# Environment` block among the messages, no longer in the system prompt: as a `system` turn after the first user message (Opus, Sonnet, Fable), or as a `<system-reminder>` block opening it (Haiku). The adapter read the system prompt only, so the SDK child ran in the proxy's own directory, described that one to the model, and under the preset put its `git status` ahead of every new conversation. | Read from either place (`extractClaudeCodeClientCwd`). The child runs in the client's directory when it exists on the proxy host. |
+| Tool descriptions | Cut at 2,048 characters, the CLI's limit for an MCP tool, which is what a passthrough client's tools are to the SDK child: six of a `claude -p` main thread's 21 (CronCreate 2,924, DesignSync 3,742, EnterWorktree 3,220, ScheduleWakeup 3,396, SendMessage 4,259, Workflow 3,480), each losing the end of its instructions. | Whole: the child's `CLAUDE_CODE_MAX_MCP_DESCRIPTION_LENGTH` is raised for this client. An operator's own value stands. |
+| The client's own deferrable tools | Loaded. Connected directly, the client defers WebFetch, WebSearch, SendMessage, NotebookEdit, the cron, task and worktree tools and others; behind a proxy its own tool search is off and it sends them loaded. | Deferred with its MCP servers' tools (`CLAUDE_CODE_DEFERRED_TOOLS`). |
+| How many it takes | Deferral started past 15 deferrable tools. A session without MCP servers has 11 of them on a `claude -p` main thread and 7 on a general-purpose subagent, and kept everything loaded. | Any one, as the client does in its default tool-search mode. `MERIDIAN_DEFER_TOOL_THRESHOLD`, when set, still decides. |
+| Haiku | Every tool loaded: the proxy held that the CLI gives Haiku no tool search. | Deferred like any model. The CLI keeps tool search from a model whose name holds an entry of a feature-flag list (`tengu_tool_search_unsupported_models`), by default the two Claude 3 Haikus, and as the flag was cached for a subscription on 2026-10-05 every Claude 3 model and nothing later (2.1.284 and 2.1.290 alike). Haiku 4.5 has it. |
+
+What is left is Meridian's own notes, which sit in the cached prefix: the
+working-directory note (about 1.3K characters), the replay note (0.6K) and the
+scratchpad counter-instruction (0.4K), plus the SDK child's own `# Environment`
+block (0.4K) and its identity line, which the client's prompt also carries.
+
+### Run it
+
+```bash
+E2E_SUBAGENT=1 E2E_MCP_TOOLS=20 ROUNDS=2 bun scripts/e2e-claude-code-system-turns.mjs claude-sonnet-5-5   # scripted API, no model calls
+bun scripts/e2e-claude-code-system-turns.mjs claude-haiku-4-5                                            # the reminder-block shape
+SPENT=<profile> ROOM=<profile> bun scripts/e2e-claude-code-account-switch-live.mjs                     # real accounts
+SPENT=<profile> ROOM=<profile> MAIN_MODEL=claude-sonnet-5-5 E2E_MCP_TOOLS=20 bun scripts/e2e-claude-code-account-switch-live.mjs
+bun scripts/e2e-deferred-tool-turn-live.mjs                                                             # real model, E76's live gate
+PROBE_MODEL=haiku bun scripts/e2e-deferred-tool-turn-live.mjs
+```
+
+The scripted gate is E77's. The proxy runs in a git repository of its own,
+apart from the client's directory, with no `MERIDIAN_WORKDIR`, as an installed
+proxy does, and the gate holds the claims below on every run of it.
+
+The live gate drives the real client (`claude -p`, its own `CLAUDE_CONFIG_DIR`,
+a dummy token) through this checkout's proxy, started in the gate's process
+with a config directory, session store and working directory of its own.
+`SPENT` is a profile of the installed proxy whose weekly allowance for
+`SUBAGENT_MODEL` (default `claude-fable-5-1`) is spent and which still serves
+`MAIN_MODEL` (default `claude-haiku-4-5`); `ROOM` has allowance left (see
+`GET /v1/usage/quota/all`). The main thread is told to have an Agent-tool
+subagent read a file and report its code word. `E2E_MCP_TOOLS=<n>` gives the
+client a stdio MCP server of `n` tools it never calls. The gate prints the
+prompt each turn carried, to set beside the same task run without the proxy.
+It costs one short conversation: a few `MAIN_MODEL` calls on `SPENT` and two
+`SUBAGENT_MODEL` calls on `ROOM`. Not in CI: it needs an account in that state.
+
+### Pass criteria
+
+Scripted (`e2e-claude-code-system-turns.mjs`), besides E77's and E79's:
+
+- The system prompt the API receives is the client's with fewer than 4,000
+  characters added (the list of deferred tools' names, which follows the tool
+  set, not counted).
+- Every tool description the API receives is the client's, whole (the child
+  writes an ellipsis as three full stops; nothing else may differ).
+- Every SDK query of the conversation runs in the client's directory, and
+  nothing of the proxy's directory (its path, a commit message, an untracked
+  file's name) is in any request.
+- Whenever the client sends a tool it defers itself or an MCP server's tool,
+  every round is asked with ToolSearch and the discovery budget, those tools
+  are out of every request, and every other tool of its own is in it.
+
+Live (`e2e-claude-code-account-switch-live.mjs`):
+
+- The client finishes with the code word its subagent read.
+- Every turn of the main thread is served by `SPENT` in one attempt, `new` then
+  `continuation`.
+- The subagent asks for `SUBAGENT_MODEL`, streamed; its first turn is refused
+  by `SPENT` (`429`) and served by `ROOM`; its later turns go straight to
+  `ROOM` and resume its session.
+- `/profiles/health` has `SPENT` out for that model and not out altogether.
+- The SDK children ran in the client's directory on both accounts: their
+  transcripts are under its slug and none under the proxy's.
+- The subagent's prompt cache is written for five minutes and the main
+  thread's for an hour (E79).
+
+### Verified
+
+2026-10-05, macOS arm64, client 2.1.290, SDK child CLI 2.1.284.
+
+Scripted, the first request of each conversation:
+
+| Conversation | System prompt: client, API | Tool definitions: client, API | Tools: client, declared to the API |
+|---|---|---|---|
+| Main thread, `claude-fable-5-1` | 12,010, 14,193 | 54,934, 26,078 | 21, 12 |
+| Main thread, `claude-opus-5-5` | 5,938, 8,121 | 54,934, 26,078 | 21, 12 |
+| Main thread, `claude-haiku-4-5` | 27,497, 29,680 | 82,220, 42,635 | 25, 12 |
+| Main thread, Fable, 40 MCP tools | 12,010, 14,193 | 66,764, 26,078 | 61, 12 |
+| Subagent, Fable | 2,879, 5,041 | 27,676, 12,605 | 13, 8 |
+| Subagent, Haiku | 2,879, 5,041 | 46,425, 29,162 | 13, 8 |
+| Subagent, Fable, 40 MCP tools | 2,879, 5,041 | 39,506, 12,605 | 53, 8 |
+
+Characters of request JSON in the first request of each conversation; the
+declared tools include ToolSearch and the CLI's placeholder for deferred ones.
+Every run passed every check, E77's and E79's included: 16 on the Fable main
+thread, 21 on its subagent, 15 on Opus, 15 and 20 on Haiku's main thread and
+subagent, 17 and 22 with the MCP server, and 21 with the SDK child driven by
+the 2.1.290 CLI instead of 2.1.284.
+
+Before these changes the same main thread went to the API with 24,551
+characters of system prompt where the client sent 12,247, all 21 tools loaded
+with six of their descriptions cut to 2,048 characters, and its SDK child in
+the proxy's directory. With the descriptions whole and only the MCP server's
+tools deferred, the 40-tool run's definitions came to 56,045 characters. Each
+check above was watched failing with its change taken out.
+
+Live, on two Claude Max subscriptions, one with its weekly Fable allowance
+spent (7d 89%, 5h 2%) and one with room (7d 18%, Fable 32%), against the same
+task run by the same client connected directly to the second account (no
+proxy). Prompt tokens per call are input, cache read and cache write together.
+
+| Run | Main thread | Subagent |
+|---|---|---|
+| Haiku main thread, no MCP server: direct | 21,368, 22,018, 22,590 | 9,139, 9,882 |
+| The same through Meridian before these changes | 92,051 over three calls (30.7K each) | 34,574 over two (17.3K each) |
+| The same with the preset, directory, descriptions and the client's own tools fixed | 32,742, 33,334, 33,817 | 14,881, 15,663 |
+| The same with every change | 21,772, 22,391, 22,932 | 9,776, 10,559 |
+| Sonnet main thread, 20 MCP tools: direct | 16,524, 17,080 | 10,726, 11,470 |
+| The same through Meridian, before the threshold and Haiku changes | 17,081, 17,678 | 11,558, 12,342 |
+
+Through Meridian the main thread ran on the spent account and the subagent
+was refused there (`429`) and served by the other account, in every run, and
+every check passed in every run (eleven since the working-directory check was
+added; the run before these changes is E79's, from the same day, with ten).
+
+With every change the Haiku main thread costs 1.5% to 1.9% more a call than
+direct and its subagent 7%, against 40% and 82% before. What is left is the
+notes listed above, a fixed few hundred tokens a call. The third row is how
+the threshold and Haiku showed up: with the other four changes in, a Haiku
+thread without MCP servers still sent every tool loaded, 11K tokens a call more
+than direct, where the client connected directly defers its own.
+
+The cache was written for an hour on the main thread and five minutes on the
+subagent, as on a direct connection. The first call of a conversation wrote
+more through Meridian (21.7K tokens against 7.6K direct): a direct session
+reads the system prompt and tools other direct sessions of the account cached
+before it, and the gate's temporary directory gave Meridian's prompt a working
+directory no earlier conversation had. Conversations in one project share
+that prefix through Meridian as they do directly.
+
+Live through E76's gate on Haiku 4.5, the client's own tools and an MCP
+server's deferred: 52,454 prompt tokens a call loaded, 22,800 deferred; a
+server tool and `CronList` were each found with ToolSearch and called, and
+every follow-up read its prompt back from the cache.
+
+### Not covered
+
+- A session of the size this was for. The live runs are a short task; the
+  conversations that prompted it are Opus 5.5 main threads with 200 and more
+  tools whose calls averaged 429K prompt tokens. The request shape of Opus,
+  Sonnet and Fable is the same (a `system` turn), and the scripted gate holds
+  Opus; Haiku's shape (a reminder block) is held by the scripted gate and the
+  live runs.
+- What remains from a direct connection: Meridian's notes (the working-directory
+  note, about 1.3K characters; the replay note, 0.6K; the scratchpad
+  counter-instruction, 0.4K), the SDK child's own `# Environment` block (0.4K)
+  and its identity line beside the client's. All of it sits in the cached
+  prefix. The scratchpad counter-instruction also countermands a scratchpad
+  directory the client advertises itself (`MERIDIAN_SUPPRESS_SCRATCHPAD=0`
+  removes it).
+- The SDK child rewrites tool schemas slightly: it drops a top-level
+  `additionalProperties: false` and a `default`, and writes `…` as `...`. Seen
+  in the scripted comparison, not measured in tokens.
+- Other passthrough clients. Their tool descriptions are still cut at 2,048
+  characters, and they keep the default threshold.
+- The feature flag the CLI reads for models without tool search. The proxy
+  holds the list as it was cached on 2026-10-05. If Anthropic adds a model to
+  it, the proxy announces a ToolSearch the CLI does not offer for that model;
+  the tools are still loaded and callable, and the model's ToolSearch call
+  gets the CLI's error for an unknown tool. The same holds where an operator
+  pins a model alias to a Claude 3 model (`MERIDIAN_DEFAULT_HAIKU_MODEL` and
+  the like): the proxy judges by the alias.
+- Upgrading a running proxy. The first request of each open conversation
+  writes its prompt cache again, since the system prompt and tool definitions
+  its entries sat behind have changed; and a conversation whose SDK session
+  was filed under the proxy's directory cannot be resumed from the client's,
+  so it is replayed once into a new session (three refused resumes, about
+  three seconds, then the replay). A replay is bounded by 90% of the model's
+  context window (E70). Upgrading between runs avoids both.
+- With the **CLAUDE.md** feature set to `project` or `full`, the SDK child
+  loads the client project's settings, MCP servers, hooks and CLAUDE.md, since
+  it runs there; before 2.1.290 that was the case too. Probed with the
+  scripted gate and a project carrying all four: off (the default), none of it
+  was loaded or reached the API; `project` started the `.mcp.json` server, ran
+  three hooks and sent CLAUDE.md.
 - Linux and Windows.
 
 ## Concurrent transcript publication

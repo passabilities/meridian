@@ -644,9 +644,10 @@ ANTHROPIC_AUTH_TOKEN=x ANTHROPIC_BASE_URL=http://meridian-host:3456 claude
 Claude Code is detected automatically via its `claude-cli/*` User-Agent.
 Requests flow through the Claude Code adapter which:
 
-- Parses the client's real working directory from its `Primary working directory:` system-prompt line so Claude answers path-related questions with your local path, not the proxy host's.
-- Leaves the SDK subprocess cwd on the proxy host (Claude Code's local paths don't exist there).
+- Parses the client's real working directory from the `Primary working directory:` line of the environment block it sends (in the system prompt, or among the messages from 2.1.290) so Claude answers path-related questions with your local path, not the proxy host's.
+- Runs the SDK subprocess in that directory when it exists on the proxy host, and otherwise leaves it on the proxy host (a remote client's paths don't exist there). `MERIDIAN_WORKDIR` overrides both.
 - Runs in passthrough mode by default — Claude Code executes its own tools on the machine it runs on; Meridian just forwards tool_use blocks.
+- Sends the model what the client sent: Claude Code's own system prompt without the SDK's preset on top, its tool descriptions whole, and the tools it would defer itself deferred. See [What a Claude Code request carries](configuration.md#what-a-claude-code-request-carries).
 
 ### Adapter instances
 
