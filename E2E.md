@@ -7977,7 +7977,13 @@ that every request goes through priority dispatch, passed with 4 subagents.
 - The proxy run under Bun (`bun run ./bin/cli.ts`, which the supervisor uses
   only when there is no build): @hono/node-server under Bun 1.3.14 is never
   told of a client that goes before the response's first byte, so no routing
-  mode stops the model then.
+  mode stops the model then. Nothing the handler can reach changes when that
+  client goes: probed on 2026-10-06, neither the socket nor the response emits
+  `close` or turns `destroyed`, a 0-byte socket write succeeds, and headers
+  flushed early only surface the loss at the next write. Serving with
+  `Bun.serve` instead would change the `server` that `startProxyServer` hands
+  to its callers. Startup under Bun now says so (`runtimeCancelWarning.ts`);
+  the built proxy under Node is the fix.
 - Live accounts: the gate shows the SDK child's API request closed, not an
   account's usage.
 
