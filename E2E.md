@@ -1030,6 +1030,9 @@ curl -s -X PUT -H 'Content-Type: application/json' -d '{"checkForUpdates":false}
 | E78 | [An allowance spent for one model](#e78-an-allowance-spent-for-one-model) | **Live, needs two Claude Max profiles, one out of a model's weekly allowance**: `SPENT=<profile> ROOM=<profile> bun scripts/e2e-model-allowance-failover-live.mjs` — this checkout's proxy started in the gate's process. Asserts a request for the spent model is served by the next account (streamed and not), the spent account is benched for that model alone until Anthropic's reset, another model stays on it, and a pool that refuses the model says how long until one serves it. **Run before releases touching limit detection, routing or the `Retry-After`** | 2026-10-05 |
 | E79 | [The prompt cache lifetime of a Claude Code subagent](#e79-the-prompt-cache-lifetime-of-a-claude-code-subagent) | **Automated, no model calls, not in CI**: `E2E_SUBAGENT=1 ROUNDS=2 bun scripts/e2e-claude-code-system-turns.mjs` — E77's gate. Asserts an Agent-tool subagent's prompt cache is written for five minutes and a main conversation's for an hour, as the client writes them connected directly. **Run before releases touching the Claude Code adapter, the SDK child's environment or the SDK/CLI version** | 2026-10-05 |
 | E80 | [What a Claude Code request carries](#e80-what-a-claude-code-request-carries) | **Automated, no model calls, not in CI**: `E2E_SUBAGENT=1 E2E_MCP_TOOLS=20 ROUNDS=2 bun scripts/e2e-claude-code-system-turns.mjs claude-sonnet-5-5` — E77's gate. Asserts the API receives the client's system prompt with Meridian's notes and no preset, every tool description whole, the tools the client defers itself out of the request at any count, and every SDK query running in the client's directory with nothing of the proxy's in a request. **Live, needs two Claude Max profiles**: `SPENT=<profile> ROOM=<profile> bun scripts/e2e-claude-code-account-switch-live.mjs` — the REAL Claude Code client, a main thread on the active account and a Fable subagent that account has no allowance for: the subagent fails over and resumes on the next account, the main thread stays, both run in the client's directory, and the prompt each turn carried is printed beside a direct run's. **Run before releases touching the Claude Code adapter or transform, tool deferral, the SDK child's environment, routing, or the client, SDK or CLI version** | 2026-10-05 |
+| E81 | [Deferred tools named in a Claude Code conversation's turns](#e81-deferred-tools-named-in-a-claude-code-conversations-turns) | **Automated, no model calls, not in CI**: `bun scripts/e2e-claude-code-deferred-tools-in-turns.mjs` — real proxy, SDK and CLI against a scripted API, four turns in which an MCP tool connects and another disconnects. Asserts the deferred tools are named in the turn, all of them first and then only what came or went, with the system prompt, the loaded tools and every earlier message unchanged from call to call. **Live, needs a Claude Max profile**: `PROFILE=<profile> bun scripts/e2e-claude-code-deferred-tools-in-turns-live.mjs` — the model names a tool that connected after the first turn, and each turn reads the one before from cache. **Run before releases touching tool deferral, the Claude Code adapter or transform, or the SDK/CLI version** | 2026-10-06 |
+| E82 | [Where an active+priority failover goes](#e82-where-an-activepriority-failover-goes) | **Automated, no model calls**: `bun test src/__tests__/routing.test.ts src/__tests__/active-priority-integration.test.ts` — the fallback order by room and the 24-hour weekly reset, and when usage is read. **Live, needs a Claude Max profile out of one model's allowance and two others**: `ACTIVE=<profile> bun scripts/e2e-fallback-order-live.mjs` — a refused request lands on the first account of the room order that serves it, with the configured order set the other way round. **Run before releases touching routing, failover or usage reads** | 2026-10-06 |
+| E83 | [What Meridian adds to a Claude Code client's system prompt](#e83-what-meridian-adds-to-a-claude-code-clients-system-prompt) | **Automated, no model calls, not in CI**: `bun scripts/e2e-claude-code-system-turns.mjs` (E77's gate) — the real client over 127.0.0.1: the system prompt the API receives is the client's and the replay note, without the working-directory note, the scratchpad counter-instruction, the deferred tools' names or a second identity line. **Live**: `SPENT=<profile> ROOM=<profile> bun scripts/e2e-claude-code-account-switch-live.mjs` prints the prompt each turn carried, to set beside a direct run. **Run before releases touching the Claude Code adapter or transform, the SDK child's environment, or the client, SDK or CLI version** | 2026-10-06 |
 
 | P1 | [Profile: List & Auth Status](#p1-profile-list--auth-status) | `/profiles/list` returns profiles with emails, login status, auth timestamps | - |
 | P2 | [Profile: Switch via API](#p2-profile-switch-via-api) | `POST /profiles/active` switches profile; health endpoint reflects new email | - |
@@ -7384,10 +7387,12 @@ front of the model:
 | How many it takes | Deferral started past 15 deferrable tools. A session without MCP servers has 11 of them on a `claude -p` main thread and 7 on a general-purpose subagent, and kept everything loaded. | Any one, as the client does in its default tool-search mode. `MERIDIAN_DEFER_TOOL_THRESHOLD`, when set, still decides. |
 | Haiku | Every tool loaded: the proxy held that the CLI gives Haiku no tool search. | Deferred like any model. The CLI keeps tool search from a model whose name holds an entry of a feature-flag list (`tengu_tool_search_unsupported_models`), by default the two Claude 3 Haikus, and as the flag was cached for a subscription on 2026-10-05 every Claude 3 model and nothing later (2.1.284 and 2.1.290 alike). Haiku 4.5 has it. |
 
-What is left is Meridian's own notes, which sit in the cached prefix: the
-working-directory note (about 1.3K characters), the replay note (0.6K) and the
-scratchpad counter-instruction (0.4K), plus the SDK child's own `# Environment`
-block (0.4K) and its identity line, which the client's prompt also carries.
+What was left then was Meridian's own notes, which sit in the cached prefix:
+the working-directory note (about 1.3K characters), the replay note (0.6K) and
+the scratchpad counter-instruction (0.4K), plus the SDK child's own
+`# Environment` block (0.4K) and its identity line, which the client's prompt
+also carries. Since 2026-10-06 only the replay note and that block remain for
+a client on the proxy's host: see [E83](#e83-what-meridian-adds-to-a-claude-code-clients-system-prompt).
 
 ### Run it
 
@@ -7557,6 +7562,175 @@ every follow-up read its prompt back from the cache.
   was loaded or reached the API; `project` started the `.mcp.json` server, ran
   three hooks and sent CLAUDE.md.
 - Linux and Windows.
+
+## E81: Deferred tools named in a Claude Code conversation's turns
+
+**What it proves:** a Claude Code client's deferred tools are named the way the
+client names them with its own tool search on, in its turns: all of them at the
+end of a session's first turn, then whichever came or went since, at the end of
+the turn they first apply to. A tool from an MCP server that connects after the
+first request is named to the model, one that goes away is named as gone, and
+the prompt the API receives stays a growing prefix.
+
+Meridian named them in the system prompt. The SDK child records a
+conversation's system prompt on its first request and sends that record on
+every later request and resume, whatever a later launch passes, until
+compaction (CLI 2.1.284's `systemPromptSnapshot`, on by default). So a resumed
+session went on reading its first request's list: with the turn's list off, the
+scripted gate below shows the API receiving turn 1's list on all four calls,
+though turns 2 and 3 had a third tool and turn 4 had lost one. On one machine
+Claude Code's MCP servers connected after a session's first request 72 times in
+33 sessions over four days (2026-10-02 to 10-05, compactions excluded).
+
+The list never cost a cache rewrite: the record kept the system prompt the same.
+What it cost was the model not knowing about tools it could load.
+
+### Run it
+
+```bash
+bun scripts/e2e-claude-code-deferred-tools-in-turns.mjs        # real proxy, SDK and CLI, scripted API; no model calls
+PROFILE=<profile> bun scripts/e2e-claude-code-deferred-tools-in-turns-live.mjs   # real account, three short Haiku turns
+```
+
+### Pass criteria
+
+Scripted (four turns: two MCP tools; a third connects; no change; one
+disconnects): each turn one Messages call; ToolSearch on offer on every call; no
+deferred tool named in the system prompt; the system prompt and the loaded tools
+the same on every call; turn 1 names every deferred tool after the client's
+text; each call's messages begin with the previous call's unchanged; turn 2
+names only the new tool; turn 3 nothing; turn 4 the departed tool as gone; each
+turn resumes the session the one before left.
+
+Live: the model names the tool that connected at turn 2 and still the first two;
+turn 2 reads turn 1's prompt from cache and turn 3 turn 2's.
+
+### Verified
+
+Scripted, 2026-10-06, CLI 2.1.284: 12 of 12. With `deferredToolsInTurns` off
+for Claude Code, the API received turn 1's list on all four calls, and the four
+naming checks failed.
+
+Live, 2026-10-06, Haiku 4.5 on a Claude Max profile: at turn 2 the model listed
+`mcp__oc__mcp__fixture__alpha_inventory`, `..._beta_inventory` and the
+`..._gamma_inventory` that connected at that turn. Turn 2 read 4,138 of turn 1's
+4,148 prompt tokens from cache and wrote 239; turn 3 read 4,377 of turn 2's
+4,387.
+
+### Not covered
+
+Other clients keep the system-prompt list, and with it the snapshot's effect: a
+tool connecting later is not named until the conversation is replayed. What
+each SDK session was told is kept in memory; a session this process did not
+tell (after a restart) is told of every tool again, once.
+
+## E82: Where an active+priority failover goes
+
+**What it proves:** in `active+priority`, a request the active account refuses
+moves to the fallback likeliest to keep the conversation: an account with
+capacity whose weekly limit resets within 24 hours first, soonest first, then
+the most room left, accounts with no usage known next, and accounts past 95% of
+a window that applies last. And the usage it orders by costs no tokens.
+
+Every move writes the conversation's whole prompt into the new account's
+cache. The fallbacks were tried in the configured order, which on one machine
+put three accounts at their weekly cap and three at 99% ahead of the one with
+room: a conversation moved onto a 99% account paid its rewrite there and was
+refused again soon after.
+
+The order reads the account's last usage read (`GET /api/oauth/usage`, a REST
+endpoint, not a model call) and the rate-limit figures its own responses carry.
+A request never waits on a read. They are refreshed only while a move is near
+(the active account refused, is out, or has used 80% of a window), in the
+background, at most once every five minutes per account, on top of that
+endpoint's 30-second cache. The 45-second auth keepalive (`claude auth status`)
+makes no model call either.
+
+### Run it
+
+```bash
+bun test src/__tests__/routing.test.ts src/__tests__/active-priority-integration.test.ts
+ACTIVE=<profile out of MODEL's allowance> bun scripts/e2e-fallback-order-live.mjs
+```
+
+### Pass criteria
+
+The request is answered; the active profile is tried first and refuses; it is
+served by the first account in the room order that serves it; and not by the
+account the configured order names first (set to the room order reversed).
+
+### Verified
+
+Unit: 14 tests of the order and the share used (`routing.test.ts`), each rule
+RED before it was written. HTTP, mocked SDK: 7 tests
+(`active-priority-integration.test.ts`); with the order switched off three
+fail, and with the background reads switched off two.
+
+Live, 2026-10-06, Fable 5.1, the active profile out of its Fable allowance,
+seven other Claude Max profiles, usage as read just then (5h / 7d / Fable 7d,
+weekly reset in): one at 92% / 48% / 70% (140h), three at 99% weekly, three
+at 100%. One of the 99% accounts reset within 15 hours and stayed last for
+being near its cap. The configured order was set to the room order reversed.
+Tried: the active profile, 429; then the account the room order put first,
+200. The configured order would have gone to an account at its weekly cap.
+
+### Not covered
+
+`priority` mode keeps its configured pool order. A failover that comes before
+any usage read of the fallbacks (a proxy just started, with the active account
+already out and no page open) uses the configured order for that request. A
+conversation already on a healthy fallback stays there. `MERIDIAN_FALLBACK_ORDER=configured`
+switches the room order off.
+
+## E83: What Meridian adds to a Claude Code client's system prompt
+
+**What it proves:** for a Claude Code client on the proxy's host, working in
+the directory the SDK child runs in, the system prompt the API receives is the
+client's and Meridian's replay note, and nothing else.
+
+Before, each call carried three notes and a repeated line: the note separating
+the client's environment from the child's (about 1.3K characters, naming one
+path four times, though the child runs in the client's directory and its own
+environment lines describe it), the scratchpad counter-instruction (0.4K, which
+also countermanded the scratchpad directory Claude Code names for its own
+tools, while the child, its preset off, names none: a subscription profile's
+child sent no scratchpad line, CLI 2.1.284 against a scripted API, 2026-10-06),
+and for a `claude -p` client the SDK identity line twice.
+
+### Run it
+
+```bash
+bun scripts/e2e-claude-code-system-turns.mjs                    # real client and CLI, scripted API; no model calls
+E2E_SUBAGENT=1 E2E_MCP_TOOLS=20 bun scripts/e2e-claude-code-system-turns.mjs
+SPENT=<profile> ROOM=<profile> bun scripts/e2e-claude-code-account-switch-live.mjs   # real accounts; prompt per turn
+```
+
+### Verified
+
+Scripted, real client 2.1.290 and CLI 2.1.284 over 127.0.0.1: the system prompt
+the API receives is the client's plus 640 to 661 characters (the replay note),
+where it was about 2.1K more: main thread 12,010 -> 12,671, subagent 2,879 ->
+3,519, Haiku 27,497 -> 28,158; Opus, an MCP server's tools and a subagent with
+them alike, all PASS. With the adapter's `sharesEnvironmentOnLoopback` off, the
+gate fails on the working-directory note (12,010 -> 13,759).
+
+Live, 2026-10-06, the real client 2.1.291, Haiku 4.5 for main thread and
+subagent on one Claude Max profile, the same task run directly and through the
+proxy (prompt tokens per call: fresh + cache write + cache read):
+
+| | Direct | Through the proxy |
+|---|---|---|
+| Main thread | 21,371 · 21,984 · 22,497 | 21,318 · 21,899 · 22,412 (-0.2% to -0.4%) |
+| Subagent | 11,286 · 12,000 | 11,340 · 12,016 (+0.5%, +0.1%) |
+
+The day before, with the notes, the main thread was 1.5% to 1.9% over and the
+subagent 7%.
+
+### Not covered
+
+A request from another host, a forwarded one, or one whose directory the child
+does not run in still gets the working-directory note. The replay note (640
+characters) and the SDK child's own `# Environment` block (about 440) remain.
 
 ## Concurrent transcript publication
 

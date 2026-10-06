@@ -766,10 +766,11 @@ resends as recorded, so the model was never told of a tool that connected
 later and went on being told of one that had gone. They are named in the
 turn now, in the client's own words.
 
-Measured live against the same task run directly, a Haiku main thread
-without MCP servers now costs 1.5% to 1.9% more prompt a call and its
-subagent 7%, where they cost 40% and 82% more before; what is left is
-Meridian's own notes, a few hundred tokens a call.
+Measured live against the same task run directly (2026-10-06, the real client,
+Haiku, one account), a main thread without MCP servers costs 0.2% to 0.4%
+less prompt a call through Meridian and its subagent 0.1% to 0.5% more. Before
+these changes they cost 40% and 82% more, and before the notes were cut 1.5%
+to 1.9% and 7% more. See `E2E.md` E80 and E83.
 
 The first request of each open conversation after an upgrade to this writes
 its prompt cache again: the system prompt and the tool definitions the old
