@@ -19,8 +19,11 @@
 //
 // The model defaults to claude-fable-5-1. AGENTS (default 4) subagents,
 // ROUNDS (default 4) tool rounds each, LONG_SLEEP seconds (default 35) for
-// the round that outlasts the timer. E2E_CLAUDE_CLIENT picks the client
-// (default: `claude` on PATH) and E2E_CLAUDE_PATH the CLI the SDK drives.
+// the round that outlasts the timer. PROFILES (default 1) accounts on the
+// scripted API: with two and MERIDIAN_ROUTING=active+priority every request
+// goes through priority dispatch, which needs a pool of more than one.
+// E2E_CLAUDE_CLIENT picks the client (default: `claude` on PATH) and
+// E2E_CLAUDE_PATH the CLI the SDK drives.
 import assert from "node:assert/strict"
 import { mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs"
 import { randomUUID } from "node:crypto"
@@ -162,7 +165,9 @@ const observer = spyOn(sdk, "query").mockImplementation(input => {
 const { startProxyServer } = await import("../src/proxy/server.ts")
 const { telemetryStore } = await import("../src/telemetry/index.ts")
 const proxy = await startProxyServer({ port: 0, host: "127.0.0.1", silent: true,
-  profiles: [{ id: "fixture", type: "api", apiKey: "local-test-key", baseUrl: `http://127.0.0.1:${upstream.port}` }] })
+  profiles: Array.from({ length: Math.max(1, Number(process.env.PROFILES ?? 1)) }, (_, index) => ({
+    id: index === 0 ? "fixture" : `fixture-${index + 1}`, type: "api", apiKey: "local-test-key", baseUrl: `http://127.0.0.1:${upstream.port}`,
+  })) })
 const address = proxy.server.address()
 assert(address && typeof address === "object")
 const proxyUrl = `http://127.0.0.1:${address.port}`

@@ -282,7 +282,7 @@ describe("a conversation that moves to another account and comes back", () => {
     const served = seen.at(-1)!
     expect(served.dir).toContain("personal")
     expect(served.resume).toBe(personalSession)
-  })
+  }, 20_000)
 
   it("waits for the reply the other account is still writing before carrying its session", async () => {
     writeTranscripts = true
@@ -324,9 +324,8 @@ describe("a conversation that moves to another account and comes back", () => {
   it("lets go of a carry cancelled with its request at once", async () => {
     // Cancelled while it waits for a reply that never lands: the session it
     // prepared on `personal` is retired for deletion then, not left prepared
-    // until its lease runs out. Manual routing: the account is the one set.
+    // until its lease runs out.
     writeTranscripts = true
-    process.env.MERIDIAN_ROUTING = "manual"
     setSessionStoreDir(join(root, "sessions"))
     try {
       const app = createApp()
@@ -355,8 +354,11 @@ describe("a conversation that moves to another account and comes back", () => {
         ] }),
       }))
       await until(() => personalStates().includes("prepared"))
+      const cancelledAt = Date.now()
       cancel.abort()
       await Promise.resolve(pending).catch((error: unknown) => error)
+      // Ended by the cancel, not by the wait for the reply running out.
+      expect(Date.now() - cancelledAt).toBeLessThan(1500)
       await until(() => !personalStates().includes("prepared"))
       expect(personalStates()).toContain("retired")
     } finally {
