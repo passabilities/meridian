@@ -446,6 +446,17 @@ export function messagesHeld(lineage: LineageResult, messages: ReadonlyArray<{ r
 }
 
 /**
+ * Whether resuming a session of this lineage would leave out a reply the
+ * history holds: one after what the session holds (messagesHeld). A resume
+ * sends those turns as a delta, which keeps only the user's side of them. The
+ * history's last message is the turn asked for, a prefill if the assistant's.
+ */
+export function resumeDropsReplies(lineage: LineageResult, messages: ReadonlyArray<{ role: string }>): boolean {
+  if (lineage.type !== "continuation" && lineage.type !== "compaction") return false
+  return messages.slice(messagesHeld(lineage, messages), -1).some(message => message.role === "assistant")
+}
+
+/**
  * The copy of this conversation on another account that holds more of the
  * history at hand than this account's own (which holds `own.held` messages of
  * it), with its lineage: of several, the one holding the most, a continuation

@@ -175,6 +175,7 @@ import {
   accountUsedLast,
   copyElsewhereHoldingMore,
   messagesHeld,
+  resumeDropsReplies,
   storeSession,
   rollbackPrioritySessionPublication,
   finalizePrioritySessionPublication,
@@ -2982,8 +2983,12 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
         const keyOn = (profileId: string): string | undefined => agentSessionId
           ? mappingKeyOn(profileId, agentSessionId)
           : getConversationFingerprint(lineageMessages, profileId !== "default" ? `${clientWorkingDirectory}::profile=${profileId}` : clientWorkingDirectory)
+        // Looked for also where the copy here no longer matches the history,
+        // as when the client compacted it on another account: the session it
+        // was replayed into there may. Not for a request kept from any
+        // session for want of a header (above).
         const elsewhere = durableMappingKey && !isIndependentSession
-          && (lineageResult.type !== "diverged" || lineageResult.reason === "not-found")
+          && (lineageResult.type !== "diverged" || lineageResult.reason !== "missing-session-header")
           ? copyElsewhereHoldingMore(
               getEffectiveProfiles(finalConfig.profiles)
                 .filter(other => other.id !== profile.id)
@@ -3064,15 +3069,18 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
             return undefined
           }
         }
-        // Where this account has no current copy of its own, carry the newest
-        // one here rather than replay the history flattened: the session then
-        // resumes as it would have on its own account, and the move costs
+        // Where this account has no current copy of its own (none, one behind
+        // the conversation, or one that no longer matches it), carry the one
+        // that does here rather than replay the history flattened: the session
+        // then resumes as it would have on its own account, and the move costs
         // this account its prompt cache, as switching accounts costs a direct
         // client, and nothing more. MERIDIAN_SESSION_CARRY=0 replays instead.
+        // Not one that lacks a reply the history holds after it, which the
+        // resume would leave out: replayed, the history keeps it.
         if (
           lineageResult.type === "diverged"
-          && (lineageResult.reason === "not-found" || lineageResult.reason === "moved-on-elsewhere")
           && elsewhere && elsewhere.lineage.type === "continuation"
+          && !resumeDropsReplies(elsewhere.lineage, lineageMessages)
           && durableMappingKey
           && !options.forceFreshPriorityReplay
           && env("SESSION_CARRY") !== "0"

@@ -254,6 +254,50 @@ describe("a conversation that moves to another account and comes back", () => {
     expect(back.prompt).not.toContain("<conversation_history>")
   })
 
+  it("carries the session it went on in elsewhere when its own copy no longer matches its history", async () => {
+    writeTranscripts = true
+    const app = createApp()
+    await setActive(app, "work")
+    await turn(app, "rt-compacted", [{ role: "user", content: "FIRST-QUESTION" }])
+    // On `personal` the client compacts: its history starts again from a
+    // summary, which no copy holds, and is replayed there once.
+    await setActive(app, "personal")
+    const history: Message[] = [
+      { role: "user", content: "SUMMARY-OF-FIRST" }, { role: "assistant", content: "NOTED" },
+      { role: "user", content: "SECOND-QUESTION" },
+    ]
+    await turn(app, "rt-compacted", history)
+    history.push({ role: "assistant", content: "PERSONAL-ANSWER-2" }, { role: "user", content: "THIRD-QUESTION" })
+    await turn(app, "rt-compacted", history)
+    // Back on `work`, whose copy begins with the first question.
+    await setActive(app, "work")
+    history.push({ role: "assistant", content: "PERSONAL-ANSWER-3" }, { role: "user", content: "FOURTH-QUESTION" })
+    await turn(app, "rt-compacted", history)
+    const back = seen.at(-1)!
+    expect(back.dir).toContain("work")
+    expect({ resumed: back.resume !== undefined, replayed: back.prompt.includes("<conversation_history>") }).toEqual({ resumed: true, replayed: false })
+    expect(back.resumedFrom).toContain("THIRD-QUESTION")
+    expect(back.prompt).toContain("FOURTH-QUESTION")
+  })
+
+  it("replays rather than carry a session that would leave out a reply given after it", async () => {
+    writeTranscripts = true
+    const app = createApp()
+    await setActive(app, "work")
+    await turn(app, "rt-gap", [{ role: "user", content: "FIRST-QUESTION" }])
+    // The history the client sends next holds a reply no copy wrote: resumed
+    // from `work`'s copy, the turns after it go as a delta of the user's side.
+    await setActive(app, "personal")
+    await turn(app, "rt-gap", [
+      { role: "user", content: "FIRST-QUESTION" }, { role: "assistant", content: "WORK-ANSWER-1" },
+      { role: "user", content: "SECOND-QUESTION" }, { role: "assistant", content: "ANSWER-NO-COPY-HOLDS" },
+      { role: "user", content: "THIRD-QUESTION" },
+    ])
+    const moved = seen.at(-1)!
+    expect(moved.dir).toContain("personal")
+    expect(moved.prompt).toContain("ANSWER-NO-COPY-HOLDS")
+  })
+
   it("replays instead of carrying when MERIDIAN_SESSION_CARRY=0", async () => {
     writeTranscripts = true
     process.env.MERIDIAN_SESSION_CARRY = "0"

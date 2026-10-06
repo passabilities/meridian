@@ -7815,7 +7815,7 @@ FROM=<profile> TO=<profile> bun scripts/e2e-session-carry-live.mjs    # two real
 
 ### Verified
 
-HTTP, mocked SDK: 10 tests (`account-return-trip.test.ts`):
+HTTP, mocked SDK: 12 tests (`account-return-trip.test.ts`):
 
 - With nothing to carry, the way back is a replay of the whole history. Before
   the guard this test failed on the stale resume above.
@@ -7827,6 +7827,15 @@ HTTP, mocked SDK: 10 tests (`account-return-trip.test.ts`):
   both hold for it (2 tests). Until 2026-10-06 they needed a session key, and
   such a conversation coming back was sent "SECOND-QUESTION … THIRD-QUESTION …
   FOURTH-QUESTION" on the account's stale copy.
+- A conversation the client compacted on the other account comes back to an
+  account whose copy begins before the summary: the session it was replayed
+  into there is carried and resumed. Until 2026-10-06 an account's own copy
+  that no longer matched was replayed again.
+- A history holding a reply that no copy wrote (served where no copy was
+  stored) is replayed, not carried: the copy's resume would send the turns
+  after it as a delta of the user's side, and the model was sent
+  "SECOND-QUESTION … THIRD-QUESTION" without that reply. `resumeDropsReplies`
+  (`session-copy-held.test.ts`, 7 tests) excepts a prefill.
 
 An independent review of the first version found five defects, each now a test
 that failed first:
@@ -7874,9 +7883,15 @@ turn was written.
   move.
 - A copy written in another working directory than the one the SDK child runs
   in, and a transcript that is gone: both are replayed as before.
-- A copy elsewhere that holds more of the history but as a compaction or an
-  undo of it, and an account's own copy that has diverged: replayed, not
-  carried.
+- A copy elsewhere that holds more of the history as an undo (a rewind), or,
+  under `MERIDIAN_COMPACTION_SURVIVAL=1`, a compaction of it: replayed, not
+  carried. An undo is replayed on its own account too: every resumed turn forks
+  its session, and a fork keeps a usable rollback UUID only for its newest
+  reply, so no rewind has one. Compaction is replayed on every account unless
+  that legacy setting is on.
+- On one account, a copy resumed although the history holds a reply after it
+  that it did not write (served where nothing was stored): the delta leaves
+  that reply out, as it always has; only a carry checks for it.
 
 ## E86: A conversation across a proxy restart
 
