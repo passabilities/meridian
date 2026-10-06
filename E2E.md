@@ -1033,9 +1033,10 @@ curl -s -X PUT -H 'Content-Type: application/json' -d '{"checkForUpdates":false}
 | E81 | [Deferred tools named in a Claude Code conversation's turns](#e81-deferred-tools-named-in-a-claude-code-conversations-turns) | **Automated, no model calls, not in CI**: `bun scripts/e2e-claude-code-deferred-tools-in-turns.mjs` — real proxy, SDK and CLI against a scripted API, four turns in which an MCP tool connects and another disconnects. Asserts the deferred tools are named in the turn, all of them first and then only what came or went, with the system prompt, the loaded tools and every earlier message unchanged from call to call. **Live, needs a Claude Max profile**: `PROFILE=<profile> bun scripts/e2e-claude-code-deferred-tools-in-turns-live.mjs` — the model names a tool that connected after the first turn, and each turn reads the one before from cache. **Run before releases touching tool deferral, the Claude Code adapter or transform, or the SDK/CLI version** | 2026-10-06 |
 | E82 | [Where an active+priority failover goes](#e82-where-an-activepriority-failover-goes) | **Automated, no model calls**: `bun test src/__tests__/routing.test.ts src/__tests__/active-priority-integration.test.ts` — the fallback order by room and the 24-hour weekly reset, and when usage is read. **Live, needs a Claude Max profile out of one model's allowance and two others**: `ACTIVE=<profile> bun scripts/e2e-fallback-order-live.mjs` — a refused request lands on the first account of the room order that serves it, with the configured order set the other way round. **Run before releases touching routing, failover or usage reads** | 2026-10-06 |
 | E83 | [What Meridian adds to a Claude Code client's system prompt](#e83-what-meridian-adds-to-a-claude-code-clients-system-prompt) | **Automated, no model calls, not in CI**: `bun scripts/e2e-claude-code-system-turns.mjs` (E77's gate) — the real client over 127.0.0.1: the system prompt the API receives is the client's and the replay note, without the working-directory note, the scratchpad counter-instruction, the deferred tools' names or a second identity line. **Live**: `SPENT=<profile> ROOM=<profile> bun scripts/e2e-claude-code-account-switch-live.mjs` prints the prompt each turn carried, to set beside a direct run. **Run before releases touching the Claude Code adapter or transform, the SDK child's environment, or the client, SDK or CLI version** | 2026-10-06 |
-| E84 | [Parallel background subagents through the proxy](#e84-parallel-background-subagents-through-the-proxy) | **Automated, no model calls, not in CI**: `bun scripts/e2e-claude-code-parallel-subagents.mjs [model]` — the real client starts several subagents in the background at once, each through tool rounds and a progress summary: every conversation resumes, one Messages call per request, each call's messages beginning with the call before. `AGENTS=12` goes past the 10 SDK children run at once. **Run before releases touching session resume, the turn lease, progress summaries or the Claude Code adapter** | 2026-10-06 |
+| E84 | [Parallel background subagents through the proxy](#e84-parallel-background-subagents-through-the-proxy) | **Automated, no model calls, not in CI**: `bun scripts/e2e-claude-code-parallel-subagents.mjs [model]` — the real client starts several subagents in the background at once, each through tool rounds and a progress summary: every conversation resumes, one Messages call per request, each call's messages beginning with the call before. `AGENTS=12` goes past the 10 SDK children run at once; `PROFILES=2 MERIDIAN_ROUTING=active+priority` sends every request through priority dispatch. **Run before releases touching session resume, the turn lease, progress summaries or the Claude Code adapter** | 2026-10-06 |
 | E85 | [A conversation that moves between accounts](#e85-a-conversation-that-moves-between-accounts) | **Automated**: `bun test src/__tests__/account-return-trip.test.ts`. **No model calls, not in CI**: `bun scripts/e2e-session-carry-cli.mjs [claude]` — a session copied into another config directory resumes in the real CLI with its turns structured and its system prompt. **Live, needs two Claude Max profiles**: `FROM=<profile> TO=<profile> bun scripts/e2e-session-carry-live.mjs` — there and back, each move resumed, nothing replayed. **Run before releases touching session mapping, routing, the session lifecycle or the CLI version** | 2026-10-06 |
 | E86 | [A conversation across a proxy restart](#e86-a-conversation-across-a-proxy-restart) | **Automated, no model calls, not in CI**: `bun scripts/e2e-claude-code-proxy-restart.mjs [model]` — turn 1 through one proxy process, turn 2 through a new one sharing its session store: a resume, no replay, turn 1's messages unchanged. **Run before releases touching session persistence or startup** | 2026-10-06 |
+| E87 | [A client that goes away stops the model](#e87-a-client-that-goes-away-stops-the-model) | **Automated**: `bun test src/__tests__/priority-client-cancel.test.ts`. **No model calls, not in CI, needs a build**: `npm run build && bun scripts/e2e-claude-code-priority-cancel.mjs [model]` — the real client killed before any output, the built proxy under Node: the SDK child's request closed within 5 s, manual and active+priority. **Run before releases touching request cancellation, priority dispatch or the HTTP server** | 2026-10-06 |
 
 | P1 | [Profile: List & Auth Status](#p1-profile-list--auth-status) | `/profiles/list` returns profiles with emails, login status, auth timestamps | - |
 | P2 | [Profile: Switch via API](#p2-profile-switch-via-api) | `POST /profiles/active` switches profile; health endpoint reflects new email | - |
@@ -7795,12 +7796,14 @@ on a move:
   sent "SECOND-QUESTION … THIRD-QUESTION … FOURTH-QUESTION", with the two
   answers given on the other account gone.
 
-Now an account resumes its own copy only if no other account's copy that
-holds the same history was used since. Otherwise the newest copy's transcript
-is copied into this account's config directory as a new session, with its
-message UUIDs (`sessionCarry.ts`). That copy is stored as this account's copy
-and resumed like any other. A move then costs the new account its prompt
-cache, as switching accounts costs a direct client.
+Now an account resumes its own copy unless another account's copy holds more
+of the history the client sent: what a copy resumes from and the reply it
+wrote to that, or for a rewind, all but the new message. Then that copy's
+transcript is copied into this account's config directory as a new session,
+with its message UUIDs (`sessionCarry.ts`), once it holds the session's last
+turn. That copy is stored as this account's copy and resumed like any other.
+A move then costs the new account its prompt cache, as switching accounts
+costs a direct client.
 
 ### Run it
 
@@ -7812,13 +7815,32 @@ FROM=<profile> TO=<profile> bun scripts/e2e-session-carry-live.mjs    # two real
 
 ### Verified
 
-HTTP, mocked SDK: 3 tests (`account-return-trip.test.ts`):
+HTTP, mocked SDK: 8 tests (`account-return-trip.test.ts`):
 
 - With nothing to carry, the way back is a replay of the whole history. Before
   the guard this test failed on the stale resume above.
 - With transcripts, the carry works both ways: the move and the way back each
   resume the newest session, and neither turn is replayed.
 - `MERIDIAN_SESSION_CARRY=0` replays both moves.
+
+An independent review of the first version found five defects, each now a test
+that failed first:
+
+- A rewind after a move and back, to a point the account's own session holds,
+  was replayed in full: a copy elsewhere used later, gone past the rewind, took
+  over and could not be carried. The own session now resumes.
+- A carry to an account that refused the turn sent the request back to the
+  account it came from, which copied the conversation back and set its own
+  session aside. It now resumes its own.
+- A reply still being written when the next request arrived (the CLI batches
+  its writes, and its process can still be exiting) was carried without it.
+  The carry now waits for the session's last turn by UUID, up to about 3 s, and
+  replays if it never lands. In 34 mappings of the live store, every stored
+  reply and checkpoint UUID was in its session's transcript.
+- A carry whose request was cancelled could not let go of what it prepared
+  until its lease ran out; it is now retired at once.
+- A stray file among the project folders (`.DS_Store`) failed the search for a
+  transcript (`session-carry.test.ts`).
 
 The real CLI against a scripted API, 2.1.291 and 2.1.284: a session copied
 into a second config directory resumes there with `--resume --fork-session`.
@@ -7850,8 +7872,9 @@ turn was written.
   move.
 - A copy written in another working directory than the one the SDK child runs
   in, and a transcript that is gone: both are replayed as before.
-- A conversation whose newest copy is a compaction or an undo of the history at
-  hand: replayed.
+- A copy elsewhere that holds more of the history but as a compaction or an
+  undo of it, and an account's own copy that has diverged: replayed, not
+  carried.
 
 ## E86: A conversation across a proxy restart
 
@@ -7882,6 +7905,64 @@ A turn under way when the proxy stops is cut off and is replayed when the
 client retries it. A cache older than its lifetime is written again however
 the conversation resumes: five minutes for a subagent's, an hour for a main
 thread's.
+
+## E87: A client that goes away stops the model
+
+**What it proves:** a client that cancels a request, or goes away, stops the
+model, under manual routing and under active+priority. Before, under
+active+priority, a client that went before the first byte of output left the
+SDK child running to the end of its turn, on the account's allowance. That is
+Esc on a turn still thinking, or an orchestrator cancelling subagents still
+queued for an SDK slot or starting their CLI.
+
+Every attempt of a priority-routed request adopts the request's abort link,
+which hears the client go, the turn watchdog, a parent's cancellation and
+shutdown. The handler's last `finally` detached the link whether it had made
+it or adopted it. The priority dispatch returns from inside that `try`, so the
+link was detached before the first attempt ran. Now only the handler that made
+a link detaches it; the outer handler detaches the request's own once the
+request is over. A streaming client that had already read bytes stopped the
+model before too, by cancelling the body.
+
+### Run it
+
+```bash
+bun test src/__tests__/priority-client-cancel.test.ts               # HTTP, mocked SDK
+npm run build && bun scripts/e2e-claude-code-priority-cancel.mjs   # real client, built proxy under Node, SDK and CLI; scripted API; no model calls
+```
+
+The gate's scripted API holds each turn's first byte for 20 s. Once the SDK
+child's turn reaches it, the client is killed, and the gate waits for every
+request the SDK child has open there to close. `CANCEL_GATE_SERVER` names
+another build's `dist/server.js`, to run the gate against older code.
+
+### Verified
+
+HTTP, mocked SDK (`priority-client-cancel.test.ts`): a plain request, a
+streaming one before its first byte, and one on the account a failover
+reached. Each turn ran its full 3 s before the fix and is stopped at the
+cancel after it. `account-return-trip.test.ts` also holds a carry cancelled
+under priority routing to end at the cancel.
+
+2026-10-06, client 2.1.291, the proxy built and run under Node as
+`npm run start` runs it:
+
+| Routing | Before (48f7825) | After |
+|---|---|---|
+| manual | closed 1,524 ms after the client went | closed 1,514 ms after |
+| active+priority | 2 requests still open 20 s later | closed 28 ms after |
+
+The parallel-subagents gate (E84) with `PROFILES=2` and active+priority, so
+that every request goes through priority dispatch, passed with 4 subagents.
+
+### Not covered
+
+- The proxy run under Bun (`bun run ./bin/cli.ts`, which the supervisor uses
+  only when there is no build): @hono/node-server under Bun 1.3.14 is never
+  told of a client that goes before the response's first byte, so no routing
+  mode stops the model then.
+- Live accounts: the gate shows the SDK child's API request closed, not an
+  account's usage.
 
 ## Concurrent transcript publication
 
