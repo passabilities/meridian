@@ -69,6 +69,11 @@ describe("OpenCode transform parity", () => {
     expect(ctx.autoDeferThreshold).toBeUndefined()
   })
 
+  it("keeps naming deferred tools in the system prompt", () => {
+    const ctx = runTransformHook(openCodeTransforms, "onRequest", makeCtx("opencode"), "opencode")
+    expect(ctx.deferredToolsInTurns).toBeUndefined()
+  })
+
   it("matches supportsThinking", () => {
     const ctx = runTransformHook(openCodeTransforms, "onRequest", makeCtx("opencode"), "opencode")
     expect(ctx.supportsThinking).toBe(openCodeAdapter.supportsThinking!())
@@ -365,6 +370,11 @@ describe("Claude Code transform parity", () => {
   it("defers at any count, as the client does with its own tool search on", () => {
     const ctx = runTransformHook(claudeCodeTransforms, "onRequest", makeCtx("claude-code"), "claude-code")
     expect(ctx.autoDeferThreshold).toBe(0)
+  })
+
+  it("names deferred tools in the conversation, as the client does with its own tool search on", () => {
+    const ctx = runTransformHook(claudeCodeTransforms, "onRequest", makeCtx("claude-code"), "claude-code")
+    expect(ctx.deferredToolsInTurns).toBe(true)
   })
 
   it("matches passthrough (default on)", () => {

@@ -761,6 +761,13 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
   // OpenCode does when it switches agents. Bounded like its neighbours.
   const sessionDeferPin = new LRUMap<string, boolean>(getMaxSessionsLimit())
 
+  // The deferred tools each SDK session has been told of in its turns
+  // (RequestContext.deferredToolsInTurns), by session id, so the next request
+  // that resumes it names only what changed. Not persisted: a session this
+  // process did not tell is told of every one again, a few lines at the end of
+  // one turn.
+  const deferredToolAnnouncements = new LRUMap<string, string[]>(getMaxSessionsLimit())
+
   // Consecutive upstream-idle stalls per session, for the retry ceiling.
   const idleStalls = new IdleStallTracker(UPSTREAM_IDLE_MAX_CONSECUTIVE, getMaxSessionsLimit())
 
@@ -3844,6 +3851,18 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
       if (hasDeferredTools) {
         plog(`[PROXY] ${requestMeta.requestId} deferred=${deferredToolCount}/${toolCount} tools ${toolSearch.active ? "via ToolSearch" : `marked, all loaded (${toolSearch.reason})`}`)
       }
+      // Deferred tools named in the turn rather than the system prompt
+      // (RequestContext.deferredToolsInTurns). A query that resumes a session
+      // tells it what changed since this process last told it; one rolling
+      // back to an earlier message, or starting a session, tells it all.
+      const deferredToolsInTurns = toolSearch.active && pipelineCtx.deferredToolsInTurns === true
+      const deferredToolsNow = passthroughMcp?.deferredToolNames ?? []
+      const deferredToolsAnnouncedTo = (sessionId: string | undefined, rollsBack: boolean): readonly string[] | undefined =>
+        deferredToolsInTurns && sessionId && !rollsBack ? deferredToolAnnouncements.get(sessionId) : undefined
+      /** The session this request leaves for the next to resume has now been told of every deferred tool it has. */
+      const noteDeferredToolsAnnounced = (sessionId: string | undefined): void => {
+        if (deferredToolsInTurns && sessionId) deferredToolAnnouncements.set(sessionId, [...deferredToolsNow])
+      }
       // Which calls the hook answered with the stop, and what the queries
       // went on to do: a model turn after one of them belongs to a CLI that
       // ignored it.
@@ -4230,7 +4249,7 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
                   if (resumeSessionId) resumedMappingMayBeAdvanced = true
                   const attemptQuery = buildQueryOptions({
                     prompt: makePrompt(), ownsCacheBreakpoints: promptCacheLayout !== undefined, promptCacheLifetime, wholeToolDescriptions, model, workingDirectory, clientWorkingDirectory: promptClientWorkingDirectory, clientEnvironmentMayDifferFromProxy, systemContext, claudeExecutable,
-                    passthrough, stream: false, sdkAgents, passthroughMcp, cleanEnv: profileEnv, envOverrides, hasDeferredTools, toolSearch: toolSearch.active, earlyStop: earlyStopEnabled, liftSingleTurnCap: singleTurnCapLifted,
+                    passthrough, stream: false, sdkAgents, passthroughMcp, cleanEnv: profileEnv, envOverrides, hasDeferredTools, toolSearch: toolSearch.active, earlyStop: earlyStopEnabled, liftSingleTurnCap: singleTurnCapLifted, deferredToolsInTurns, deferredToolsAnnounced: deferredToolsAnnouncedTo(resumeSessionId, sdkUndo),
                     resumeSessionId, isUndo: sdkUndo, resumeSessionAtUuid: undoRollbackUuid ?? passthroughToolCallAssistantUuid, forkSession: busySessionFork || undefined, forkSessionId: managedForkTarget?.sessionId, sdkHooks, blockedTools: pipelineCtx.blockedTools, incompatibleTools: pipelineCtx.incompatibleTools, mcpServerName: adapter.getMcpServerName(), allowedMcpTools: pipelineCtx.allowedMcpTools, onStderr,
                     effort, thinking, taskBudget, outputFormat, betas, settingSources,
                     codeSystemPrompt: sdkFeatures.codeSystemPrompt, clientSystemPrompt: sdkFeatures.clientSystemPrompt === false ? false : undefined,
@@ -4337,7 +4356,7 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
                     yield* runSdkQueryAttempt(buildQueryOptions({
                       prompt: buildFreshPrompt(allMessages, sanitizeOpts, renderReplayToolName, replayBudgetFor(model), "non_stream_resume_replay"),
                       promptCacheLifetime, wholeToolDescriptions, model, workingDirectory, clientWorkingDirectory: promptClientWorkingDirectory, clientEnvironmentMayDifferFromProxy, systemContext, claudeExecutable,
-                      passthrough, stream: false, sdkAgents, passthroughMcp, cleanEnv: profileEnv, envOverrides, hasDeferredTools, toolSearch: toolSearch.active, earlyStop: earlyStopEnabled,
+                      passthrough, stream: false, sdkAgents, passthroughMcp, cleanEnv: profileEnv, envOverrides, hasDeferredTools, toolSearch: toolSearch.active, earlyStop: earlyStopEnabled, deferredToolsInTurns,
                       resumeSessionId: undefined, isUndo: false, resumeSessionAtUuid: undefined, forkSessionId: managedForkTarget?.sessionId, sdkHooks, blockedTools: pipelineCtx.blockedTools, incompatibleTools: pipelineCtx.incompatibleTools, mcpServerName: adapter.getMcpServerName(), allowedMcpTools: pipelineCtx.allowedMcpTools, onStderr,
                       effort, thinking, taskBudget, outputFormat, betas, settingSources,
                       codeSystemPrompt: sdkFeatures.codeSystemPrompt, clientSystemPrompt: sdkFeatures.clientSystemPrompt === false ? false : undefined,
@@ -4398,7 +4417,7 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
                     yield* runSdkQueryAttempt(buildQueryOptions({
                       prompt: buildFreshPrompt(allMessages, sanitizeOpts, renderReplayToolName, replayBudgetFor(model), "non_stream_model_fallback"),
                       promptCacheLifetime, wholeToolDescriptions, model, workingDirectory, clientWorkingDirectory: promptClientWorkingDirectory, clientEnvironmentMayDifferFromProxy, systemContext, claudeExecutable,
-                      passthrough, stream: false, sdkAgents, passthroughMcp, cleanEnv: profileEnv, envOverrides, hasDeferredTools, toolSearch: toolSearch.active, earlyStop: earlyStopEnabled,
+                      passthrough, stream: false, sdkAgents, passthroughMcp, cleanEnv: profileEnv, envOverrides, hasDeferredTools, toolSearch: toolSearch.active, earlyStop: earlyStopEnabled, deferredToolsInTurns,
                       resumeSessionId: undefined, isUndo: false, resumeSessionAtUuid: undefined, forkSessionId: managedForkTarget?.sessionId, sdkHooks, blockedTools: pipelineCtx.blockedTools, incompatibleTools: pipelineCtx.incompatibleTools, mcpServerName: adapter.getMcpServerName(), allowedMcpTools: pipelineCtx.allowedMcpTools, onStderr,
                       effort, thinking, taskBudget, outputFormat, betas, settingSources,
                       codeSystemPrompt: sdkFeatures.codeSystemPrompt, clientSystemPrompt: sdkFeatures.clientSystemPrompt === false ? false : undefined,
@@ -5107,6 +5126,8 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
                         if (stored) {
                           mappingExpectedGeneration = stored
                           if (managedForkTarget?.sessionId === currentSessionId) managedForkPublished = true
+                        noteDeferredToolsAnnounced(currentSessionId)
+                          noteDeferredToolsAnnounced(currentSessionId)
                         }
                         return stored
                       },
@@ -5443,7 +5464,7 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
                     if (resumeSessionId) resumedMappingMayBeAdvanced = true
                     const attemptQuery = buildQueryOptions({
                       prompt: makePrompt(), ownsCacheBreakpoints: promptCacheLayout !== undefined, promptCacheLifetime, wholeToolDescriptions, model, workingDirectory, clientWorkingDirectory: promptClientWorkingDirectory, clientEnvironmentMayDifferFromProxy, systemContext, claudeExecutable,
-                      passthrough, stream: true, sdkAgents, passthroughMcp, cleanEnv: profileEnv, envOverrides, hasDeferredTools, toolSearch: toolSearch.active, earlyStop: earlyStopEnabled, liftSingleTurnCap: singleTurnCapLifted,
+                      passthrough, stream: true, sdkAgents, passthroughMcp, cleanEnv: profileEnv, envOverrides, hasDeferredTools, toolSearch: toolSearch.active, earlyStop: earlyStopEnabled, liftSingleTurnCap: singleTurnCapLifted, deferredToolsInTurns, deferredToolsAnnounced: deferredToolsAnnouncedTo(resumeSessionId, sdkUndo),
                       resumeSessionId, isUndo: sdkUndo, resumeSessionAtUuid: undoRollbackUuid ?? passthroughToolCallAssistantUuid, forkSession: busySessionFork || undefined, forkSessionId: managedForkTarget?.sessionId, sdkHooks, blockedTools: pipelineCtx.blockedTools, incompatibleTools: pipelineCtx.incompatibleTools, mcpServerName: adapter.getMcpServerName(), allowedMcpTools: pipelineCtx.allowedMcpTools, onStderr,
                       effort, thinking, taskBudget, outputFormat, betas, settingSources,
                       codeSystemPrompt: sdkFeatures.codeSystemPrompt, clientSystemPrompt: sdkFeatures.clientSystemPrompt === false ? false : undefined,
@@ -5530,7 +5551,7 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
                       yield* runSdkQueryAttempt(buildQueryOptions({
                         prompt: buildFreshPrompt(allMessages, sanitizeOpts, renderReplayToolName, replayBudgetFor(model), "stream_resume_replay"),
                         promptCacheLifetime, wholeToolDescriptions, model, workingDirectory, clientWorkingDirectory: promptClientWorkingDirectory, clientEnvironmentMayDifferFromProxy, systemContext, claudeExecutable,
-                        passthrough, stream: true, sdkAgents, passthroughMcp, cleanEnv: profileEnv, envOverrides, hasDeferredTools, toolSearch: toolSearch.active, earlyStop: earlyStopEnabled,
+                        passthrough, stream: true, sdkAgents, passthroughMcp, cleanEnv: profileEnv, envOverrides, hasDeferredTools, toolSearch: toolSearch.active, earlyStop: earlyStopEnabled, deferredToolsInTurns,
                         resumeSessionId: undefined, isUndo: false, resumeSessionAtUuid: undefined, forkSessionId: managedForkTarget?.sessionId, sdkHooks, blockedTools: pipelineCtx.blockedTools, incompatibleTools: pipelineCtx.incompatibleTools, mcpServerName: adapter.getMcpServerName(), allowedMcpTools: pipelineCtx.allowedMcpTools, onStderr,
                         effort, thinking, taskBudget, outputFormat, betas, settingSources,
                         codeSystemPrompt: sdkFeatures.codeSystemPrompt, clientSystemPrompt: sdkFeatures.clientSystemPrompt === false ? false : undefined,
@@ -5587,7 +5608,7 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
                       yield* runSdkQueryAttempt(buildQueryOptions({
                         prompt: buildFreshPrompt(allMessages, sanitizeOpts, renderReplayToolName, replayBudgetFor(model), "stream_model_fallback"),
                         promptCacheLifetime, wholeToolDescriptions, model, workingDirectory, clientWorkingDirectory: promptClientWorkingDirectory, clientEnvironmentMayDifferFromProxy, systemContext, claudeExecutable,
-                        passthrough, stream: true, sdkAgents, passthroughMcp, cleanEnv: profileEnv, envOverrides, hasDeferredTools, toolSearch: toolSearch.active, earlyStop: earlyStopEnabled,
+                        passthrough, stream: true, sdkAgents, passthroughMcp, cleanEnv: profileEnv, envOverrides, hasDeferredTools, toolSearch: toolSearch.active, earlyStop: earlyStopEnabled, deferredToolsInTurns,
                         resumeSessionId: undefined, isUndo: false, resumeSessionAtUuid: undefined, forkSessionId: managedForkTarget?.sessionId, sdkHooks, blockedTools: pipelineCtx.blockedTools, incompatibleTools: pipelineCtx.incompatibleTools, mcpServerName: adapter.getMcpServerName(), allowedMcpTools: pipelineCtx.allowedMcpTools, onStderr,
                         effort, thinking, taskBudget, outputFormat, betas, settingSources,
                         codeSystemPrompt: sdkFeatures.codeSystemPrompt, clientSystemPrompt: sdkFeatures.clientSystemPrompt === false ? false : undefined,
@@ -6333,6 +6354,7 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
                       if (stored) {
                         mappingExpectedGeneration = stored
                         if (managedForkTarget?.sessionId === currentSessionId) managedForkPublished = true
+                        noteDeferredToolsAnnounced(currentSessionId)
                       }
                       return stored
                     },
@@ -6508,6 +6530,8 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
                     // valid answer — so the tool surface has to stay identical.
                     passthrough, stream: true, sdkAgents, passthroughMcp,
                     cleanEnv: profileEnv, envOverrides, hasDeferredTools, toolSearch: toolSearch.active, earlyStop: earlyStopEnabled,
+                    // Told in this request's own turn, which the fork keeps.
+                    deferredToolsInTurns, deferredToolsAnnounced: deferredToolsNow,
                     resumeSessionId: currentSessionId || resumeSessionId,
                     isUndo: false,
                     // Fork rather than extend: the silent turn is now this
@@ -6666,6 +6690,7 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
                         mappingExpectedGeneration = stored
                         recoveryForkPublished = true
                         recoveryPublishedTarget = recoveryForkTarget
+                        noteDeferredToolsAnnounced(recoverySessionId)
                       }
                       return stored
                     },
@@ -7409,6 +7434,7 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
                       if (stored) {
                         mappingExpectedGeneration = stored
                         if (managedForkTarget?.sessionId === currentSessionId) managedForkPublished = true
+                        noteDeferredToolsAnnounced(currentSessionId)
                       }
                       return stored
                     },

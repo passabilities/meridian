@@ -10,7 +10,7 @@ import { isAbsolute, join, posix, resolve, win32 } from "node:path"
 import type { Options, OutputFormat, SdkBeta, SettingSource, ThinkingConfig } from "@anthropic-ai/claude-agent-sdk"
 import { createOpencodeMcpServer } from "../mcpTools"
 import { createPassthroughMcpServer, PASSTHROUGH_MCP_NAME } from "./passthroughTools"
-import { TOOL_SEARCH_TOOL_NAME, TOOL_SEARCH_TURN_BUDGET, deferredToolsNote } from "./passthroughToolSearch"
+import { TOOL_SEARCH_TOOL_NAME, TOOL_SEARCH_TURN_BUDGET, deferredToolsAnnouncement, deferredToolsNote } from "./passthroughToolSearch"
 import { env, envInt } from "../env"
 import type { Effort } from "./effort"
 
@@ -137,6 +137,19 @@ export interface QueryContext {
    * with deferred tools sends every one of them loaded.
    */
   toolSearch?: boolean
+  /**
+   * Name the deferred tools in the conversation instead of the system prompt
+   * (`RequestContext.deferredToolsInTurns`): all of them in a session's first
+   * turn, then what changed, each time at the end of the turn. Only while
+   * `toolSearch` is on.
+   */
+  deferredToolsInTurns?: boolean
+  /**
+   * The deferred tools the session this query resumes has been told of, when
+   * this process told it. Undefined for a fresh session, or one told by
+   * another process: it then hears of every one.
+   */
+  deferredToolsAnnounced?: readonly string[]
   /**
    * Whether passthrough early stop is active (MERIDIAN_PASSTHROUGH_EARLY_STOP
    * != "0"). Gates the single-turn maxTurns cap: the cap is only safe when the
@@ -581,6 +594,37 @@ export const SCRATCHPAD_COUNTER_INSTRUCTION =
  */
 const WHOLE_TOOL_DESCRIPTION_LENGTH = 1_000_000
 
+/**
+ * The prompt with `text` added to the end of its last user message: after a
+ * text prompt, or on the last message of a structured one, where it follows a
+ * string content as more text and block content (tool results among it) as a
+ * text block of its own. Earlier messages pass through untouched: the SDK
+ * answers each structured input as a live turn of its own.
+ */
+export function appendToFinalTurn(prompt: string | AsyncIterable<unknown>, text: string): string | AsyncIterable<unknown> {
+  if (typeof prompt === "string") return prompt ? `${prompt}\n\n${text}` : text
+  return (async function* () {
+    let last: { value: unknown } | undefined
+    for await (const message of prompt) {
+      if (last) yield last.value
+      last = { value: message }
+    }
+    if (last) yield withTextAppended(last.value, text)
+  })()
+}
+
+function withTextAppended(message: unknown, text: string): unknown {
+  if (typeof message !== "object" || message === null) return message
+  const inner = (message as { message?: unknown }).message
+  if (typeof inner !== "object" || inner === null) return message
+  const content = (inner as { content?: unknown }).content
+  const appended = typeof content === "string"
+    ? `${content}\n\n${text}`
+    : Array.isArray(content) ? [...content, { type: "text", text }] : undefined
+  if (appended === undefined) return message
+  return { ...message, message: { ...inner, content: appended } }
+}
+
 function resolveSystemPrompt(
   systemContext: string | undefined,
   passthrough: boolean,
@@ -633,10 +677,16 @@ export function buildQueryOptions(ctx: QueryContext, abortController?: AbortCont
   const allBlockedTools = [...blockedTools, ...incompatibleTools]
   // Deferral is a passthrough matter: elsewhere the SDK runs its own tools.
   const toolSearch = passthrough && ctx.toolSearch === true
-  const deferredNote = toolSearch ? deferredToolsNote(passthroughMcp?.deferredToolNames ?? []) : ""
+  const deferredNames = passthroughMcp?.deferredToolNames ?? []
+  // Named in the turn, a tool set that changes mid-conversation is told as it
+  // changes; named in the system prompt, a resumed session goes on reading the
+  // list its first request had (passthroughToolSearch.ts, deferredToolsAnnouncement).
+  const deferredInTurns = toolSearch && ctx.deferredToolsInTurns === true
+  const deferredNote = toolSearch && !deferredInTurns ? deferredToolsNote(deferredNames) : ""
+  const deferredAnnouncement = deferredInTurns ? deferredToolsAnnouncement(deferredNames, ctx.deferredToolsAnnounced) : ""
 
   return {
-    prompt,
+    prompt: deferredAnnouncement ? appendToFinalTurn(prompt, deferredAnnouncement) : prompt,
     options: {
       // Force Node as the executable. The claude-agent-sdk auto-detects Bun
       // via process.versions.bun and defaults to spawning `bun cli.js`.

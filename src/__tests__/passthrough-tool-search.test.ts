@@ -10,6 +10,7 @@ import {
   cliIgnoresStop,
   createInternalToolResults,
   createStopWatch,
+  deferredToolsAnnouncement,
   deferredToolsNote,
   endTurnAtDeny,
   internalToolResultsAt,
@@ -264,6 +265,42 @@ describe("deferredToolsNote", () => {
 
   it("is the same text for the same tools, whatever order they arrive in", () => {
     expect(deferredToolsNote(["b", "a"])).toBe(deferredToolsNote(["a", "b"]))
+  })
+})
+
+describe("deferredToolsAnnouncement", () => {
+  // The client's own wording (Claude Code 2.1.290's deferred_tools_delta).
+  const NOW_AVAILABLE = "The following deferred tools are now available via ToolSearch. Their schemas are NOT loaded — calling them directly will fail with InputValidationError. Use ToolSearch with query \"select:<name>[,<name>...]\" to load tool schemas before calling them:"
+  const GONE = "The following deferred tools are no longer available in this session. Do not search for them — ToolSearch will return no match:"
+  const AMBIENT = "This is ambient context — do not narrate it to the user unless they ask or it is directly relevant to their request."
+
+  it("names every deferred tool to a session told nothing yet", () => {
+    expect(deferredToolsAnnouncement(["mcp__oc__b", "mcp__oc__a"], undefined))
+      .toBe(`<system-reminder>\n${NOW_AVAILABLE}\nmcp__oc__a\nmcp__oc__b\n</system-reminder>`)
+  })
+
+  it("says nothing to a session already told about these tools, whatever their order", () => {
+    expect(deferredToolsAnnouncement(["mcp__oc__a", "mcp__oc__b"], ["mcp__oc__b", "mcp__oc__a"])).toBe("")
+  })
+
+  it("names only the tools added since the session was last told", () => {
+    expect(deferredToolsAnnouncement(["mcp__oc__a", "mcp__oc__c", "mcp__oc__b"], ["mcp__oc__a"]))
+      .toBe(`<system-reminder>\n${NOW_AVAILABLE}\nmcp__oc__b\nmcp__oc__c\n</system-reminder>`)
+  })
+
+  it("names the tools that went away, as ambient context", () => {
+    expect(deferredToolsAnnouncement(["mcp__oc__a"], ["mcp__oc__a", "mcp__oc__z"]))
+      .toBe(`<system-reminder>\n${GONE}\nmcp__oc__z\n\n${AMBIENT}\n</system-reminder>`)
+  })
+
+  it("names what came before what went", () => {
+    expect(deferredToolsAnnouncement(["mcp__oc__a", "mcp__oc__n"], ["mcp__oc__a", "mcp__oc__z"]))
+      .toBe(`<system-reminder>\n${NOW_AVAILABLE}\nmcp__oc__n\n\n${GONE}\nmcp__oc__z\n\n${AMBIENT}\n</system-reminder>`)
+  })
+
+  it("is empty when nothing is deferred and nothing was", () => {
+    expect(deferredToolsAnnouncement([], undefined)).toBe("")
+    expect(deferredToolsAnnouncement([], [])).toBe("")
   })
 })
 

@@ -5,7 +5,7 @@ import { describe, it, expect } from "bun:test"
 import { buildQueryOptions, GIT_STATUS_PROVENANCE_NOTE, REPLAY_PROVENANCE_NOTE, SCRATCHPAD_COUNTER_INSTRUCTION, resolveQueryConfigDir, singleTurnCapLiftRaisesBudget, type QueryContext } from "../proxy/query"
 import { BLOCKED_BUILTIN_TOOLS, CLAUDE_CODE_ONLY_TOOLS, MCP_SERVER_NAME, ALLOWED_MCP_TOOLS } from "../proxy/tools"
 import { CHERRY_BLOCKED_BUILTIN_TOOLS, CHERRY_INCOMPATIBLE_TOOLS, CHERRY_WEB_TOOLS } from "../proxy/adapters/cherry"
-import { TOOL_SEARCH_TURN_BUDGET, deferredToolsNote } from "../proxy/passthroughToolSearch"
+import { TOOL_SEARCH_TURN_BUDGET, deferredToolsAnnouncement, deferredToolsNote } from "../proxy/passthroughToolSearch"
 
 /** A passthrough tool server as query.ts reads it, with two tools deferred. */
 function deferringMcp(): NonNullable<QueryContext["passthroughMcp"]> {
@@ -723,6 +723,76 @@ describe("buildQueryOptions", () => {
     it("are not named while ToolSearch is not on offer", () => {
       expect(systemText({ toolSearch: false, systemContext: "CLIENT PROMPT" })).not.toContain("available-deferred-tools")
       expect(systemText({ toolSearch: false })).not.toContain("available-deferred-tools")
+    })
+  })
+
+  describe("the deferred tools named in the turn, for a client that defers that way", () => {
+    const deferred = deferringMcp().deferredToolNames
+    const build = (overrides: Partial<QueryContext>) => buildQueryOptions(makeContext({
+      passthrough: true, hasDeferredTools: true, toolSearch: true, passthroughMcp: deferringMcp(),
+      deferredToolsInTurns: true, systemContext: "CLIENT PROMPT", codeSystemPrompt: false, ...overrides,
+    }))
+    const systemOf = (result: ReturnType<typeof buildQueryOptions>): string => {
+      const { systemPrompt } = result.options
+      return typeof systemPrompt === "string" ? systemPrompt : (systemPrompt as { append?: string } | undefined)?.append ?? ""
+    }
+    type UserInput = { type: "user"; message: { role: "user"; content: unknown }; parent_tool_use_id: null }
+    const turn = (content: unknown): UserInput => ({ type: "user", message: { role: "user", content }, parent_tool_use_id: null })
+    async function* stream(messages: UserInput[]): AsyncIterable<UserInput> { for (const message of messages) yield message }
+    async function collect(prompt: string | AsyncIterable<unknown>): Promise<UserInput[]> {
+      if (typeof prompt === "string") throw new Error("expected a structured prompt")
+      const out: UserInput[] = []
+      for await (const message of prompt) out.push(message as UserInput)
+      return out
+    }
+
+    it("are not named in the system prompt, which then stays the same whatever tools come and go", () => {
+      const text = systemOf(build({}))
+      expect(text).toContain("CLIENT PROMPT")
+      expect(text).not.toContain("mcp__oc__mcp__jira__get")
+      expect(systemOf(build({ passthroughMcp: { ...deferringMcp(), deferredToolNames: [...deferred, "mcp__oc__mcp__new"] } }))).toBe(text)
+    })
+
+    it("are all named at the end of the turn when the session has been told nothing", () => {
+      expect(build({ prompt: "Hello" }).prompt).toBe(`Hello\n\n${deferredToolsAnnouncement(deferred, undefined)}`)
+    })
+
+    it("leave the turn as it was when the session was already told about these tools", () => {
+      expect(build({ prompt: "Hello", deferredToolsAnnounced: [...deferred].reverse() }).prompt).toBe("Hello")
+    })
+
+    it("name only what changed since the session was last told", () => {
+      const told = ["mcp__oc__mcp__jira__get", "mcp__oc__mcp__gone"]
+      expect(build({ prompt: "Hello", deferredToolsAnnounced: told }).prompt)
+        .toBe(`Hello\n\n${deferredToolsAnnouncement(deferred, told)}`)
+    })
+
+    it("go after the tool results of a structured turn, as a text block of their own", async () => {
+      const results = [{ type: "tool_result", tool_use_id: "t1", content: "ok" }]
+      const out = await collect(build({ prompt: stream([turn(results)]) }).prompt)
+      expect(out.map(m => m.message.content)).toEqual([[...results, { type: "text", text: deferredToolsAnnouncement(deferred, undefined) }]])
+    })
+
+    it("go on the last message of a structured turn only", async () => {
+      const out = await collect(build({ prompt: stream([turn("first"), turn("second")]) }).prompt)
+      expect(out.map(m => m.message.content)).toEqual(["first", `second\n\n${deferredToolsAnnouncement(deferred, undefined)}`])
+    })
+
+    it("leave a structured turn as it was when there is nothing to tell", async () => {
+      const out = await collect(build({ prompt: stream([turn("only")]), deferredToolsAnnounced: deferred }).prompt)
+      expect(out.map(m => m.message.content)).toEqual(["only"])
+    })
+
+    it("are not named anywhere while ToolSearch is not on offer", () => {
+      const result = build({ toolSearch: false })
+      expect(result.prompt).toBe("Hello")
+      expect(systemOf(result)).not.toContain("mcp__oc__mcp__jira__get")
+    })
+
+    it("stay in the system prompt for a client that does not defer that way", () => {
+      const result = build({ deferredToolsInTurns: undefined })
+      expect(systemOf(result)).toContain(deferredToolsNote(deferred))
+      expect(result.prompt).toBe("Hello")
     })
   })
 

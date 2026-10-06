@@ -88,6 +88,14 @@ export interface RequestContext {
    * never under on a direct connection. Unset: the child's limit stands.
    */
   wholeToolDescriptions?: boolean
+  /**
+   * Deferred tools are named in the conversation, as the client names them
+   * with its own tool search on: every one in a session's first turn, then
+   * what came or went, at the end of the turn it first applies to. Unset: in
+   * the system prompt, which the SDK child records on a session's first
+   * request and resends as recorded, so tools connecting later go unnamed.
+   */
+  deferredToolsInTurns?: boolean
   sdkAgents: Record<string, any>
   sdkHooks?: any
   passthrough?: boolean

@@ -97,6 +97,14 @@ export const claudeCodeTransforms: Transform[] = [
         // client's MCP servers arrive already cut to that length by the
         // client, as they do on a direct connection.
         wholeToolDescriptions: true,
+        // Named where the client names them, in its turns. Its MCP servers
+        // often connect after a session's first request (on one machine, 72
+        // times in 33 sessions over four days), and the SDK child sends the
+        // system prompt it recorded on a session's first request for as long
+        // as the session lasts (the CLI's systemPromptSnapshot), so a list
+        // there never named a tool that connected later and went on naming
+        // ones that had gone.
+        deferredToolsInTurns: true,
         // Claude Code owns tool execution client-side. Mirrors
         // claudeCodeAdapter.usesPassthrough().
         passthrough: resolvePassthrough(true),

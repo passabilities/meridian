@@ -746,6 +746,15 @@ direct connection. Other clients are not changed.
 servers, however few there are, and on Haiku as well: see
 [tool deferral](#how-tool-calling-works-in-passthrough).
 
+**They are named in its turns.** An MCP server often connects after a
+session's first request (72 times in 33 sessions over four days on one
+machine). The client names the tools it adds, or the ones a disconnect takes
+away, at the end of the turn they first apply to. Meridian named them in the
+system prompt, which the SDK child records on a session's first request and
+resends as recorded, so the model was never told of a tool that connected
+later and went on being told of one that had gone. They are named in the
+turn now, in the client's own words.
+
 Measured live against the same task run directly, a Haiku main thread
 without MCP servers now costs 1.5% to 1.9% more prompt a call and its
 subagent 7%, where they cost 40% and 82% more before; what is left is
@@ -1103,6 +1112,8 @@ Codex and Polytoken require client-owned tools and cannot be switched to interna
 4. The client executes the tool locally and sends the result back
 
 **Tool deferral** — a large tool set is most of a prompt, and most of it goes unused in any one session. So when a client declares many tools, the ones it is unlikely to need are left out of the prompt. The model is given their names and the SDK's ToolSearch tool. When it wants one it calls ToolSearch, the definition is loaded, and the call that follows is returned to the client like any other. The ToolSearch round is one more upstream call inside the same request, and the client never sees it. A loaded tool stays loaded for the rest of the session.
+
+Where the names go depends on the client. For Claude Code they are named in the conversation, the way the client names them with its own tool search on: all of them at the end of a session's first turn, then whichever came or went since, at the end of the turn they first apply to (a session the proxy did not tell itself, as after a restart, hears all of them again). For other clients they are named in the system prompt, and the SDK child records a conversation's system prompt on its first request and sends that record on every later one until compaction: a tool that connects later in the conversation is not named until the conversation is replayed, and one that goes away stays named.
 
 | Client | Stays in the prompt | Deferred |
 |---|---|---|

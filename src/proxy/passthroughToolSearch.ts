@@ -339,6 +339,47 @@ export function deferredToolsNote(names: readonly string[]): string {
   )
 }
 
+const NOW_AVAILABLE =
+  `The following deferred tools are now available via ${TOOL_SEARCH_TOOL_NAME}. Their schemas are NOT loaded — ` +
+  `calling them directly will fail with InputValidationError. Use ${TOOL_SEARCH_TOOL_NAME} with query ` +
+  `"select:<name>[,<name>...]" to load tool schemas before calling them:`
+const NO_LONGER_AVAILABLE =
+  `The following deferred tools are no longer available in this session. Do not search for them — ` +
+  `${TOOL_SEARCH_TOOL_NAME} will return no match:`
+const AMBIENT_CONTEXT =
+  "This is ambient context — do not narrate it to the user unless they ask or it is directly relevant to their request."
+
+/**
+ * The reminder that names deferred tools in the conversation, the way the
+ * client does when it defers them itself: every one in a session's first turn,
+ * then only those added or gone since the session was last told. The wording
+ * is the client's own (Claude Code 2.1.290), and the CLI's ToolSearch
+ * description tells the model to look for the names in such reminders.
+ *
+ * The system-prompt block (`deferredToolsNote`) cannot do that for a session
+ * the SDK resumes: the CLI records a conversation's system prompt on its first
+ * request and sends that record on every later one, whatever a later launch
+ * passes, until compaction (its `systemPromptSnapshot`, on by default in
+ * 2.1.284). A tool that connected after the first request went unnamed and one
+ * that went away stayed named. `announced` undefined means the session has not
+ * been told anything this process knows of: a new session, or one this
+ * process did not tell.
+ */
+export function deferredToolsAnnouncement(
+  current: readonly string[],
+  announced: readonly string[] | undefined,
+): string {
+  const before = new Set(announced ?? [])
+  const now = new Set(current)
+  const added = [...now].filter(name => !before.has(name)).sort((a, b) => a.localeCompare(b))
+  const gone = [...before].filter(name => !now.has(name)).sort((a, b) => a.localeCompare(b))
+  const paragraphs: string[] = []
+  if (added.length > 0) paragraphs.push(`${NOW_AVAILABLE}\n${added.join("\n")}`)
+  if (gone.length > 0) paragraphs.push(`${NO_LONGER_AVAILABLE}\n${gone.join("\n")}`, AMBIENT_CONTEXT)
+  if (paragraphs.length === 0) return ""
+  return `<system-reminder>\n${paragraphs.join("\n\n")}\n</system-reminder>`
+}
+
 /** A `tool_result` block as the continuation carries it. */
 export interface InternalToolResultBlock {
   type: "tool_result"

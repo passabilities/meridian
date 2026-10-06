@@ -171,6 +171,13 @@ const systemText = (index = 0): string => {
   const prompt = queries[index]!.options.systemPrompt
   return typeof prompt === "string" ? prompt : prompt?.append ?? ""
 }
+/** What the SDK was handed as the turn, as text: where a Claude Code client's deferred tools are named. */
+const promptText = (index = 0): string => prompts[index]!.map(part => {
+  if (typeof part === "string") return part
+  const content = (part as { message?: { content?: unknown } }).message?.content
+  if (typeof content === "string") return content
+  return Array.isArray(content) ? content.map(block => (block as { text?: string }).text ?? "").join("\n") : ""
+}).join("\n")
 const streamedTools = (events: ReturnType<typeof parseSSE>): string[] => events.flatMap(({ event, data }) => {
   const block = (data as { content_block?: { type?: string; name?: string } }).content_block
   return event === "content_block_start" && block?.type === "tool_use" ? [String(block.name)] : []
@@ -364,8 +371,10 @@ describe("which of a Claude Code client's tools are deferred", () => {
 
     const { options } = queries[0]!
     expect(options.tools).toEqual(["ToolSearch"])
-    for (const { name } of [...DEFERRED_ON_DIRECT, ...serverTools(12)]) expect(systemText()).toContain(`\nmcp__oc__${name}\n`)
-    for (const { name } of KEPT) expect(systemText()).not.toContain(`\nmcp__oc__${name}\n`)
+    // Named in the turn, as the client names them (deferredToolsInTurns).
+    for (const { name } of [...DEFERRED_ON_DIRECT, ...serverTools(12)]) expect(promptText()).toContain(`\nmcp__oc__${name}\n`)
+    for (const { name } of KEPT) expect(promptText()).not.toContain(`\nmcp__oc__${name}\n`)
+    expect(systemText()).not.toContain("mcp__oc__")
   })
 
   // The client defers them at any count when its tool search is on: a
@@ -375,8 +384,8 @@ describe("which of a Claude Code client's tools are deferred", () => {
     const response = await postClaudeCode([...KEPT, ...DEFERRED_ON_DIRECT])
     expect(response.status).toBe(200)
     expect(queries[0]!.options.tools).toEqual(["ToolSearch"])
-    for (const { name } of DEFERRED_ON_DIRECT) expect(systemText()).toContain(`\nmcp__oc__${name}\n`)
-    for (const { name } of KEPT) expect(systemText()).not.toContain(`\nmcp__oc__${name}\n`)
+    for (const { name } of DEFERRED_ON_DIRECT) expect(promptText()).toContain(`\nmcp__oc__${name}\n`)
+    for (const { name } of KEPT) expect(promptText()).not.toContain(`\nmcp__oc__${name}\n`)
 
     await postClaudeCode([...KEPT, tool("WebFetch")])
     expect(queries[1]!.options.tools).toEqual(["ToolSearch"])
@@ -402,6 +411,88 @@ describe("which of a Claude Code client's tools are deferred", () => {
     process.env.MERIDIAN_DEFER_TOOL_THRESHOLD = "0"
     await postClaudeCode([...KEPT, ...DEFERRED_ON_DIRECT, ...serverTools(40)])
     expect(queries[0]!.options.tools).toEqual([])
+  })
+})
+
+describe("a Claude Code conversation whose MCP servers connect as it goes", () => {
+  // The client names deferred tools in its turns when its own tool search is
+  // on, so a server connecting late adds a line at the end of the prompt. A
+  // list in the system prompt would change it and rewrite the prompt cache of
+  // everything after it, on every such connection.
+  const tool = (name: string) => ({ name, description: `${name} tool`, input_schema: { type: "object", properties: { input: { type: "string" } } } })
+  const OWN = ["Bash", "Read"].map(tool)
+  const server = (...indexes: number[]) => indexes.map(i => tool(`mcp__srv__tool_${String(i).padStart(2, "0")}`))
+  const registered = (i: number) => `mcp__oc__mcp__srv__tool_${String(i).padStart(2, "0")}`
+  const NOW_AVAILABLE = "The following deferred tools are now available via ToolSearch."
+  const postTurn = (tools: unknown[], session: string, messages: unknown[], target: App = app) => {
+    usedSessionKeys.add(session)
+    return target.fetch(new Request("http://localhost/v1/messages", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-api-key": "dummy", "user-agent": "claude-cli/2.1.290 (external, cli)" },
+      body: JSON.stringify({
+        model: "claude-sonnet-4-5", max_tokens: 400, stream: false, tools, messages,
+        metadata: { user_id: JSON.stringify({ session_id: session }) },
+      }),
+    }))
+  }
+  const turns = (...texts: string[]) => texts.flatMap((text, i) => i === 0
+    ? [{ role: "user", content: text }]
+    : [{ role: "assistant", content: [{ type: "text", text: "Hello" }] }, { role: "user", content: text }])
+
+  beforeEach(() => { script = [assistant("msg_text", [{ type: "text", text: "Hello" }])] })
+
+  it("names every deferred tool in the first turn and none in the system prompt", async () => {
+    const response = await postTurn([...OWN, ...server(0, 1)], `cc-turns-first-${RUN}`, turns("hello"))
+    expect(response.status).toBe(200)
+
+    expect(queries[0]!.options.tools).toEqual(["ToolSearch"])
+    expect(systemText(0)).not.toContain(registered(0))
+    expect(promptText(0)).toContain(`${NOW_AVAILABLE}`)
+    expect(promptText(0)).toContain(`\n${registered(0)}\n${registered(1)}\n</system-reminder>`)
+    expect(promptText(0).indexOf("hello")).toBeLessThan(promptText(0).indexOf(NOW_AVAILABLE))
+  })
+
+  it("keeps the system prompt as it was when a server connects, and names only its tools in that turn", async () => {
+    const session = `cc-turns-grow-${RUN}`
+    await postTurn([...OWN, ...server(0, 1)], session, turns("hello"))
+    const second = await postTurn([...OWN, ...server(0, 1, 2)], session, turns("hello", "next"))
+    expect(second.status).toBe(200)
+
+    expect(queries[1]!.options.resume).toBe(queries[0]!.options.sessionId)
+    expect(systemText(1)).toBe(systemText(0))
+    expect(promptText(1)).toContain(`${NOW_AVAILABLE}`)
+    expect(promptText(1)).toContain(`\n${registered(2)}\n</system-reminder>`)
+    expect(promptText(1)).not.toContain(registered(0))
+  })
+
+  it("says nothing more while the tools stay as they are", async () => {
+    const session = `cc-turns-steady-${RUN}`
+    await postTurn([...OWN, ...server(0, 1)], session, turns("hello"))
+    await postTurn([...OWN, ...server(0, 1)], session, turns("hello", "next"))
+
+    expect(queries[1]!.options.resume).toBe(queries[0]!.options.sessionId)
+    expect(promptText(1)).not.toContain("<system-reminder>")
+  })
+
+  it("names the tools that went away", async () => {
+    const session = `cc-turns-shrink-${RUN}`
+    await postTurn([...OWN, ...server(0, 1)], session, turns("hello"))
+    await postTurn([...OWN, ...server(0)], session, turns("hello", "next"))
+
+    expect(systemText(1)).toBe(systemText(0))
+    expect(promptText(1)).toContain(`no longer available in this session`)
+    expect(promptText(1)).toContain(`\n${registered(1)}\n`)
+    expect(promptText(1)).not.toContain(NOW_AVAILABLE)
+  })
+
+  it("names every tool again to a session this process did not tell, such as one resumed after a restart", async () => {
+    const session = `cc-turns-restart-${RUN}`
+    await postTurn([...OWN, ...server(0, 1)], session, turns("hello"))
+    const restarted = createProxyServer({ port: 0, host: "127.0.0.1" }).app
+    await postTurn([...OWN, ...server(0, 1)], session, turns("hello", "next"), restarted)
+
+    expect(queries[1]!.options.resume).toBe(queries[0]!.options.sessionId)
+    expect(promptText(1)).toContain(`\n${registered(0)}\n${registered(1)}\n</system-reminder>`)
   })
 })
 
@@ -891,7 +982,7 @@ describe("a Claude Code client", () => {
     await postClaudeCode([...own(20), ...mcp(16)], `cc-big-${RUN}`)
 
     expect(queries[0]!.options.tools).toEqual(["ToolSearch"])
-    const note = systemText().slice(systemText().indexOf("<available-deferred-tools>"))
+    const note = promptText().slice(promptText().indexOf("<system-reminder>"))
     expect(note.match(/^mcp__oc__mcp__srv__tool_\d\d$/gm)).toHaveLength(16)
     expect(note).not.toContain("Own")
   })
@@ -901,7 +992,7 @@ describe("a Claude Code client", () => {
     await postClaudeCode([...own(40), ...mcp(3)], `cc-few-${RUN}`)
 
     expect(queries[0]!.options.tools).toEqual(["ToolSearch"])
-    const note = systemText().slice(systemText().indexOf("<available-deferred-tools>"))
+    const note = promptText().slice(promptText().indexOf("<system-reminder>"))
     expect(note.match(/^mcp__oc__mcp__srv__tool_\d\d$/gm)).toHaveLength(3)
     expect(note).not.toContain("Own")
   })
