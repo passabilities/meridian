@@ -64,10 +64,30 @@ export interface RequestContext {
   /**
    * Limits auto-defer to tools whose names start with one of these. For a
    * client whose own tool set cannot be listed in `coreToolNames` ahead of
-   * time but whose deferrable tools share a prefix. Unset: every tool outside
-   * `coreToolNames` may be deferred.
+   * time but whose deferrable tools share a prefix. Unset, and no
+   * `deferrableToolNames` either: every tool outside `coreToolNames` may be
+   * deferred.
    */
   deferrableToolPrefixes?: readonly string[]
+  /**
+   * Tools that may be deferred beside the prefixed ones, by the exact name the
+   * client gives them. Limits auto-defer the same way when set on its own.
+   */
+  deferrableToolNames?: readonly string[]
+  /**
+   * Auto-defer starts once more tools than this would leave the prompt, where
+   * the operator has not set MERIDIAN_DEFER_TOOL_THRESHOLD. 0: as soon as one
+   * would. Unset: 15.
+   */
+  autoDeferThreshold?: number
+  /**
+   * The client's tool descriptions are to reach the model whole. In
+   * passthrough the client's tools are registered with the SDK child as MCP
+   * tools, and the child cuts an MCP tool's description at 2,048 characters:
+   * a limit meant for third-party servers, which a client's own tools were
+   * never under on a direct connection. Unset: the child's limit stands.
+   */
+  wholeToolDescriptions?: boolean
   sdkAgents: Record<string, any>
   sdkHooks?: any
   passthrough?: boolean

@@ -232,6 +232,51 @@ describe("auto-defer limited to a name prefix", () => {
   })
 })
 
+describe("auto-defer limited to a name prefix and to tools listed by name", () => {
+  const tool = (name: string) => ({ name, description: "client tool" })
+  const own = ["Agent", "Skill", "Workflow"].map(tool)
+  const LISTED = ["WebFetch", "WebSearch", "NotebookEdit"]
+  const mcp = (count: number) => Array.from({ length: count }, (_, i) => tool(`mcp__srv__tool_${String(i).padStart(2, "0")}`))
+  const CORE = ["Read", "Write", "Edit", "Bash"]
+  const server = (tools: Array<{ name: string; description: string }>) =>
+    createPassthroughMcpServer(tools, CORE, undefined, undefined, ["mcp__"], LISTED)
+
+  it("counts a listed tool toward the threshold", () => {
+    expect(server([...own, ...LISTED.map(tool), ...mcp(12)]).hasDeferredTools).toBe(false)
+    expect(server([...own, ...LISTED.map(tool), ...mcp(13)]).hasDeferredTools).toBe(true)
+  })
+
+  it("defers the listed tools with the prefixed ones and keeps every other tool loaded", () => {
+    const result = server([...own, ...LISTED.map(tool), ...mcp(13)])
+    expect(result.deferredToolNames).toHaveLength(16)
+    expect(result.deferredToolNames).toContain("mcp__oc__WebFetch")
+    expect(result.deferredToolNames).toContain("mcp__oc__mcp__srv__tool_00")
+    for (const reg of registeredTools) {
+      const loaded = reg.config._meta?.["anthropic/alwaysLoad"] === true
+      expect(loaded).toBe(own.some(candidate => candidate.name === reg.name))
+    }
+  })
+
+  it("leaves a listed tool loaded while too few tools would leave the prompt", () => {
+    const result = server([...own, ...LISTED.map(tool), ...mcp(3)])
+    expect(result.hasDeferredTools).toBe(false)
+    expect(result.deferredToolNames).toEqual([])
+  })
+
+  it("is narrowed by a list of names alone as well", () => {
+    const many = Array.from({ length: 16 }, (_, i) => `Listed${i}`)
+    const result = createPassthroughMcpServer([...own, ...many.map(tool), ...mcp(4)], CORE, undefined, undefined, undefined, many)
+    expect(result.deferredToolNames).toHaveLength(16)
+    expect(result.deferredToolNames.every(name => name.startsWith("mcp__oc__Listed"))).toBe(true)
+  })
+
+  it("matches a listed name exactly", () => {
+    const result = server([...own, tool("WebFetcher"), tool("webfetch"), ...mcp(16)])
+    expect(result.deferredToolNames).not.toContain("mcp__oc__WebFetcher")
+    expect(result.deferredToolNames).not.toContain("mcp__oc__webfetch")
+  })
+})
+
 describe("deferredToolNames", () => {
   it("is every tool outside the core set when no prefix narrows it", () => {
     const tools = [
@@ -263,6 +308,15 @@ describe("autoDeferrableToolNames", () => {
     expect(autoDeferrableToolNames(tools, ["mcp__a__x"], ["mcp__"])).toEqual(["mcp__b__y"])
   })
 
+  it("includes the tools the adapter lists by name beside the prefixed ones", () => {
+    expect(autoDeferrableToolNames(tools, ["read"], ["mcp__"], ["Agent"])).toEqual(["Agent", "mcp__a__x", "mcp__b__y"])
+    expect(autoDeferrableToolNames(tools, ["read"], undefined, ["Agent"])).toEqual(["Agent"])
+  })
+
+  it("never includes a core tool, listed or not", () => {
+    expect(autoDeferrableToolNames(tools, ["read"], ["mcp__"], ["Read"])).toEqual(["mcp__a__x", "mcp__b__y"])
+  })
+
   it("is empty without a core set, which is how an adapter opts out", () => {
     expect(autoDeferrableToolNames(tools, undefined)).toEqual([])
     expect(autoDeferrableToolNames(tools, [])).toEqual([])
@@ -279,13 +333,25 @@ describe("getAutoDeferThreshold", () => {
     expect(getAutoDeferThreshold()).toBe(25)
   })
 
-  it("returns 0 when set to 0 (disable)", () => {
+  it("is null when set to 0, which switches auto-defer off", () => {
     process.env.MERIDIAN_DEFER_TOOL_THRESHOLD = "0"
-    expect(getAutoDeferThreshold()).toBe(0)
+    expect(getAutoDeferThreshold()).toBeNull()
+    expect(getAutoDeferThreshold(0)).toBeNull()
   })
 
   it("returns default for invalid values", () => {
     process.env.MERIDIAN_DEFER_TOOL_THRESHOLD = "abc"
     expect(getAutoDeferThreshold()).toBe(15)
+  })
+
+  it("is the client's own where the operator has set none", () => {
+    expect(getAutoDeferThreshold(0)).toBe(0)
+    process.env.MERIDIAN_DEFER_TOOL_THRESHOLD = "abc"
+    expect(getAutoDeferThreshold(0)).toBe(0)
+  })
+
+  it("is the operator's over the client's", () => {
+    process.env.MERIDIAN_DEFER_TOOL_THRESHOLD = "25"
+    expect(getAutoDeferThreshold(0)).toBe(25)
   })
 })

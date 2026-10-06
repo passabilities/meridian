@@ -54,6 +54,21 @@ describe("OpenCode transform parity", () => {
     expect(ctx.deferrableToolPrefixes).toBeUndefined()
   })
 
+  it("lists no tool to defer by name", () => {
+    const ctx = runTransformHook(openCodeTransforms, "onRequest", makeCtx("opencode"), "opencode")
+    expect(ctx.deferrableToolNames).toBeUndefined()
+  })
+
+  it("leaves the SDK child's cap on tool descriptions as it is", () => {
+    const ctx = runTransformHook(openCodeTransforms, "onRequest", makeCtx("opencode"), "opencode")
+    expect(ctx.wholeToolDescriptions).toBeUndefined()
+  })
+
+  it("keeps the default threshold for auto-defer", () => {
+    const ctx = runTransformHook(openCodeTransforms, "onRequest", makeCtx("opencode"), "opencode")
+    expect(ctx.autoDeferThreshold).toBeUndefined()
+  })
+
   it("matches supportsThinking", () => {
     const ctx = runTransformHook(openCodeTransforms, "onRequest", makeCtx("opencode"), "opencode")
     expect(ctx.supportsThinking).toBe(openCodeAdapter.supportsThinking!())
@@ -320,6 +335,36 @@ describe("Claude Code transform parity", () => {
   it("limits auto-defer to the tools of the client's MCP servers", () => {
     const ctx = runTransformHook(claudeCodeTransforms, "onRequest", makeCtx("claude-code"), "claude-code")
     expect(ctx.deferrableToolPrefixes).toEqual(["mcp__"])
+  })
+
+  it("also defers the tools of its own that Claude Code defers on a direct connection", () => {
+    const ctx = runTransformHook(claudeCodeTransforms, "onRequest", makeCtx("claude-code"), "claude-code")
+    const names = ctx.deferrableToolNames ?? []
+    // Deferred by the 2.1.290 client connected directly, 2026-10-05.
+    for (const name of ["CronCreate", "CronDelete", "CronList", "DesignSync", "EnterWorktree", "ExitWorktree", "Monitor",
+      "NotebookEdit", "PushNotification", "RemoteTrigger", "SendMessage", "TaskCreate", "TaskGet", "TaskList", "TaskStop",
+      "TaskUpdate", "WebFetch", "WebSearch"]) {
+      expect(names).toContain(name)
+    }
+  })
+
+  it("keeps loaded the tools Claude Code keeps loaded, and the ones whose loading follows its mode", () => {
+    const ctx = runTransformHook(claudeCodeTransforms, "onRequest", makeCtx("claude-code"), "claude-code")
+    const names = ctx.deferrableToolNames ?? []
+    for (const name of ["Agent", "AskUserQuestion", "Bash", "Edit", "Glob", "Grep", "Read", "Skill", "ToolSearch", "Workflow", "Write",
+      "EnterPlanMode", "ExitPlanMode"]) {
+      expect(names).not.toContain(name)
+    }
+  })
+
+  it("asks for the client's tool descriptions whole", () => {
+    const ctx = runTransformHook(claudeCodeTransforms, "onRequest", makeCtx("claude-code"), "claude-code")
+    expect(ctx.wholeToolDescriptions).toBe(true)
+  })
+
+  it("defers at any count, as the client does with its own tool search on", () => {
+    const ctx = runTransformHook(claudeCodeTransforms, "onRequest", makeCtx("claude-code"), "claude-code")
+    expect(ctx.autoDeferThreshold).toBe(0)
   })
 
   it("matches passthrough (default on)", () => {

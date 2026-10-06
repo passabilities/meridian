@@ -3477,6 +3477,9 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
       // makes is given it: the replay after a refused resume writes the whole
       // conversation, and is where the rate matters most.
       const promptCacheLifetime = adapter.promptCacheLifetime?.(c, body)
+      // Whether the client's tool descriptions go to the model whole, past
+      // the length the SDK child cuts an MCP tool's at. Every query, as above.
+      const wholeToolDescriptions = pipelineCtx.wholeToolDescriptions === true
 
       function rebuildReplayPrompt(): void {
         structuredMessages = undefined
@@ -3782,6 +3785,7 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
         const cachedMcp = mcpSessionKey ? sessionMcpCache.get(mcpSessionKey) : undefined
         const coreNamesForDefer = pipelineCtx.coreToolNames ? [...pipelineCtx.coreToolNames] : undefined
         const deferrablePrefixes = pipelineCtx.deferrableToolPrefixes
+        const deferrableNames = pipelineCtx.deferrableToolNames
         // Consulted even when the MCP server is rebuilt: a changed tool set
         // already costs one cache miss, and re-deciding on top of it would ALSO
         // flip maxTurns mid-session. The suppressed flip is logged whenever the
@@ -3789,9 +3793,9 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
         // issue asked for regardless of which fix landed.
         const pinnedDefer = profileSessionId ? sessionDeferPin.get(profileSessionId) : undefined
         const liveDefer = autoDeferDecision(
-          getAutoDeferThreshold(),
+          getAutoDeferThreshold(pipelineCtx.autoDeferThreshold),
           coreNamesForDefer,
-          autoDeferrableToolNames(requestTools, coreNamesForDefer, deferrablePrefixes).length,
+          autoDeferrableToolNames(requestTools, coreNamesForDefer, deferrablePrefixes, deferrableNames).length,
         )
         if (pinnedDefer !== undefined && pinnedDefer !== liveDefer) {
           plog(`[PROXY] ${requestMeta.requestId} defer_flip suppressed: session pinned autoDefer=${pinnedDefer}, live tool count ${requestTools.length} would give ${liveDefer}`)
@@ -3800,7 +3804,7 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
         if (cachedMcp && cachedMcp.key === toolSetKey) {
           passthroughMcp = cachedMcp.mcp
         } else {
-          passthroughMcp = createPassthroughMcpServer(requestTools, coreNamesForDefer, passthroughMcpName, pinnedDefer, deferrablePrefixes)
+          passthroughMcp = createPassthroughMcpServer(requestTools, coreNamesForDefer, passthroughMcpName, pinnedDefer ?? liveDefer, deferrablePrefixes, deferrableNames)
           if (mcpSessionKey) {
             sessionMcpCache.set(mcpSessionKey, { key: toolSetKey, mcp: passthroughMcp })
             if (cachedMcp) {
@@ -4225,7 +4229,7 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
                 try {
                   if (resumeSessionId) resumedMappingMayBeAdvanced = true
                   const attemptQuery = buildQueryOptions({
-                    prompt: makePrompt(), ownsCacheBreakpoints: promptCacheLayout !== undefined, promptCacheLifetime, model, workingDirectory, clientWorkingDirectory: promptClientWorkingDirectory, clientEnvironmentMayDifferFromProxy, systemContext, claudeExecutable,
+                    prompt: makePrompt(), ownsCacheBreakpoints: promptCacheLayout !== undefined, promptCacheLifetime, wholeToolDescriptions, model, workingDirectory, clientWorkingDirectory: promptClientWorkingDirectory, clientEnvironmentMayDifferFromProxy, systemContext, claudeExecutable,
                     passthrough, stream: false, sdkAgents, passthroughMcp, cleanEnv: profileEnv, envOverrides, hasDeferredTools, toolSearch: toolSearch.active, earlyStop: earlyStopEnabled, liftSingleTurnCap: singleTurnCapLifted,
                     resumeSessionId, isUndo: sdkUndo, resumeSessionAtUuid: undoRollbackUuid ?? passthroughToolCallAssistantUuid, forkSession: busySessionFork || undefined, forkSessionId: managedForkTarget?.sessionId, sdkHooks, blockedTools: pipelineCtx.blockedTools, incompatibleTools: pipelineCtx.incompatibleTools, mcpServerName: adapter.getMcpServerName(), allowedMcpTools: pipelineCtx.allowedMcpTools, onStderr,
                     effort, thinking, taskBudget, outputFormat, betas, settingSources,
@@ -4332,7 +4336,7 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
                     for (let i = 0; i < allMessages.length; i++) sdkUuidMap.push(null)
                     yield* runSdkQueryAttempt(buildQueryOptions({
                       prompt: buildFreshPrompt(allMessages, sanitizeOpts, renderReplayToolName, replayBudgetFor(model), "non_stream_resume_replay"),
-                      promptCacheLifetime, model, workingDirectory, clientWorkingDirectory: promptClientWorkingDirectory, clientEnvironmentMayDifferFromProxy, systemContext, claudeExecutable,
+                      promptCacheLifetime, wholeToolDescriptions, model, workingDirectory, clientWorkingDirectory: promptClientWorkingDirectory, clientEnvironmentMayDifferFromProxy, systemContext, claudeExecutable,
                       passthrough, stream: false, sdkAgents, passthroughMcp, cleanEnv: profileEnv, envOverrides, hasDeferredTools, toolSearch: toolSearch.active, earlyStop: earlyStopEnabled,
                       resumeSessionId: undefined, isUndo: false, resumeSessionAtUuid: undefined, forkSessionId: managedForkTarget?.sessionId, sdkHooks, blockedTools: pipelineCtx.blockedTools, incompatibleTools: pipelineCtx.incompatibleTools, mcpServerName: adapter.getMcpServerName(), allowedMcpTools: pipelineCtx.allowedMcpTools, onStderr,
                       effort, thinking, taskBudget, outputFormat, betas, settingSources,
@@ -4393,7 +4397,7 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
                     for (let i = 0; i < allMessages.length; i++) sdkUuidMap.push(null)
                     yield* runSdkQueryAttempt(buildQueryOptions({
                       prompt: buildFreshPrompt(allMessages, sanitizeOpts, renderReplayToolName, replayBudgetFor(model), "non_stream_model_fallback"),
-                      promptCacheLifetime, model, workingDirectory, clientWorkingDirectory: promptClientWorkingDirectory, clientEnvironmentMayDifferFromProxy, systemContext, claudeExecutable,
+                      promptCacheLifetime, wholeToolDescriptions, model, workingDirectory, clientWorkingDirectory: promptClientWorkingDirectory, clientEnvironmentMayDifferFromProxy, systemContext, claudeExecutable,
                       passthrough, stream: false, sdkAgents, passthroughMcp, cleanEnv: profileEnv, envOverrides, hasDeferredTools, toolSearch: toolSearch.active, earlyStop: earlyStopEnabled,
                       resumeSessionId: undefined, isUndo: false, resumeSessionAtUuid: undefined, forkSessionId: managedForkTarget?.sessionId, sdkHooks, blockedTools: pipelineCtx.blockedTools, incompatibleTools: pipelineCtx.incompatibleTools, mcpServerName: adapter.getMcpServerName(), allowedMcpTools: pipelineCtx.allowedMcpTools, onStderr,
                       effort, thinking, taskBudget, outputFormat, betas, settingSources,
@@ -5438,7 +5442,7 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
                   try {
                     if (resumeSessionId) resumedMappingMayBeAdvanced = true
                     const attemptQuery = buildQueryOptions({
-                      prompt: makePrompt(), ownsCacheBreakpoints: promptCacheLayout !== undefined, promptCacheLifetime, model, workingDirectory, clientWorkingDirectory: promptClientWorkingDirectory, clientEnvironmentMayDifferFromProxy, systemContext, claudeExecutable,
+                      prompt: makePrompt(), ownsCacheBreakpoints: promptCacheLayout !== undefined, promptCacheLifetime, wholeToolDescriptions, model, workingDirectory, clientWorkingDirectory: promptClientWorkingDirectory, clientEnvironmentMayDifferFromProxy, systemContext, claudeExecutable,
                       passthrough, stream: true, sdkAgents, passthroughMcp, cleanEnv: profileEnv, envOverrides, hasDeferredTools, toolSearch: toolSearch.active, earlyStop: earlyStopEnabled, liftSingleTurnCap: singleTurnCapLifted,
                       resumeSessionId, isUndo: sdkUndo, resumeSessionAtUuid: undoRollbackUuid ?? passthroughToolCallAssistantUuid, forkSession: busySessionFork || undefined, forkSessionId: managedForkTarget?.sessionId, sdkHooks, blockedTools: pipelineCtx.blockedTools, incompatibleTools: pipelineCtx.incompatibleTools, mcpServerName: adapter.getMcpServerName(), allowedMcpTools: pipelineCtx.allowedMcpTools, onStderr,
                       effort, thinking, taskBudget, outputFormat, betas, settingSources,
@@ -5525,7 +5529,7 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
                       for (let i = 0; i < allMessages.length; i++) sdkUuidMap.push(null)
                       yield* runSdkQueryAttempt(buildQueryOptions({
                         prompt: buildFreshPrompt(allMessages, sanitizeOpts, renderReplayToolName, replayBudgetFor(model), "stream_resume_replay"),
-                        promptCacheLifetime, model, workingDirectory, clientWorkingDirectory: promptClientWorkingDirectory, clientEnvironmentMayDifferFromProxy, systemContext, claudeExecutable,
+                        promptCacheLifetime, wholeToolDescriptions, model, workingDirectory, clientWorkingDirectory: promptClientWorkingDirectory, clientEnvironmentMayDifferFromProxy, systemContext, claudeExecutable,
                         passthrough, stream: true, sdkAgents, passthroughMcp, cleanEnv: profileEnv, envOverrides, hasDeferredTools, toolSearch: toolSearch.active, earlyStop: earlyStopEnabled,
                         resumeSessionId: undefined, isUndo: false, resumeSessionAtUuid: undefined, forkSessionId: managedForkTarget?.sessionId, sdkHooks, blockedTools: pipelineCtx.blockedTools, incompatibleTools: pipelineCtx.incompatibleTools, mcpServerName: adapter.getMcpServerName(), allowedMcpTools: pipelineCtx.allowedMcpTools, onStderr,
                         effort, thinking, taskBudget, outputFormat, betas, settingSources,
@@ -5582,7 +5586,7 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
                       for (let i = 0; i < allMessages.length; i++) sdkUuidMap.push(null)
                       yield* runSdkQueryAttempt(buildQueryOptions({
                         prompt: buildFreshPrompt(allMessages, sanitizeOpts, renderReplayToolName, replayBudgetFor(model), "stream_model_fallback"),
-                        promptCacheLifetime, model, workingDirectory, clientWorkingDirectory: promptClientWorkingDirectory, clientEnvironmentMayDifferFromProxy, systemContext, claudeExecutable,
+                        promptCacheLifetime, wholeToolDescriptions, model, workingDirectory, clientWorkingDirectory: promptClientWorkingDirectory, clientEnvironmentMayDifferFromProxy, systemContext, claudeExecutable,
                         passthrough, stream: true, sdkAgents, passthroughMcp, cleanEnv: profileEnv, envOverrides, hasDeferredTools, toolSearch: toolSearch.active, earlyStop: earlyStopEnabled,
                         resumeSessionId: undefined, isUndo: false, resumeSessionAtUuid: undefined, forkSessionId: managedForkTarget?.sessionId, sdkHooks, blockedTools: pipelineCtx.blockedTools, incompatibleTools: pipelineCtx.incompatibleTools, mcpServerName: adapter.getMcpServerName(), allowedMcpTools: pipelineCtx.allowedMcpTools, onStderr,
                         effort, thinking, taskBudget, outputFormat, betas, settingSources,
@@ -6499,7 +6503,7 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
                   // had already produced a deliverable turn.
                   for await (const event of runSdkQueryAttempt(buildQueryOptions({
                     prompt: SILENT_TURN_NUDGE,
-                    promptCacheLifetime, model, workingDirectory, clientWorkingDirectory: promptClientWorkingDirectory, clientEnvironmentMayDifferFromProxy, systemContext, claudeExecutable,
+                    promptCacheLifetime, wholeToolDescriptions, model, workingDirectory, clientWorkingDirectory: promptClientWorkingDirectory, clientEnvironmentMayDifferFromProxy, systemContext, claudeExecutable,
                     // The nudge asks for prose, but a tool call is an equally
                     // valid answer — so the tool surface has to stay identical.
                     passthrough, stream: true, sdkAgents, passthroughMcp,

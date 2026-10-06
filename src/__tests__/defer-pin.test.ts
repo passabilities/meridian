@@ -28,10 +28,16 @@ const tools = (n: number) => Array.from({ length: n }, (_, i) => ({
 }))
 /** The core tools and `n` more: `n` is what auto-defer would take out. */
 const withDeferrable = (n: number) => tools(CORE.length + n)
+/** The threshold with nothing set by the operator or the client: 15. */
+function defaultThreshold(): number {
+  const threshold = getAutoDeferThreshold()
+  if (threshold === null) throw new Error("auto-defer is switched off in this environment")
+  return threshold
+}
 
 describe("autoDeferDecision", () => {
   it("is off at or below the threshold and on above it", () => {
-    const t = getAutoDeferThreshold()
+    const t = defaultThreshold()
     expect(autoDeferDecision(t, CORE, t)).toBe(false)
     expect(autoDeferDecision(t, CORE, t + 1)).toBe(true)
   })
@@ -41,19 +47,26 @@ describe("autoDeferDecision", () => {
     expect(autoDeferDecision(15, [], 400)).toBe(false)
   })
 
-  it("is off when the threshold is disabled", () => {
-    expect(autoDeferDecision(0, CORE, 400)).toBe(false)
+  it("is off when the operator has switched it off", () => {
+    expect(autoDeferDecision(null, CORE, 400)).toBe(false)
+  })
+
+  // A client that defers whatever it can, at any count, as Claude Code does
+  // with its own tool search on.
+  it("is on for any deferrable tool over a threshold of 0", () => {
+    expect(autoDeferDecision(0, CORE, 1)).toBe(true)
+    expect(autoDeferDecision(0, CORE, 0)).toBe(false)
   })
 
   // The reported trigger: one tool either side of the boundary.
   it("flips on a single tool across the boundary — the reported blast radius", () => {
-    const t = getAutoDeferThreshold()
+    const t = defaultThreshold()
     expect(autoDeferDecision(t, CORE, t)).not.toBe(autoDeferDecision(t, CORE, t + 1))
   })
 })
 
 describe("createPassthroughMcpServer with a pinned decision", () => {
-  const t = getAutoDeferThreshold()
+  const t = defaultThreshold()
 
   it("defers by live count when unpinned", () => {
     expect(createPassthroughMcpServer(withDeferrable(t), CORE).hasDeferredTools).toBe(false)

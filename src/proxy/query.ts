@@ -122,6 +122,12 @@ export interface QueryContext {
    * (`AgentAdapter.promptCacheLifetime`). Undefined leaves it to the CLI.
    */
   promptCacheLifetime?: "5m" | "1h"
+  /**
+   * The client's tool descriptions reach the model whole
+   * (`RequestContext.wholeToolDescriptions`). Passthrough only: elsewhere the
+   * child's MCP tools are the proxy's own and third parties'.
+   */
+  wholeToolDescriptions?: boolean
   /** Whether any passthrough tools use deferred loading */
   hasDeferredTools: boolean
   /**
@@ -566,6 +572,15 @@ export const SCRATCHPAD_COUNTER_INSTRUCTION =
   `or system temporary directory as requested by the user.\n` +
   `</meridian-note>`
 
+/**
+ * What `CLAUDE_CODE_MAX_MCP_DESCRIPTION_LENGTH` is set to for a client whose
+ * tool descriptions are to arrive whole. The CLI reads a positive integer of
+ * digits and has no way to say "no limit" (2.1.284); its default is 2,048.
+ * The longest description a Claude Code client sent when this was written was
+ * under 16,000 characters.
+ */
+const WHOLE_TOOL_DESCRIPTION_LENGTH = 1_000_000
+
 function resolveSystemPrompt(
   systemContext: string | undefined,
   passthrough: boolean,
@@ -712,6 +727,12 @@ export function buildQueryOptions(ctx: QueryContext, abortController?: AbortCont
         // inherited environment for the same reason: an operator who set it,
         // or FORCE_PROMPT_CACHING_5M, has decided for every conversation.
         ...(ctx.promptCacheLifetime ? { CLAUDE_CODE_PROMPT_CACHE_TTL: ctx.promptCacheLifetime } : {}),
+        // The CLI's own switch for the length it cuts an MCP tool's description
+        // at, which is how a passthrough client's tools are registered. Ahead
+        // of the inherited environment as well: an operator's cap stands.
+        ...(passthrough && ctx.wholeToolDescriptions
+          ? { CLAUDE_CODE_MAX_MCP_DESCRIPTION_LENGTH: String(WHOLE_TOOL_DESCRIPTION_LENGTH) }
+          : {}),
         // Passthrough clients own filesystem context. The CLI otherwise parses
         // replayed Ruby @app/@config as file mentions and invents Bash listings.
         // Explicit client media is unaffected; inherited env may opt out.

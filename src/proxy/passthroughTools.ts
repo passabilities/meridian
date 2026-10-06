@@ -230,51 +230,64 @@ function objectShapeFromJsonSchema(schema: JsonSchemaNode): Record<string, z.Zod
   return shape
 }
 
-/** Default threshold: auto-defer when tool count exceeds this.
+/** Default threshold: auto-defer when more tools than this would be deferred.
  *  Override with MERIDIAN_DEFER_TOOL_THRESHOLD env var. Set to 0 to disable. */
 const DEFAULT_DEFER_THRESHOLD = 15
 
-export function getAutoDeferThreshold(): number {
+/**
+ * Auto-defer starts once more tools than this would leave the prompt. The
+ * operator's `MERIDIAN_DEFER_TOOL_THRESHOLD` when set, else the client's own
+ * (`RequestContext.autoDeferThreshold`), else 15. `null` when the operator has
+ * set it to 0, which switches auto-defer off.
+ */
+export function getAutoDeferThreshold(clientThreshold?: number): number | null {
+  const fallback = clientThreshold ?? DEFAULT_DEFER_THRESHOLD
   const raw = process.env.MERIDIAN_DEFER_TOOL_THRESHOLD
-  if (raw === undefined) return DEFAULT_DEFER_THRESHOLD
+  if (raw === undefined) return fallback
   const parsed = Number.parseInt(raw, 10)
-  if (!Number.isFinite(parsed) || parsed < 0) return DEFAULT_DEFER_THRESHOLD
-  return parsed
+  if (!Number.isFinite(parsed) || parsed < 0) return fallback
+  return parsed === 0 ? null : parsed
 }
 
 /**
  * The tools auto-defer would take out of the prompt: everything outside the
- * adapter's core set, narrowed to `deferrablePrefixes` when the adapter gives
- * any. Names are the client's.
+ * adapter's core set, narrowed to `deferrablePrefixes` and `deferrableNames`
+ * when the adapter gives either. Names are the client's.
  *
- * The prefixes exist for a client whose own tools cannot be listed ahead of
+ * The two exist for a client whose own tools cannot all be listed ahead of
  * time. Claude Code's built-in set changes from release to release, but its
  * MCP tools are always `mcp__<server>__<tool>`, and those are what the client
- * itself defers.
+ * itself defers, with the ones of its own it names. A name is matched whole
+ * and as the client spells it.
  */
 export function autoDeferrableToolNames(
   tools: ReadonlyArray<{ name: string }>,
   coreToolNames: readonly string[] | undefined,
   deferrablePrefixes?: readonly string[],
+  deferrableNames?: readonly string[],
 ): string[] {
   if (!coreToolNames || coreToolNames.length === 0) return []
-  const isDeferrable = autoDeferrable(coreToolNames, deferrablePrefixes)
+  const isDeferrable = autoDeferrable(coreToolNames, deferrablePrefixes, deferrableNames)
   return tools.map(tool => tool.name).filter(isDeferrable)
 }
 
 function autoDeferrable(
   coreToolNames: readonly string[],
   deferrablePrefixes: readonly string[] | undefined,
+  deferrableNames: readonly string[] | undefined,
 ): (name: string) => boolean {
   const core = new Set(coreToolNames.map(name => name.toLowerCase()))
+  const listed = new Set(deferrableNames ?? [])
+  const narrowed = deferrablePrefixes !== undefined || deferrableNames !== undefined
   return name =>
     !core.has(name.toLowerCase()) &&
-    (!deferrablePrefixes || deferrablePrefixes.some(prefix => name.startsWith(prefix)))
+    (!narrowed || listed.has(name) || (deferrablePrefixes ?? []).some(prefix => name.startsWith(prefix)))
 }
 
 /**
  * Whether auto-defer applies, given how many tools it would take out of the
- * prompt (`autoDeferrableToolNames`).
+ * prompt (`autoDeferrableToolNames`) and the threshold
+ * (`getAutoDeferThreshold`, `null` for off).
  *
  * Pure, and exported so the caller can pin the answer for a session.
  *
@@ -294,11 +307,11 @@ function autoDeferrable(
  * budget changes with them (computePassthroughMaxTurns).
  */
 export function autoDeferDecision(
-  threshold: number,
+  threshold: number | null,
   coreToolNames: readonly string[] | undefined,
   deferrableCount: number,
 ): boolean {
-  return !!(threshold > 0 && coreToolNames && coreToolNames.length > 0 && deferrableCount > threshold)
+  return !!(threshold !== null && coreToolNames && coreToolNames.length > 0 && deferrableCount > threshold)
 }
 
 /**
@@ -316,16 +329,22 @@ export function createPassthroughMcpServer(
   tools: Array<{ name: string; description?: string; input_schema?: JsonSchemaNode; defer_loading?: boolean }>,
   coreToolNames?: readonly string[],
   serverName: string = PASSTHROUGH_MCP_NAME,
-  /** Pinned auto-defer decision for this session, when one has been made (#861). */
-  pinnedAutoDefer?: boolean,
-  /** Limits auto-defer to tools whose names start with one of these. */
+  /**
+   * The auto-defer decision, when the caller has made it: the session's pin
+   * (#861), or the request's own under the client's threshold. Unset, it is
+   * made here under the default one.
+   */
+  decidedAutoDefer?: boolean,
+  /** Limits auto-defer to tools whose names start with one of these, */
   deferrablePrefixes?: readonly string[],
+  /** or are one of these. */
+  deferrableNames?: readonly string[],
 ) {
   // Auto-defer: if enough tools would be deferred and adapter provides core tools
   const threshold = getAutoDeferThreshold()
-  const autoDefer = pinnedAutoDefer
-    ?? autoDeferDecision(threshold, coreToolNames, autoDeferrableToolNames(tools, coreToolNames, deferrablePrefixes).length)
-  const isAutoDeferrable = autoDefer && coreToolNames ? autoDeferrable(coreToolNames, deferrablePrefixes) : undefined
+  const autoDefer = decidedAutoDefer
+    ?? autoDeferDecision(threshold, coreToolNames, autoDeferrableToolNames(tools, coreToolNames, deferrablePrefixes, deferrableNames).length)
+  const isAutoDeferrable = autoDefer && coreToolNames ? autoDeferrable(coreToolNames, deferrablePrefixes, deferrableNames) : undefined
 
   // hasDeferredTools is true when: client explicitly defers any tool, OR auto-defer kicks in
   const hasDeferredTools = tools.some(t => t.defer_loading === true) || autoDefer

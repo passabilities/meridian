@@ -226,6 +226,27 @@ describe("buildQueryOptions", () => {
     expect(profile.options.env?.CLAUDE_CODE_PROMPT_CACHE_TTL).toBe("1h")
   })
 
+  // The CLI cuts an MCP tool's description at 2,048 characters, and an MCP
+  // tool is what a passthrough client's own tool is registered as.
+  it("lifts the CLI's cap on tool descriptions for a client whose tools are to arrive whole", () => {
+    const result = buildQueryOptions(makeContext({ passthrough: true, wholeToolDescriptions: true }))
+    expect(Number(result.options.env?.CLAUDE_CODE_MAX_MCP_DESCRIPTION_LENGTH)).toBeGreaterThanOrEqual(1_000_000)
+  })
+
+  it("leaves the cap alone for any other client, and outside passthrough", () => {
+    expect(buildQueryOptions(makeContext({ passthrough: true })).options.env?.CLAUDE_CODE_MAX_MCP_DESCRIPTION_LENGTH).toBeUndefined()
+    // There the MCP tools are the proxy's own and third parties', which the cap is for.
+    expect(buildQueryOptions(makeContext({ wholeToolDescriptions: true })).options.env?.CLAUDE_CODE_MAX_MCP_DESCRIPTION_LENGTH).toBeUndefined()
+  })
+
+  it("lets an operator's own cap stand, inherited or set on the profile", () => {
+    const whole = { passthrough: true, wholeToolDescriptions: true }
+    const inherited = buildQueryOptions(makeContext({ ...whole, cleanEnv: { CLAUDE_CODE_MAX_MCP_DESCRIPTION_LENGTH: "2048" } }))
+    expect(inherited.options.env?.CLAUDE_CODE_MAX_MCP_DESCRIPTION_LENGTH).toBe("2048")
+    const profile = buildQueryOptions(makeContext({ ...whole, envOverrides: { CLAUDE_CODE_MAX_MCP_DESCRIPTION_LENGTH: "2048" } }))
+    expect(profile.options.env?.CLAUDE_CODE_MAX_MCP_DESCRIPTION_LENGTH).toBe("2048")
+  })
+
   // The CLI opens the prompt with a snapshot of `git status` in its own
   // working directory, ahead of the prompt's breakpoints. Nothing cached
   // behind it is read back once a file there changes.

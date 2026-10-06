@@ -227,9 +227,25 @@ function turnStarts(watch: StopWatch, apiId: string | undefined): boolean {
   return false
 }
 
-/** The CLI's own list of models without tool search is `haiku`. */
+/**
+ * The models the CLI gives no tool search: a model whose lower-cased name
+ * holds one of these.
+ *
+ * NOTE: the CLI reads its list from a feature flag
+ * (`tengu_tool_search_unsupported_models`) and falls back to the two Claude 3
+ * Haikus; 2.1.284 and 2.1.290 alike. As the flag stood for a subscription on
+ * 2026-10-05 it named the Claude 3 models below and nothing later. The proxy
+ * cannot read what the child will be told, so this is the flag as it stood.
+ * Haiku 4.5, which is what the CLI's `haiku` is, has tool search: the 2.1.290
+ * client connected directly deferred its own tools on it.
+ */
+const MODELS_WITHOUT_TOOL_SEARCH = [
+  "claude-3-5-haiku", "claude-3-haiku", "claude-3-opus", "claude-3-sonnet", "claude-3-5-sonnet", "claude-3-7-sonnet",
+]
+
 function modelHasToolSearch(model: string): boolean {
-  return !/haiku/i.test(model)
+  const name = model.toLowerCase()
+  return !MODELS_WITHOUT_TOOL_SEARCH.some(entry => name.includes(entry))
 }
 
 /**

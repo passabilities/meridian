@@ -338,6 +338,73 @@ describe("what a deferred-tools session asks the SDK for", () => {
   })
 })
 
+describe("which of a Claude Code client's tools are deferred", () => {
+  beforeEach(() => { script = [assistant("msg_text", [{ type: "text", text: "Hello" }])] })
+
+  const tool = (name: string) => ({ name, description: `${name} tool`, input_schema: { type: "object", properties: { input: { type: "string" } } } })
+  // What the client keeps loaded on a direct connection, and what it defers.
+  const KEPT = ["Agent", "Bash", "Edit", "Read", "Skill", "Workflow"].map(tool)
+  const DEFERRED_ON_DIRECT = ["CronCreate", "NotebookEdit", "SendMessage", "TaskStop", "WebFetch", "WebSearch"].map(tool)
+  const serverTools = (count: number) => Array.from({ length: count }, (_, i) => tool(`mcp__srv__tool_${String(i).padStart(2, "0")}`))
+
+  /** A Claude Code request: told apart by its user agent, keyed by its own session id. */
+  const postClaudeCode = (tools: unknown[]) => app.fetch(new Request("http://localhost/v1/messages", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "x-api-key": "dummy", "user-agent": "claude-cli/2.1.290 (external, cli)" },
+    body: JSON.stringify({
+      model: "claude-sonnet-4-5", max_tokens: 400, stream: false, tools,
+      metadata: { user_id: JSON.stringify({ session_id: crypto.randomUUID() }) },
+      messages: ask("fetch the page"),
+    }),
+  }))
+
+  it("defers its own tools that it defers itself, beside its MCP servers' tools", async () => {
+    const response = await postClaudeCode([...KEPT, ...DEFERRED_ON_DIRECT, ...serverTools(12)])
+    expect(response.status).toBe(200)
+
+    const { options } = queries[0]!
+    expect(options.tools).toEqual(["ToolSearch"])
+    for (const { name } of [...DEFERRED_ON_DIRECT, ...serverTools(12)]) expect(systemText()).toContain(`\nmcp__oc__${name}\n`)
+    for (const { name } of KEPT) expect(systemText()).not.toContain(`\nmcp__oc__${name}\n`)
+  })
+
+  // The client defers them at any count when its tool search is on: a
+  // session without MCP servers, or a subagent with a few of these, sent them
+  // loaded through the proxy where it would not have on its own.
+  it("defers them at any count, as the client does", async () => {
+    const response = await postClaudeCode([...KEPT, ...DEFERRED_ON_DIRECT])
+    expect(response.status).toBe(200)
+    expect(queries[0]!.options.tools).toEqual(["ToolSearch"])
+    for (const { name } of DEFERRED_ON_DIRECT) expect(systemText()).toContain(`\nmcp__oc__${name}\n`)
+    for (const { name } of KEPT) expect(systemText()).not.toContain(`\nmcp__oc__${name}\n`)
+
+    await postClaudeCode([...KEPT, tool("WebFetch")])
+    expect(queries[1]!.options.tools).toEqual(["ToolSearch"])
+  })
+
+  it("defers nothing when it has nothing it would defer", async () => {
+    await postClaudeCode(KEPT)
+    expect(queries[0]!.options.tools).toEqual([])
+    expect(queries[0]!.options.maxTurns).toBe(1)
+  })
+
+  it("keeps to a threshold the operator has set, counting them with the MCP servers' tools", async () => {
+    process.env.MERIDIAN_DEFER_TOOL_THRESHOLD = "15"
+    await postClaudeCode([...KEPT, ...DEFERRED_ON_DIRECT, ...serverTools(9)])
+    expect(queries[0]!.options.tools).toEqual([])
+    expect(systemText()).not.toContain("available-deferred-tools")
+
+    await postClaudeCode([...KEPT, ...DEFERRED_ON_DIRECT, ...serverTools(10)])
+    expect(queries[1]!.options.tools).toEqual(["ToolSearch"])
+  })
+
+  it("defers nothing when the operator has switched auto-defer off", async () => {
+    process.env.MERIDIAN_DEFER_TOOL_THRESHOLD = "0"
+    await postClaudeCode([...KEPT, ...DEFERRED_ON_DIRECT, ...serverTools(40)])
+    expect(queries[0]!.options.tools).toEqual([])
+  })
+})
+
 describe("a session pinned to deferral whose tools are all loaded now", () => {
   // The pin (#861) holds the session's first decision. A client that then
   // drops every deferrable tool leaves it marked with nothing to defer.
@@ -829,8 +896,18 @@ describe("a Claude Code client", () => {
     expect(note).not.toContain("Own")
   })
 
-  it("defers nothing when its MCP servers bring only a few tools, however many it has itself", async () => {
+  // However few: the client's own tool search defers an MCP tool at any count.
+  it("defers its MCP servers' tools however few, and keeps however many of its own loaded", async () => {
     await postClaudeCode([...own(40), ...mcp(3)], `cc-few-${RUN}`)
+
+    expect(queries[0]!.options.tools).toEqual(["ToolSearch"])
+    const note = systemText().slice(systemText().indexOf("<available-deferred-tools>"))
+    expect(note.match(/^mcp__oc__mcp__srv__tool_\d\d$/gm)).toHaveLength(3)
+    expect(note).not.toContain("Own")
+  })
+
+  it("defers nothing when it has no MCP server and none of the tools it defers itself", async () => {
+    await postClaudeCode(own(40), `cc-none-${RUN}`)
 
     expect(queries[0]!.options.tools).toEqual([])
     expect(queries[0]!.options.maxTurns).toBe(1)

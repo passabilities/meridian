@@ -69,9 +69,21 @@ describe("resolveToolSearch", () => {
     expect(decide({ pinnedTurnBudget: 2 })).toEqual({ active: true })
   })
 
-  it("is off for haiku, which the CLI gives no tool search", () => {
-    expect(decide({ model: "haiku" })).toEqual({ active: false, reason: "model" })
-    expect(decide({ model: "claude-haiku-4-5-20251001" })).toEqual({ active: false, reason: "model" })
+  // The CLI keeps tool search from a model whose name holds one of a list it
+  // reads from a feature flag: by default the Claude 3 Haikus, and as the flag
+  // stood for a subscription on 2026-10-05, every Claude 3 model. Haiku 4.5,
+  // which is what the CLI's `haiku` is, has it; the 2.1.290 client connected
+  // directly deferred its own tools on it.
+  it("is on for Haiku 4.5, which is what the CLI's `haiku` is", () => {
+    expect(decide({ model: "haiku" })).toEqual({ active: true })
+    expect(decide({ model: "claude-haiku-4-5-20251001" })).toEqual({ active: true })
+  })
+
+  it("is off for a Claude 3 model, which the CLI gives no tool search", () => {
+    for (const model of ["claude-3-5-haiku-20241022", "claude-3-haiku-20240307", "claude-3-opus-20240229",
+      "claude-3-sonnet-20240229", "claude-3-5-sonnet-20241022", "claude-3-7-sonnet-20250219", "CLAUDE-3-5-HAIKU-latest"]) {
+      expect(decide({ model })).toEqual({ active: false, reason: "model" })
+    }
   })
 
   it("is off when the client brings a ToolSearch of its own", () => {

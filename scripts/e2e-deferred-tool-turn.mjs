@@ -39,11 +39,12 @@
 //   overrun   a model that only ever searches ends as `max_tokens`, not an
 //             error, after exactly the budget's Messages calls, and with no
 //             text the model did not write;
-//   haiku     a model the CLI gives no tool search keeps every tool loaded and
-//             the one-turn cap;
-//   unvouched  so does an upstream that is not Anthropic's own, until the
-//             operator vouches for it. The scripted API is one: the rest of the
-//             gate runs under MERIDIAN_PASSTHROUGH_TOOL_SEARCH=force.
+//   haiku     the same as direct on Haiku 4.5, which the CLI gives tool search
+//             (only Claude 3 models go without);
+//   unvouched  an upstream that is not Anthropic's own keeps every tool loaded
+//             and the one-turn cap, until the operator vouches for it. The
+//             scripted API is one: the rest of the gate runs under
+//             MERIDIAN_PASSTHROUGH_TOOL_SEARCH=force.
 //
 // FALLBACK (the CLI calls the model again after the stop):
 //   the first tool turn still reaches the client, at the price of the digest;
@@ -341,7 +342,7 @@ async function deferralCase(shape, stream) {
   check(first !== undefined && deferredTools.every(target => first.system.includes(`mcp__oc__${target.name}`)) && first.system.includes("available-deferred-tools"),
     "the system prompt names the deferred tools")
 
-  if (shape === "direct" || shape === "parallel") {
+  if (shape === "direct" || shape === "parallel" || shape === "haiku") {
     check(x.turnCalls.length === 1, "the tool turn costs one Messages call", `${x.turnCalls.length} call(s)`)
     check(x.turnResult?.subtype === "success", "the query ends in a success result", `subtype=${x.turnResult?.subtype}`)
     checkForwarded(x, shape === "parallel" ? [readTool, listTool] : [readTool])
@@ -429,7 +430,7 @@ try {
     for (const stream of [false, true]) {
       for (const shape of ["bare", "retry"]) await deferralCase(shape, stream)
     }
-    await loadedCase("haiku", true, "no tool search for this model")
+    await deferralCase("haiku", true)
     // The scripted API without the operator's word for it: the CLI leaves its
     // own tool search off for such a base URL, and the proxy must not force it.
     delete process.env.MERIDIAN_PASSTHROUGH_TOOL_SEARCH

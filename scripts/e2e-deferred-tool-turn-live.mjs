@@ -16,6 +16,10 @@
 //   discover  the model is asked for something only an MCP tool can answer: it
 //             has to find the tool with ToolSearch, call it, and the client has
 //             to run it for real (the answer is a value only the server knows).
+//   own       the model is asked for something only one of the client's own
+//             tools can answer, one that Claude Code defers on a direct
+//             connection and the proxy therefore defers with the server's: it
+//             has to be found with ToolSearch as well.
 //
 // The MCP server is a fixture written to the run's temp directory: one tool
 // that answers, and FILLER_TOOLS more that only take up room, as a real
@@ -32,14 +36,15 @@
 // PROBE_MODEL picks the model (default sonnet). E2E_CLAUDE_PATH picks the CLI
 // the proxy's SDK drives (default: this checkout's node_modules/.bin/claude,
 // the one `npm run start` uses). FILLER_TOOLS sizes the server (default 60).
-import { mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs"
-import { tmpdir } from "node:os"
+import { existsSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs"
+import { homedir, tmpdir } from "node:os"
 import { join, resolve } from "node:path"
 import { spawnSync } from "node:child_process"
 import { randomUUID } from "node:crypto"
 import { spyOn } from "bun:test"
 import * as sdk from "@anthropic-ai/claude-agent-sdk"
 import { setSessionStoreDir } from "../src/proxy/sessionStore.ts"
+import { CLAUDE_CODE_DEFERRED_TOOLS } from "../src/proxy/transforms/claudecode.ts"
 
 const say = console.log.bind(console)
 const which = spawnSync("command", ["-v", "claude"], { shell: true, encoding: "utf8" })
@@ -117,6 +122,9 @@ const observer = spyOn(sdk, "query").mockImplementation(input => {
   const record = { phase, model: options.model, maxTurns: options.maxTurns, resumed: Boolean(options.resume), resumeSessionAt: Boolean(options.resumeSessionAt),
     sdkTools: options.tools ?? [], clientTools: options.allowedTools?.length ?? 0,
     announced: (system.match(/^mcp__oc__mcp__fixture__/gm) ?? []).length,
+    // The client's own tools among the names announced, and among all it sent.
+    announcedOwn: (system.match(/^mcp__oc__(?!mcp__)\S+$/gm) ?? []).map(name => name.slice("mcp__oc__".length)).sort(),
+    own: (options.allowedTools ?? []).map(name => name.slice("mcp__oc__".length)).filter(name => !name.startsWith("mcp__")).sort(),
     calls: new Map(), toolUses: [], result: undefined }
   queries.push(record)
   const actual = realQuery(input)
@@ -160,7 +168,7 @@ async function runClient(name, prompt) {
   Object.assign(env, { CLAUDE_CONFIG_DIR: join(WORKDIR, `client-config-${name}`), ANTHROPIC_BASE_URL: `http://127.0.0.1:${address.port}`, ANTHROPIC_AUTH_TOKEN: "meridian-e2e-dummy" })
   const proc = Bun.spawn([CLIENT, "-p", prompt, "--model", MODEL, "--permission-mode", "default",
     "--mcp-config", mcpConfigPath, "--strict-mcp-config",
-    "--allowedTools", "Bash(echo:*)", "mcp__fixture__order_receipt"],
+    "--allowedTools", "Bash(echo:*)", "mcp__fixture__order_receipt", "CronList"],
   { cwd: WORKDIR, env, stdin: "ignore", stdout: "pipe", stderr: "pipe" })
   const timer = setTimeout(() => proc.kill(), 300_000)
   const [out, err, status] = await Promise.all([new Response(proc.stdout).text(), new Response(proc.stderr).text(), proc.exited])
@@ -178,9 +186,16 @@ try {
   runs.deferred = await runClient("deferred", echoPrompt)
   runs.discover = await runClient("discover",
     "Look up the receipt code of customer order 42 with the order receipt tool of the fixture MCP server, then reply with only the receipt code.")
+  runs.own = await runClient("own",
+    "Use the CronList tool to list the cron jobs scheduled in this session, then reply with only the number of scheduled jobs, as digits.")
 } finally {
   await proxy.close()
   observer.mockRestore()
+  // The SDK keeps a transcript per working directory, in each profile it ran as.
+  const slug = WORKDIR.replace(/[^A-Za-z0-9]/g, "-")
+  const installed = join(process.env.MERIDIAN_CONFIG_DIR ?? join(homedir(), ".config", "meridian"), "profiles.json")
+  const configDirs = existsSync(installed) ? JSON.parse(readFileSync(installed, "utf8")).map(profile => profile.claudeConfigDir).filter(Boolean) : []
+  for (const dir of [...configDirs, join(homedir(), ".claude")]) rmSync(join(dir, "projects", slug), { recursive: true, force: true })
 }
 
 const total = call => call.read + call.write + call.input
@@ -215,16 +230,20 @@ check(toolTurns("loaded").length >= 1 && toolTurns("loaded").every(query => quer
 say("\n  deferred (the same exchange)")
 check(runs.deferred.status === 0 && runs.deferred.out.includes(nonce), "the client ran the tool and answered with its output",
   `exit=${runs.deferred.status} out=${runs.deferred.out.slice(0, 80)}${runs.deferred.status === 0 ? "" : ` err=${runs.deferred.err.slice(-300)}`}`)
-check(withTools("deferred").length > 0 && withTools("deferred").every(query => JSON.stringify(query.sdkTools) === '["ToolSearch"]' && query.announced === FILLER_TOOLS + 1),
-  "every query offers ToolSearch and names the MCP server's tools, and only those",
-  withTools("deferred").map(query => `sdkTools=${JSON.stringify(query.sdkTools)} announced=${query.announced}`).join("; "))
+// The client's own tools it defers on a direct connection go with them, and
+// no other of its own.
+const deferredOnDirect = query => query.own.filter(name => CLAUDE_CODE_DEFERRED_TOOLS.includes(name))
+check(withTools("deferred").length > 0 && withTools("deferred").every(query => JSON.stringify(query.sdkTools) === '["ToolSearch"]' && query.announced === FILLER_TOOLS + 1
+    && query.announcedOwn.length > 0 && JSON.stringify(query.announcedOwn) === JSON.stringify(deferredOnDirect(query))),
+  "every query offers ToolSearch and names the MCP server's tools and the client's own that it defers itself, and only those",
+  withTools("deferred").map(query => `sdkTools=${JSON.stringify(query.sdkTools)} announced=${query.announced} of the server's and ${query.announcedOwn.length} of the client's ${query.own.length} (${query.announcedOwn.join(", ")})`).join("; "))
 check(toolTurns("deferred").length >= 1 && toolTurns("deferred").every(query => query.calls.size === 1 && query.result === "success" && !query.toolUses.includes("ToolSearch")),
   "a call to one of the client's own tools is still one Messages call, with no ToolSearch",
   toolTurns("deferred").map(query => `${query.calls.size} call(s), ${query.result}, [${query.toolUses.join(",")}]`).join("; ") || "no tool turn seen")
 const loadedPrompt = firstCall("loaded") ? total(firstCall("loaded")) : 0
 const deferredPrompt = firstCall("deferred") ? total(firstCall("deferred")) : 0
 check(loadedPrompt > 0 && deferredPrompt > 0 && deferredPrompt < loadedPrompt * 0.8,
-  "the prompt is smaller by the MCP server's tool definitions",
+  "the prompt is smaller by the deferred tools' definitions",
   `${loadedPrompt} tokens loaded, ${deferredPrompt} deferred: ${loadedPrompt - deferredPrompt} fewer per call (${Math.round((1 - deferredPrompt / loadedPrompt) * 100)}%)`)
 const resumedDeferred = withTools("deferred").filter(query => query.resumed)
 check(resumedDeferred.length >= 1 && resumedDeferred.every(query => query.resumeSessionAt && [...query.calls.values()].every(call => call.read > 0)),
@@ -243,6 +262,19 @@ const discoveryCalls = discovery ? [...discovery.calls.values()] : []
 check(discoveryCalls.length >= 2 && discoveryCalls.slice(1).every(call => call.read > 0),
   "the call after the ToolSearch round reads the prompt back from the cache",
   discoveryCalls.map(call => `prompt ${total(call)} read ${call.read} write ${call.write}`).join(" | "))
+
+say("\n  own (one of the client's own tools that is not in the prompt)")
+check(runs.own.status === 0 && /^\d+$/.test(runs.own.out), "the client ran its tool and answered with what it returned",
+  `exit=${runs.own.status} out=${runs.own.out.slice(0, 80)}${runs.own.status === 0 ? "" : ` err=${runs.own.err.slice(-300)}`}`)
+const ownDiscovery = withTools("own").find(query => query.toolUses.includes("ToolSearch"))
+const ownSearchAt = ownDiscovery?.toolUses.indexOf("ToolSearch") ?? -1
+const ownCallAt = ownDiscovery?.toolUses.findIndex(name => name === "mcp__oc__CronList") ?? -1
+check(ownDiscovery !== undefined && ownCallAt > ownSearchAt, "the model loaded it with ToolSearch and then called it, in one query",
+  ownDiscovery ? `tool_use=[${ownDiscovery.toolUses.join(",")}] ${ownDiscovery.calls.size} Messages call(s), ${ownDiscovery.result}` : `no ToolSearch seen: ${withTools("own").map(query => `[${query.toolUses.join(",")}]`).join(" ")}`)
+const ownResumed = withTools("own").filter(query => query.resumed)
+check(ownResumed.length >= 1 && ownResumed.every(query => query.resumeSessionAt && [...query.calls.values()].every(call => call.read > 0)),
+  "the follow-up resumes at the call with the client's result and reads the prompt back from the cache",
+  ownResumed.map(query => [...query.calls.values()].map(call => `read=${call.read} write=${call.write}`).join(",")).join("; ") || "no resumed query seen")
 
 const all = queries.filter(query => query.clientTools > 0)
 say(`\n${failures.length === 0 ? "PASS" : "FAIL"}: ${all.reduce((sum, query) => sum + query.calls.size, 0)} Messages call(s) across ${all.length} tool-bearing queries`)
