@@ -122,6 +122,17 @@ export interface AgentIdentity {
   auxiliaryPromptGrows?(c: Context, body?: unknown): boolean
 
   /**
+   * Optional: how long the prompt cache entries this request writes should
+   * live, where the client would have chosen other than the SDK child does.
+   *
+   * The child writes an SDK query's cache as it would a main conversation's.
+   * A client that keeps some of its conversations' caches for a shorter time
+   * says so here, and the child is asked for the same. Undefined, or no
+   * method, leaves the lifetime to the child.
+   */
+  promptCacheLifetime?(c: Context, body?: unknown): "5m" | "1h" | undefined
+
+  /**
    * Optional trusted identity for a visible human turn.
    *
    * This is deliberately a positive, normalized assertion. Callers must treat

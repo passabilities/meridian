@@ -682,6 +682,28 @@ general_settings:
       forward_headers: true
 ```
 
+### Prompt cache lifetime of Claude Code subagents
+
+On a subscription, Claude Code keeps a main conversation's prompt cache for an
+hour and an Agent-tool subagent's for five minutes. An hour's entry costs 2x
+input a token to write and five minutes' costs 1.25x, and a subagent works in
+one burst. Through Meridian each conversation is a query of its own SDK child,
+which the CLI takes for a main conversation, so a subagent's cache used to be
+written for an hour as well.
+
+A request that carries `x-claude-code-agent-id` (a subagent's turns, and the
+progress summaries forked from them) is now run with
+`CLAUDE_CODE_PROMPT_CACHE_TTL=5m` in its child's environment, which is the
+CLI's own switch for an SDK query. The main conversation is left to the CLI,
+and so is the auto-mode permission check, whose cache the CLI keeps for an
+hour itself.
+
+To decide for every conversation yourself, set `CLAUDE_CODE_PROMPT_CACHE_TTL`
+(`5m` or `1h`) or `FORCE_PROMPT_CACHING_5M=1` in the proxy's environment or in
+a profile's `env`. Either is passed to the child and wins over the above. An
+API-key profile writes for five minutes in any case, unless the operator has
+set `ENABLE_PROMPT_CACHING_1H`; a subagent's request is five minutes then too.
+
 ### Client-driven tool loops need a session header
 
 A request whose last message is a `tool_result` is a round of the client's own

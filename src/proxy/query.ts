@@ -116,6 +116,12 @@ export interface QueryContext {
    * part of what it writes ahead of the prompt that changes between queries.
    */
   ownsCacheBreakpoints?: boolean
+  /**
+   * How long this query's prompt cache entries should live, when the client
+   * would have chosen other than the CLI does for an SDK query
+   * (`AgentAdapter.promptCacheLifetime`). Undefined leaves it to the CLI.
+   */
+  promptCacheLifetime?: "5m" | "1h"
   /** Whether any passthrough tools use deferred loading */
   hasDeferredTools: boolean
   /**
@@ -702,6 +708,10 @@ export function buildQueryOptions(ctx: QueryContext, abortController?: AbortCont
       env: {
         // First, so an operator-set value of any kind overrides it.
         ...QUIET_SUBPROCESS_ENV,
+        // The CLI's own switch for an SDK query's cache lifetime. Ahead of the
+        // inherited environment for the same reason: an operator who set it,
+        // or FORCE_PROMPT_CACHING_5M, has decided for every conversation.
+        ...(ctx.promptCacheLifetime ? { CLAUDE_CODE_PROMPT_CACHE_TTL: ctx.promptCacheLifetime } : {}),
         // Passthrough clients own filesystem context. The CLI otherwise parses
         // replayed Ruby @app/@config as file mentions and invents Bash listings.
         // Explicit client media is unaffected; inherited env may opt out.

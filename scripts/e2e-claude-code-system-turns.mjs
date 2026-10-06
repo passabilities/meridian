@@ -103,6 +103,10 @@ Object.assign(process.env, {
   // The fixture profile authenticates with an API key, so the SDK child needs
   // nothing from the user's own Claude config; its transcripts stay under root.
   CLAUDE_CONFIG_DIR: join(root, "claude-config"),
+  // And an API key's prompt cache is written for five minutes whatever the
+  // conversation. This is the CLI's switch for the hour a subscription gets,
+  // so that the lifetime asked for a subagent can be told from the default.
+  ENABLE_PROMPT_CACHING_1H: "1",
   ...(process.env.E2E_CLAUDE_PATH ? { MERIDIAN_CLAUDE_PATH: resolve(process.env.E2E_CLAUDE_PATH) } : {}),
 })
 
@@ -131,6 +135,9 @@ function sse(blocks, stopReason, model, inputTokens) {
 // subagent's, told apart by the task its conversation opens with.
 const upstreamCalls = []
 const parentCalls = []
+// How long the cache breakpoints of a Messages request ask to be kept.
+const cacheLifetimes = body => [...new Set((JSON.stringify([body.system, body.tools, body.messages]).match(/"cache_control":\{[^{}]*\}/g) ?? [])
+  .map(mark => mark.includes('"ttl":"1h"') ? "1h" : "5m"))]
 const upstreamErrors = []
 let cliVersion
 const upstream = Bun.serve({ hostname: "127.0.0.1", port: 0, async fetch(request) {
@@ -142,14 +149,14 @@ const upstream = Bun.serve({ hostname: "127.0.0.1", port: 0, async fetch(request
     if (!readName) return sse([{ type: "text", text: "ok" }], "end_turn", body.model, 100)
     cliVersion ??= JSON.stringify(body.system ?? "").match(/cc_version=([0-9.]+[0-9])/)?.[1]
     if (SUBAGENT && !JSON.stringify(body.messages[0] ?? "").includes("SUBAGENT-TASK")) {
-      parentCalls.push({ messages: body.messages })
+      parentCalls.push({ messages: body.messages, cache: cacheLifetimes(body) })
       const agentName = (body.tools ?? []).map(tool => tool.name).find(name => name.endsWith("Agent"))
       if (parentCalls.length > 1 || !agentName) return sse([{ type: "text", text: "ALL-FIXTURES-READ" }], "end_turn", body.model, 9000)
       return sse([{ type: "tool_use", id: `toolu_delegate_${randomUUID().replaceAll("-", "").slice(0, 12)}`, name: agentName,
         input: { description: "Read fixtures", prompt: SUBAGENT_TASK, subagent_type: "general-purpose" } }], "tool_use", body.model, 4000)
     }
     const call = upstreamCalls.length + 1
-    upstreamCalls.push({ call, messages: body.messages, tools: (body.tools ?? []).map(tool => tool.name) })
+    upstreamCalls.push({ call, messages: body.messages, tools: (body.tools ?? []).map(tool => tool.name), cache: cacheLifetimes(body) })
     const read = index => ({ type: "tool_use", id: `toolu_round${call}_${index}_${randomUUID().replaceAll("-", "").slice(0, 12)}`, name: readName, input: { file_path: fixtures[index] } })
     if (call === 1) return sse([{ type: "text", text: "Reading two." }, read(0), read(1)], "tool_use", body.model, 100 + 5000 * call)
     if (call <= ROUNDS) return sse([read(call)], "tool_use", body.model, 100 + 5000 * call)
@@ -220,7 +227,7 @@ try {
 
   const env = { ...process.env }
   for (const key of Object.keys(env)) {
-    if (/^CLAUDE(CODE|_)/.test(key) || key.startsWith("MERIDIAN_") || key.startsWith("ANTHROPIC_") || key === "ENABLE_TOOL_SEARCH") delete env[key]
+    if (/^CLAUDE(CODE|_)/.test(key) || key.startsWith("MERIDIAN_") || key.startsWith("ANTHROPIC_") || key === "ENABLE_TOOL_SEARCH" || key === "ENABLE_PROMPT_CACHING_1H") delete env[key]
   }
   Object.assign(env, { CLAUDE_CONFIG_DIR: join(root, "client-config"), ANTHROPIC_BASE_URL: `http://127.0.0.1:${relay.port}`,
     ANTHROPIC_AUTH_TOKEN: "meridian-e2e-dummy", DISABLE_AUTOUPDATER: "1" })
@@ -277,6 +284,17 @@ try {
     "no round is sent as a replay of the conversation")
 
   check(upstreamCalls.length === ROUNDS + 1, "each request costs one Messages call", `${upstreamCalls.length} call(s)`)
+  // On a subscription the CLI keeps a main conversation's cache for an hour
+  // and a subagent's for five minutes; the proxy's query for a subagent is to
+  // ask for the same.
+  const lifetimes = calls => calls.map(call => call.cache.join("+") || "none").join(", ")
+  if (SUBAGENT) {
+    check(upstreamCalls.every(call => call.cache.length > 0 && call.cache.every(lifetime => lifetime === "5m")),
+      "the subagent's prompt cache is written for five minutes", lifetimes(upstreamCalls))
+    check(parentCalls.length > 0 && parentCalls.every(call => call.cache.includes("1h")), "the main thread's is written for an hour", lifetimes(parentCalls))
+  } else {
+    check(upstreamCalls.every(call => call.cache.includes("1h")), "the conversation's prompt cache is written for an hour", lifetimes(upstreamCalls))
+  }
   const deferred = main.length > 0 && main.every(query => JSON.stringify(query.sdkTools) === '["ToolSearch"]')
   console.log(`  note  ${main[0]?.clientTools ?? 0} client tools; ${upstreamCalls[0]?.tools.length ?? 0} declared to the API; ToolSearch ${deferred ? "on offer, turns ended by the hook" : "not on offer, turns ended by the cap"} (maxTurns ${[...new Set(main.map(query => query.maxTurns))].join(",")})`)
   if (MCP_TOOLS > 0) {

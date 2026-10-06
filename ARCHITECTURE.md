@@ -335,6 +335,7 @@ Agent-specific behavior is isolated behind the `AgentAdapter` interface (`adapte
 | `isAuxiliaryRequest(c, body)` | Declare a side call that shares the conversation's session key: it skips session lookup, publication and the turn lease (Claude Code's auto-mode classifier and background-agent progress summary) |
 | `getAuxiliaryReplayMessages(c, body)` | Optional: the messages such a side call's answer depends on, when that is less than the history it carries; only those are replayed into its session (Claude Code's progress summary: the latest step) |
 | `auxiliaryPromptGrows(c, body)` | Optional: true when such a side call repeats the prompt of the one before it and adds to its end; its prompt is then cut into blocks with the proxy's own cache breakpoints so each call reads back what the last wrote (Claude Code's auto-mode classifier: the transcript) |
+| `promptCacheLifetime(c, body)` | Optional: how long the client would have kept this conversation's prompt cache, where the SDK child would choose otherwise; every query the request makes asks the CLI for it, unless the operator's environment already decides (Claude Code's Agent-tool subagents: five minutes, where an SDK query gets the hour of a main conversation) |
 | `extractWorkingDirectory(body)` | Parse working directory from request body |
 | `normalizeContent(content)` | Normalize message content for hashing |
 | `getBlockedBuiltinTools()` | SDK tools replaced by agent's MCP equivalents |

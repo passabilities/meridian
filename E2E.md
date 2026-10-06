@@ -7229,6 +7229,97 @@ started proxy resolves the path first; the gate starts one now.
   `active+priority`.
 - Linux and Windows.
 
+## E79: The prompt cache lifetime of a Claude Code subagent
+
+**What it proves:** through Meridian a Claude Code subagent's prompt cache is
+written for five minutes and a main conversation's for an hour, as the client
+writes them on a direct connection.
+
+On a subscription the CLI keeps a main conversation's cache for an hour and an
+Agent-tool subagent's for five minutes. Read from one machine's own
+transcripts of direct sessions, 2026-10-05: a session's 2.4M main-thread cache
+tokens were all `ephemeral_1h`, its subagents' 1.3M all `ephemeral_5m`. An
+hour's entry costs 2x input a token to write, five minutes' 1.25x.
+
+Through Meridian every conversation is a query of its own SDK child, and the
+CLI counts an SDK query as a main conversation. So a subagent's cache was
+written for an hour too: a Fable request through a subscription profile came
+back with `ephemeral_1h_input_tokens: 4208` and `ephemeral_5m_input_tokens: 0`.
+What that costs depends on how a subagent's calls are spaced. In three days of
+one user's Fable subagents (56 conversations, 1,630 calls), 1.0% of the gaps
+between a subagent's consecutive calls ran past five minutes; replaying those
+transcripts under each lifetime, an hour cost 17% more prompt than five
+minutes. The same replay of the main threads came out 11% cheaper at an hour,
+so those are left alone.
+
+The CLI's own switch for an SDK query's lifetime is
+`CLAUDE_CODE_PROMPT_CACHE_TTL` (read from the 2.1.284 binary). The Claude Code
+adapter asks for `5m` on a request that carries `x-claude-code-agent-id`,
+other than the permission check, and `buildQueryOptions` puts it in the
+child's environment ahead of the inherited one, so an operator's own value
+still decides.
+
+### Run it
+
+```bash
+E2E_SUBAGENT=1 ROUNDS=2 bun scripts/e2e-claude-code-system-turns.mjs
+bun scripts/e2e-claude-code-system-turns.mjs
+```
+
+The gate is E77's: the real client, proxy, SDK and CLI against a scripted
+Messages API, no model calls. Its fixture profile is an API key, whose cache
+is written for five minutes whatever the conversation, so the gate sets
+`ENABLE_PROMPT_CACHING_1H` for the proxy: with it the child writes for an hour
+by default and the five minutes asked for a subagent can be told apart. The
+lifetimes are read off the `cache_control` marks of each Messages call the
+scripted API receives.
+
+### Pass criteria
+
+- With `E2E_SUBAGENT=1`: every Messages call of the subagent carries only
+  five-minute marks, and every call of the main thread an hour's.
+- Without it: every call of the conversation carries an hour's.
+- Everything E77 holds still holds in the same run.
+
+### Verified
+
+2026-10-05, macOS arm64. The client was 2.1.289 for the runs before the
+change and had updated itself to 2.1.290 for the runs after.
+
+| CLI under the SDK | Run | Before | After |
+|---|---|---|---|
+| 2.1.289 | subagent, 2 rounds | subagent `1h, 1h, 1h` | |
+| 2.1.289 | main conversation, 2 rounds | `1h, 1h, 1h` | |
+| 2.1.284 | subagent, 2 rounds | | subagent `5m, 5m, 5m`; main thread `1h, 1h, 1h` |
+| 2.1.290 | subagent, 2 rounds | | subagent `5m, 5m, 5m` |
+| 2.1.284 | main conversation, 5 rounds | | `1h` on all six calls |
+
+On two subscriptions, through the real client (E80): the subagent's two
+replies wrote 17,653 tokens for five minutes and none for an hour; the main
+thread's wrote 31,240 for an hour and none for five minutes.
+
+`src/__tests__/claude-code-cache-lifetime.test.ts` holds the adapter's rule,
+`query.test.ts` the environment and its precedence, and
+`claude-code-cache-lifetime-integration.test.ts` the request path: a
+subagent's request, the main conversation's, a request under an agent id from
+another client, an operator's own value, and a subagent's request replayed
+into a fresh session after a refused resume, streamed and not.
+
+### Not covered
+
+- The two rarer queries a request can make, the fresh session after a model
+  fallback and the nudge after a silent turn. They are given the lifetime by
+  the same argument as the others and have no test of their own.
+- A subagent that pauses more than five minutes between calls. It writes its
+  context again, as it does on a direct connection; in the sample above that
+  was one gap in a hundred.
+- The 17% and 11% are a replay of recorded transcripts under each lifetime,
+  not a measured before and after.
+- What a direct subagent is given under an API key with
+  `ENABLE_PROMPT_CACHING_1H`. Through Meridian it is five minutes.
+- Other clients. No other adapter declares a lifetime.
+- Linux and Windows.
+
 ## Concurrent transcript publication
 
 Run `bun scripts/e2e-publication-lifetime.mjs` and again with `--stream` after lifecycle or publication changes. This gate uses real Claude Max queries and two concurrent HTTP conversations, each with a fresh and resumed turn. A timing hook pauses each request after its real SDK writer lease is released, promotes its request pin as the owning proxy would, and runs a separate collector process before publication. The collector uses zero grace periods and the supported SDK deleter, exercising the destructive race in an isolated session store and disposable project.

@@ -255,6 +255,32 @@ export function claudeCodeAuxiliaryPromptGrows(body: unknown): boolean {
   return Boolean(body) && typeof body === "object" && hasClassifierShape(body as Parameters<typeof hasClassifierShape>[0])
 }
 
+/**
+ * How long the prompt cache entries a request writes should live.
+ *
+ * NOTE: agent-specific (claude-code). On a subscription the CLI writes a main
+ * conversation's cache for an hour and an Agent-tool subagent's for five
+ * minutes: a subagent works in one burst, and an hour's entry costs 2x input
+ * a token against 1.25x. Through Meridian every conversation is a query of
+ * its own SDK child, which the CLI takes for a main conversation, so a
+ * subagent's cache was written for an hour too (a Fable request through a
+ * subscription profile, 2026-10-05: `ephemeral_1h_input_tokens` 4208,
+ * `ephemeral_5m_input_tokens` 0). On three days of one user's Fable subagents,
+ * 1,630 calls, 1.0% of the gaps between a subagent's calls ran past five
+ * minutes, and writing for an hour cost 17% more prompt than writing for five.
+ *
+ * So a request under an agent id gets the five minutes the CLI would have
+ * given it: a subagent's turns, and the progress summary forked from them.
+ * The permission check is left to the child, since the CLI keeps that cache
+ * for an hour itself, and so is the main conversation, where an hour is the
+ * cheaper of the two (the same three days: 11% less than five minutes).
+ */
+export function claudeCodePromptCacheLifetime(agentId: string | undefined, body: unknown): "5m" | undefined {
+  if (agentId === undefined || !CLAUDE_CODE_AGENT_ID.test(agentId)) return undefined
+  if (body && typeof body === "object" && hasClassifierShape(body as Parameters<typeof hasClassifierShape>[0])) return undefined
+  return "5m"
+}
+
 /** The most a progress label is shown of any one tool input, tool output or note. */
 const AGENT_SUMMARY_FIELD_MAX = 2_000
 
@@ -456,6 +482,11 @@ export const claudeCodeAdapter: AgentAdapter = {
   /** See `claudeCodeAuxiliaryPromptGrows`. */
   auxiliaryPromptGrows(_c: Context, body?: unknown): boolean {
     return claudeCodeAuxiliaryPromptGrows(body)
+  },
+
+  /** See `claudeCodePromptCacheLifetime`. */
+  promptCacheLifetime(c: Context, body?: unknown): "5m" | undefined {
+    return claudeCodePromptCacheLifetime(c.req.header(CLAUDE_CODE_AGENT_ID_HEADER), body)
   },
 
   /**

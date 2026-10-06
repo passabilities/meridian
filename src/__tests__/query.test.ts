@@ -207,6 +207,25 @@ describe("buildQueryOptions", () => {
     expect(result.options.env?.DISABLE_PROMPT_CACHING).toBe("1")
   })
 
+  // The CLI writes an SDK query's prompt cache for an hour on a subscription.
+  // A client that would have written this conversation's for five minutes is
+  // matched through the CLI's own switch.
+  it("asks the CLI for the cache lifetime the client would have used", () => {
+    const result = buildQueryOptions(makeContext({ promptCacheLifetime: "5m" }))
+    expect(result.options.env?.CLAUDE_CODE_PROMPT_CACHE_TTL).toBe("5m")
+  })
+
+  it("leaves the cache lifetime to the CLI when the client has no say", () => {
+    expect(buildQueryOptions(makeContext()).options.env?.CLAUDE_CODE_PROMPT_CACHE_TTL).toBeUndefined()
+  })
+
+  it("lets an operator's own cache lifetime stand, inherited or set on the profile", () => {
+    const inherited = buildQueryOptions(makeContext({ promptCacheLifetime: "5m", cleanEnv: { CLAUDE_CODE_PROMPT_CACHE_TTL: "1h" } }))
+    expect(inherited.options.env?.CLAUDE_CODE_PROMPT_CACHE_TTL).toBe("1h")
+    const profile = buildQueryOptions(makeContext({ promptCacheLifetime: "5m", envOverrides: { CLAUDE_CODE_PROMPT_CACHE_TTL: "1h" } }))
+    expect(profile.options.env?.CLAUDE_CODE_PROMPT_CACHE_TTL).toBe("1h")
+  })
+
   // The CLI opens the prompt with a snapshot of `git status` in its own
   // working directory, ahead of the prompt's breakpoints. Nothing cached
   // behind it is read back once a file there changes.
