@@ -7644,11 +7644,11 @@ refused again soon after.
 
 The order reads the account's last usage read (`GET /api/oauth/usage`, a REST
 endpoint, not a model call) and the rate-limit figures its own responses carry.
-A request never waits on a read. They are refreshed only while a move is near
-(the active account refused, is out, or has used 80% of a window), in the
-background, at most once every five minutes per account, on top of that
-endpoint's 30-second cache. The 45-second auth keepalive (`claude auth status`)
-makes no model call either.
+They are refreshed only while a move is near (the active account refused, is
+out, or has used 80% of a window), at most once every five minutes per account,
+on top of that endpoint's 30-second cache, in the background unless a request
+is about to move with nothing read of where it could go (E88). The 45-second
+auth keepalive (`claude auth status`) makes no model call either.
 
 ### Run it
 
@@ -7680,11 +7680,11 @@ Tried: the active profile, 429; then the account the room order put first,
 
 ### Not covered
 
-`priority` mode keeps its configured pool order. A failover that comes before
-any usage read of the fallbacks (a proxy just started, with the active account
-already out and no page open) uses the configured order for that request. A
-conversation already on a healthy fallback stays there. `MERIDIAN_FALLBACK_ORDER=configured`
-switches the room order off.
+`priority` mode keeps its configured pool order. A conversation already on a
+healthy fallback stays there. `MERIDIAN_FALLBACK_ORDER=configured` switches the
+room order off. Until 2026-10-06 a failover that came before any usage read of
+the fallbacks (a proxy just started, with the active account already out and
+no page open) used the configured order for that request; see E88.
 
 ## E83: What Meridian adds to a Claude Code client's system prompt
 

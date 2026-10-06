@@ -172,6 +172,7 @@ import { getConversationFingerprint, getPriorityAssignmentKey } from "./session/
 
 import {
   lookupSession,
+  accountUsedLast,
   copyElsewhereHoldingMore,
   messagesHeld,
   storeSession,
@@ -712,6 +713,11 @@ type PriorityDispatchOptions = {
     /** The stored route no longer proves the current mapping generation. */
     readonly forceFreshReplay?: boolean
   }
+  /**
+   * The candidates left after a refusal, in the order to try them, given what
+   * is known by then. Absent: they are tried in the order given.
+   */
+  readonly reorderAfterRefusal?: (remaining: readonly string[]) => Promise<string[]>
 }
 
 /**
@@ -813,6 +819,13 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
   // CLI to refuse it in that exit window, so it waits for the session's last
   // turn to land there as long as a resume refused in the window is retried.
   const CARRY_LAST_TURN_WAIT_MS = RESUME_REFUSAL_RETRY_DELAY_MS * RESUME_REFUSAL_MAX_RETRIES * (RESUME_REFUSAL_MAX_RETRIES + 1) / 2
+  /** A conversation's copy on an account is kept under the client's key scoped to that account. */
+  const mappingKeyOn = (profileId: string, sessionId: string): string =>
+    profileId !== "default" ? `${profileId}:${sessionId}` : sessionId
+  // How long a prompt stays in an account's cache at most: Claude Code's main
+  // thread asks for an hour. A conversation last on an account longer ago than
+  // that has nothing there to go back to.
+  const PROMPT_CACHE_LIFE_MS = 60 * 60_000
 
   // Hard ceiling on how long one turn may hold its session lease. The lease is
   // released when the request finishes, which for a stream means when the body
@@ -1428,29 +1441,62 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
   // Keeping what the fallback order reads current. A usage read is a GET on
   // the account's usage endpoint (oauthUsage.ts), not a model call, and spends
   // no tokens; it still runs only while a move is near (the active account has
-  // refused, is out, or is past FALLBACK_USAGE_WATCH_SHARE of a window), in the
-  // background, and at most once in FALLBACK_USAGE_REFRESH_MS a profile on top
-  // of that endpoint's own 30-second cache. A request never waits on one.
+  // refused, is out, or is past FALLBACK_USAGE_WATCH_SHARE of a window), and at
+  // most once in FALLBACK_USAGE_REFRESH_MS a profile on top of that endpoint's
+  // own 30-second cache. A request waits on one only to place a move with
+  // nothing read of the accounts it could go to (awaitFallbackUsage), and no
+  // longer than FALLBACK_USAGE_WAIT_MS.
   const FALLBACK_USAGE_REFRESH_MS = 5 * 60_000
   const FALLBACK_USAGE_WATCH_SHARE = 0.8
+  const FALLBACK_USAGE_WAIT_MS = 3_000
   const fallbackUsageReadAt = new Map<string, number>()
+  const fallbackUsageReads = new Map<string, Promise<void>>()
+  /** Only claude-max profiles have a usage endpoint (refinePriorityCooldown). */
+  function hasUsageEndpoint(profileId: string): boolean {
+    const target = getEffectiveProfiles(finalConfig.profiles).find(p => p.id === profileId)
+    return (target?.type ?? "claude-max") === "claude-max"
+  }
   function refreshFallbackUsage(profileIds: readonly string[]): void {
     const now = Date.now()
     const profiles = getEffectiveProfiles(finalConfig.profiles)
     for (const profileId of profileIds) {
       const target = profiles.find(p => p.id === profileId)
-      // Only claude-max profiles have a usage endpoint (refinePriorityCooldown).
-      if ((target?.type ?? "claude-max") !== "claude-max") continue
+      if (!hasUsageEndpoint(profileId)) continue
       const last = Math.max(fallbackUsageReadAt.get(profileId) ?? 0, peekOAuthUsage(profileId)?.fetchedAt ?? 0)
       if (now - last < FALLBACK_USAGE_REFRESH_MS) continue
       fallbackUsageReadAt.set(profileId, now)
-      void fetchOAuthUsage({ profileId, claudeConfigDir: target?.claudeConfigDir }).catch(err => {
-        claudeLog("priority.fallback_usage_read_failed", {
-          profile: profileId,
-          error: err instanceof Error ? err.message : String(err),
+      const read = fetchOAuthUsage({ profileId, claudeConfigDir: target?.claudeConfigDir })
+        .then(() => undefined, (err: unknown) => {
+          claudeLog("priority.fallback_usage_read_failed", {
+            profile: profileId,
+            error: err instanceof Error ? err.message : String(err),
+          })
         })
-      })
+        .finally(() => fallbackUsageReads.delete(profileId))
+      fallbackUsageReads.set(profileId, read)
     }
+  }
+
+  /**
+   * Have something read of each of these accounts before a move is placed
+   * among them: start the read of any with nothing known that has not been
+   * read lately, and wait for those under way, no longer than
+   * FALLBACK_USAGE_WAIT_MS. Right after a restart nothing has been read, and a
+   * move placed by the configured order can land a conversation, and every
+   * conversation refused with it, on an account at its cap.
+   */
+  async function awaitFallbackUsage(profileIds: readonly string[]): Promise<void> {
+    const unknown = profileIds.filter(id => hasUsageEndpoint(id) && fallbackRoomWindows(id) === undefined)
+    if (unknown.length === 0) return
+    refreshFallbackUsage(unknown)
+    const reads = unknown.flatMap(id => fallbackUsageReads.get(id) ?? [])
+    if (reads.length === 0) return
+    let timer: ReturnType<typeof setTimeout> | undefined
+    await Promise.race([
+      Promise.all(reads),
+      new Promise<void>(resolve => { timer = setTimeout(resolve, FALLBACK_USAGE_WAIT_MS) }),
+    ])
+    clearTimeout(timer)
   }
 
   /** Inspect an inner response for an account-level failure without destroying
@@ -1591,7 +1637,9 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
     // Retry-After names the pool's earliest opening (#901).
     let earliestPoolReset: number | null = null
     const requestedModel = allowanceModel(options.body?.model)
-    for (const [attempt, candidate] of options.candidateIds.entries()) {
+    const candidateIds = [...options.candidateIds]
+    for (let attempt = 0; attempt < candidateIds.length; attempt++) {
+      const candidate = candidateIds[attempt]!
       const exposure: PriorityAttemptExposure = { committed: false }
       const priorityPublication = options.durableRoute && options.publicationTurn
         ? {
@@ -1705,6 +1753,11 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
         claudeLog("priority.failover_withheld", { profile: candidate, reason: exposure.reason ?? "attempt_exposed" })
         if (!settleAttempt("block")) return unavailableAttemptResponse()
         return sniffed.response
+      }
+      // Where this request goes next is placed by what is known now, which
+      // this refusal may be the first reason to have read.
+      if (options.reorderAfterRefusal && attempt + 1 < candidateIds.length) {
+        candidateIds.splice(attempt + 1, Infinity, ...await options.reorderAfterRefusal(candidateIds.slice(attempt + 1)))
       }
     }
     if (previous) {
@@ -2135,8 +2188,9 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
             // subagent keyed apart from its parent stays on the parent's
             // account (AgentIdentity.getRootSessionId).
             const adapterSessionId = adapter.getSessionId(c, body)
+            const rootSessionId = rootSessionIdOf(adapter, c, body)
             const sessionKey = getPriorityAssignmentKey(
-              rootSessionIdOf(adapter, c, body),
+              rootSessionId,
               lineageMessages,
               assignmentCwd,
             )
@@ -2269,28 +2323,58 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
               }
               let candidates: string[]
               let pool: readonly string[] = order
+              let reorderAfterRefusal: PriorityDispatchOptions["reorderAfterRefusal"]
               if (routingMode === ACTIVE_PRIORITY) {
                 const activeId = resolveProfile(finalConfig.profiles, finalConfig.defaultProfile).id
                 if (!order.includes(activeId)) pool = [activeId, ...order]
                 const fallbacks = order.filter(id => id !== activeId)
                 const now = Date.now()
+                const activeIsOut = isBenched(activeId)
                 // The active account out, or close to a cap: a move is near.
-                if (isBenched(activeId) || (usedShare(fallbackRoomWindows(activeId), { now, model: requestedModel }) ?? 0) >= FALLBACK_USAGE_WATCH_SHARE) {
+                if (activeIsOut || (usedShare(fallbackRoomWindows(activeId), { now, model: requestedModel }) ?? 0) >= FALLBACK_USAGE_WATCH_SHARE) {
                   refreshFallbackUsage(fallbacks)
                 }
                 // Where a refused request goes next, and where a conversation
                 // lands while the active account is out: the fallback with the
                 // most room, one whose weekly limit resets within a day first.
-                const ranked = fallbacksByRoom()
-                  ? orderFallbacksByRoom(fallbacks, fallbackRoomWindows, { now, model: requestedModel })
-                  : fallbacks
+                const rankByRoom = (ids: readonly string[]): string[] => fallbacksByRoom()
+                  ? orderFallbacksByRoom(ids, fallbackRoomWindows, { now: Date.now(), model: requestedModel })
+                  : [...ids]
+                // The fallback this conversation used last, which it goes back
+                // to ahead of that order (chooseActivePriorityCandidates): the
+                // one this process sent it to, or, after a restart forgot that,
+                // the one whose copy of it was used last within a cache's life.
+                // Read only when the order behind the active account is wanted.
+                const usedLastOf = (sessionId: string | undefined): string | undefined => sessionId
+                  ? accountUsedLast(fallbacks.map(id => ({ profileId: id, key: mappingKeyOn(id, sessionId) })), Date.now() - PROMPT_CACHE_LIFE_MS)
+                  : undefined
+                let usedLast: { readonly profileId: string | undefined } | undefined
+                const previousFallback = (): string | undefined => {
+                  if (assignedProfile !== undefined && assignedProfile !== activeId) return assignedProfile
+                  usedLast ??= { profileId: usedLastOf(adapterSessionId) ?? usedLastOf(rootSessionId) }
+                  return usedLast.profileId
+                }
+                // This request moves now: place it by what can be read of the
+                // accounts it may go to, as a request refused on the way does.
+                if (activeIsOut && !retainOnlyProfile && fallbacksByRoom()) await awaitFallbackUsage(fallbacks)
+                if (!retainOnlyProfile) {
+                  reorderAfterRefusal = async remaining => {
+                    if (fallbacksByRoom()) await awaitFallbackUsage(remaining)
+                    const back = previousFallback()
+                    const ranked = rankByRoom(remaining)
+                    return back !== undefined && ranked.includes(back) && !isBenched(back)
+                      ? [back, ...ranked.filter(id => id !== back)]
+                      : ranked
+                  }
+                }
+                const ranked = rankByRoom(fallbacks)
                 candidates = retainOnlyProfile
                   ? [retainOnlyProfile]
                   : chooseActivePriorityCandidates(
                       activeId,
                       [activeId, ...ranked],
                       isBenched,
-                      assignedProfile,
+                      activeIsOut ? previousFallback() : assignedProfile,
                     )
               } else {
                 const pick = choosePriorityProfile(order, isBenched)
@@ -2323,6 +2407,7 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
                 claimTurn: trustedTurn,
                 durableRoute,
                 routing: routingMode,
+                reorderAfterRefusal,
               })
             }
           }

@@ -17,6 +17,10 @@
 // set to the room order reversed, so only the room order can pick the account
 // it picks.
 //
+// COLD=1 runs it as a proxy just restarted finds itself: nothing read of any
+// account's usage before the request. The order is read in a separate
+// process instead, so the proxy's own reads are the ones its failover starts.
+//
 // Costs one refused request on ACTIVE (no tokens) and one short MODEL request
 // on the account that serves it; more refused ones if the accounts ahead of it
 // refuse too. Not in CI: it needs accounts in that state.
@@ -59,9 +63,25 @@ const proxyUrl = `http://127.0.0.1:${address.port}`
 const failures = []
 const check = (ok, label, detail) => { say(`  ${ok ? "PASS" : "FAIL"}  ${label}${detail ? ` — ${detail}` : ""}`); if (!ok) failures.push(label) }
 
+/** Each profile's usage windows, read in a process of its own so this one's cache stays as it was. */
+function readUsageApart() {
+  const reader = join(root, "read-usage.ts")
+  writeFileSync(reader, `
+    const { fetchOAuthUsage } = await import(${JSON.stringify(resolve(import.meta.dir, "../src/proxy/oauthUsage.ts"))})
+    const pool = ${JSON.stringify(pool.map(profile => ({ id: profile.id, claudeConfigDir: profile.claudeConfigDir })))}
+    const read = await Promise.all(pool.map(async profile => ({ id: profile.id, windows: (await fetchOAuthUsage({ profileId: profile.id, claudeConfigDir: profile.claudeConfigDir, force: true }))?.windows ?? [] })))
+    console.log(JSON.stringify(read))
+  `)
+  const child = Bun.spawnSync(["bun", reader], { cwd: root, env: process.env, stderr: "pipe" })
+  if (child.exitCode !== 0) throw new Error(`usage read failed: ${child.stderr.toString().slice(0, 300)}`)
+  return JSON.parse(child.stdout.toString().trim().split("\n").at(-1))
+}
+
 try {
-  const quota = await (await fetch(`${proxyUrl}/v1/usage/quota/all`)).json()
-  const windowsOf = new Map((quota.profiles ?? []).map(entry => [entry.id, entry.windows ?? []]))
+  const cold = process.env.COLD === "1"
+  const profilesRead = cold ? readUsageApart() : (await (await fetch(`${proxyUrl}/v1/usage/quota/all`)).json()).profiles ?? []
+  if (cold) say("  COLD: nothing of any account's usage read in the proxy before the request")
+  const windowsOf = new Map(profilesRead.map(entry => [entry.id, entry.windows ?? []]))
   const now = Date.now()
   const model = windowedModel(MODEL)
   const fallbacks = pool.map(profile => profile.id).filter(id => id !== ACTIVE)
@@ -100,6 +120,8 @@ try {
   check(Boolean(served) && expected, "it is served by the first account in the room order that serves it",
     `served by ${served}; room order starts ${roomOrder[0]}, configured order ${configured[0]}`)
   check(served !== configured[0] || roomOrder[0] === configured[0], "not by the account the configured order names first", configured[0])
+  const detours = rows.slice(1).map(row => row.profileId).filter(id => id !== served && roomOrder.indexOf(id) > roomOrder.indexOf(served ?? ""))
+  check(detours.length === 0, "no account behind it in the room order is tried on the way", detours.join(", ") || "none")
 } finally {
   await proxy.close?.()
   const slug = root.replace(/[^A-Za-z0-9]/g, "-")

@@ -486,6 +486,24 @@ export function copyElsewhereHoldingMore(
   return holdingMore[0]?.copy
 }
 
+/**
+ * Of these accounts, the one whose copy of a conversation was used last, if
+ * that was since `since`: where the conversation went last among them. Read
+ * from the shared store, so it outlives a restart that forgot it.
+ */
+export function accountUsedLast(
+  copies: ReadonlyArray<{ readonly profileId: string; readonly key: string }>,
+  since: number,
+): string | undefined {
+  let last: { readonly profileId: string; readonly at: number } | undefined
+  for (const copy of copies) {
+    const found = lookupSharedSessionResult(copy.key)
+    if (found.status !== "found" || found.session.lastUsedAt < since) continue
+    if (!last || found.session.lastUsedAt > last.at) last = { profileId: copy.profileId, at: found.session.lastUsedAt }
+  }
+  return last?.profileId
+}
+
 /** Look up a session by the Claude SDK session ID returned in responses.
  *  Searches both in-memory caches and the shared file store, returning the
  *  freshest matching state if multiple cache keys point to the same Claude session. */

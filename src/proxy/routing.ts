@@ -228,7 +228,8 @@ export function choosePriorityProfile(
  * Affinity still applies BELOW the active profile: while the active profile is
  * refusing, a session returns to the same fallback it used last time rather
  * than being re-picked each turn, so an outage costs one cold cache instead of
- * one per turn.
+ * one per turn. The same holds when the active profile, its bench over, is
+ * tried again and refuses again: that fallback comes next.
  */
 export function chooseActivePriorityCandidates(
   activeId: string,
@@ -239,15 +240,13 @@ export function chooseActivePriorityCandidates(
   // Deduped because a repeated id would make the dispatcher attempt the same
   // account twice, breaking its "each profile at most once per request" rule.
   const pool = [...new Set(order.includes(activeId) ? order : [activeId, ...order])]
-  let first: string
-  if (!isExhausted(activeId)) {
-    first = activeId
-  } else if (assigned && assigned !== activeId && pool.includes(assigned) && !isExhausted(assigned)) {
-    first = assigned
-  } else {
-    first = pool.find(id => !isExhausted(id)) ?? activeId
-  }
-  return [first, ...pool.filter(id => id !== first && !isExhausted(id))]
+  const previousFallback = assigned && assigned !== activeId && pool.includes(assigned) && !isExhausted(assigned)
+    ? assigned
+    : undefined
+  const head = !isExhausted(activeId)
+    ? [activeId, ...(previousFallback ? [previousFallback] : [])]
+    : [previousFallback ?? pool.find(id => !isExhausted(id)) ?? activeId]
+  return [...head, ...pool.filter(id => !head.includes(id) && !isExhausted(id))]
 }
 
 /** A usage window as fallback ordering reads it: the share spent (0..1) and when it turns over. */

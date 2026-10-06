@@ -515,6 +515,19 @@ describe("chooseActivePriorityCandidates", () => {
     expect(candidates[0]).toBe("corp3")
   })
 
+  it("puts the session's previous fallback next when the active profile is tried again", () => {
+    // Its bench over, the active profile may refuse once more: the session
+    // then goes back to the account that holds it rather than the head of
+    // the fallback order, which would write its whole prompt again.
+    const order = ["corp1", "corp2", "corp3"]
+    expect(chooseActivePriorityCandidates("corp1", order, none, "corp3")).toEqual(["corp1", "corp3", "corp2"])
+  })
+
+  it("does not put an exhausted previous fallback next", () => {
+    const order = ["corp1", "corp2", "corp3"]
+    expect(chooseActivePriorityCandidates("corp1", order, exhausted("corp3"), "corp3")).toEqual(["corp1", "corp2"])
+  })
+
   it("takes the highest-priority healthy profile when the active one is out and there is no assignment", () => {
     const order = ["corp1", "corp2", "corp3"]
     expect(chooseActivePriorityCandidates("corp2", order, exhausted("corp2"), undefined)[0]).toBe("corp1")

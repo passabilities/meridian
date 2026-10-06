@@ -9,7 +9,7 @@
  * moves conversations already under way - plus the refusal surfaces that make
  * a spent account visible in EVERY mode.
  */
-import { describe, it, expect, mock, beforeEach, afterEach } from "bun:test"
+import { describe, it, expect, mock, beforeEach, afterEach, setSystemTime } from "bun:test"
 import { installSdkMock } from "./sdkMock"
 import { installLoggerMock } from "./loggerMock"
 import { installMcpToolsMock } from "./mcpToolsMock"
@@ -924,4 +924,103 @@ describe("the fallback a refused request moves to", () => {
     for (const turn of ["one", "two", "three"]) expect((await post(app, {}, turn)).status).toBe(200)
     expect(usageReads.filter(id => id !== "work").sort()).toEqual(["personal", "spare"])
   })
+
+  /** Usage reads answered as the endpoint would, cached as a real read is: shares in percent. */
+  function answerUsageReads(weekly: Record<string, number>, delayMs = 0) {
+    __setFetchOAuthUsageOverride(async opts => {
+      const profileId = String(opts?.profileId)
+      usageReads.push(profileId)
+      if (weekly[profileId] === undefined) return null
+      await new Promise(resolve => setTimeout(resolve, delayMs))
+      return fetchOAuthUsage({
+        profileId, force: true,
+        store: { read: async () => ({ claudeAiOauth: { accessToken: "token", refreshToken: "refresh", expiresAt: Date.now() + HOUR } }), write: async () => true },
+        fetchImpl: async () => new Response(JSON.stringify({
+          five_hour: { utilization: 5, resets_at: new Date(Date.now() + HOUR).toISOString() },
+          seven_day: { utilization: weekly[profileId], resets_at: new Date(Date.now() + 120 * HOUR).toISOString() },
+        }), { status: 200, headers: { "content-type": "application/json" } }),
+      })
+    })
+  }
+
+  // Right after a restart nothing has been read: the first refusal used to
+  // move the conversation by the configured order, onto an account that might
+  // be at its cap, and every conversation refused with it went the same way.
+  it("is the one with the most room on the first move after a restart, before any usage was read", async () => {
+    answerUsageReads({ personal: 97, spare: 10 })
+    const app = createTestApp()
+    await setActive(app, "work")
+    failingDirs.add("ap-work")
+    expect((await post(app)).status).toBe(200)
+    expect(servedBy()).toEqual(["work", "spare"])
+  })
+
+  // Parallel conversations are refused together: those that come once the
+  // active account is known to be out move at once, and are placed by the
+  // reads the first refusal started.
+  it("places a request that comes while those reads are still out by what they read", async () => {
+    answerUsageReads({ personal: 97, spare: 10 }, 1_000)
+    const app = createTestApp()
+    await setActive(app, "work")
+    failingDirs.add("ap-work")
+    const first = post(app, {}, "first")
+    for (let waited = 0; !(await health(app)).exhausted.some(entry => entry.id === "work"); waited += 20) {
+      if (waited > 5_000) throw new Error("the active account was never benched")
+      await new Promise(resolve => setTimeout(resolve, 20))
+    }
+    const second = post(app, {}, "second")
+    expect((await first).status).toBe(200)
+    expect((await second).status).toBe(200)
+    expect(servedBy().filter(id => id !== "work")).toEqual(["spare", "spare"])
+  }, 20_000)
+
+  // A conversation the active account refuses again goes back to the account
+  // that holds it, whose cache may still be warm, rather than to the one with
+  // most room now: every other move writes its whole prompt again.
+  it("is the fallback a conversation used last when the active account refuses it again after its bench", async () => {
+    await seedUsage("personal", { weekly: 50 })
+    await seedUsage("spare", { weekly: 10 })
+    const app = createTestApp()
+    await setActive(app, "work")
+    // A throttled request is retried on its account before it moves, and its
+    // bench is the ten-minute default.
+    failureMessage = THROTTLED
+    failingDirs.add("ap-work")
+    const accounts = () => servedBy().filter((id, index, all) => id !== all[index - 1])
+    expect((await post(app, { "x-opencode-session": "back-again" }, "first")).status).toBe(200)
+    expect(accounts()).toEqual(["work", "spare"])
+    await seedUsage("spare", { weekly: 60 })
+    try {
+      setSystemTime(new Date(Date.now() + 11 * 60_000))
+      capturedEnvs = []
+      expect((await post(app, { "x-opencode-session": "back-again" }, "second")).status).toBe(200)
+      expect(accounts()).toEqual(["work", "spare"])
+    } finally {
+      setSystemTime()
+    }
+  }, 20_000)
+
+  it("is the fallback a conversation used last after a restart, which forgot where it went", async () => {
+    await seedUsage("personal", { weekly: 50 })
+    await seedUsage("spare", { weekly: 10 })
+    await setActive(createTestApp(), "work")
+    failingDirs.add("ap-work")
+    expect((await post(createTestApp(), { "x-opencode-session": "restarted" }, "first")).status).toBe(200)
+    expect(servedBy()).toEqual(["work", "spare"])
+    await seedUsage("spare", { weekly: 60 })
+    capturedEnvs = []
+    expect((await post(createTestApp(), { "x-opencode-session": "restarted" }, "second")).status).toBe(200)
+    expect(servedBy()).toEqual(["work", "spare"])
+  }, 20_000)
+
+  it("does not hold a refused request longer than a usage read is given", async () => {
+    answerUsageReads({ personal: 97, spare: 10 }, 10_000)
+    const app = createTestApp()
+    await setActive(app, "work")
+    failingDirs.add("ap-work")
+    const startedAt = Date.now()
+    expect((await post(app)).status).toBe(200)
+    expect(Date.now() - startedAt).toBeLessThan(5_000)
+    expect(servedBy()).toEqual(["work", "personal"])
+  }, 20_000)
 })
