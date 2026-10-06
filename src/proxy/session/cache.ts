@@ -419,6 +419,8 @@ export function lookupSession(
 
 /** A copy of a conversation's session kept under another account's key. */
 export interface CopyElsewhere {
+  /** The account it is kept under. */
+  readonly profileId: string
   readonly key: string
   readonly session: StoredSession
   /** The copy against the history at hand: what resuming it would be. */
@@ -426,37 +428,62 @@ export interface CopyElsewhere {
 }
 
 /**
- * The most recently used copy of this conversation on another account that
- * was used after `newerThan` and still holds the history at hand (its lineage
- * is not diverged), with that lineage. Undefined when there is none.
+ * How many of the history's leading messages a session holds, by its lineage
+ * against that history: a continuation or compaction holds what it resumes
+ * from and the reply it wrote to the last of that; an undo, all but the new
+ * message; a diverged session, nothing the history can use.
+ */
+export function messagesHeld(lineage: LineageResult, messages: ReadonlyArray<{ role: string }>): number {
+  switch (lineage.type) {
+    case "continuation":
+    case "compaction":
+      return lineage.resumeFrom + (messages[lineage.resumeFrom]?.role === "assistant" ? 1 : 0)
+    case "undo":
+      return lineage.prefixOverlap
+    case "diverged":
+      return 0
+  }
+}
+
+/**
+ * The copy of this conversation on another account that holds more of the
+ * history at hand than this account's own (which holds `own.held` messages of
+ * it), with its lineage: of several, the one holding the most, a continuation
+ * before another kind, then the most recently used. Undefined when none holds
+ * more.
  *
  * Copies are kept per account and outlive a move (DEFAULT_PROFILE_COPY_GRACE_MS),
  * so a conversation that comes back to an account finds the session it left
- * there, which ends where the conversation was then. A newer copy elsewhere
- * says where the conversation went on since: resumed, the old one would be
- * sent those turns as a delta, and a resume delta keeps only the user's side
- * of them, taking the assistant's for turns the session wrote itself.
+ * there, which ends where the conversation was then. A copy elsewhere holding
+ * more says the conversation went on there since: resumed, the one here would
+ * be sent those turns as a delta, and a resume delta keeps only the user's
+ * side of them, taking the assistant's for turns the session wrote itself. A
+ * copy elsewhere holding no more says nothing against the one here, however
+ * recently it was used: it was carried from this one and refused before its
+ * turn, or it has gone further than a rewind the history went back to.
  *
  * Reads the shared store only; a copy it cannot read does not count. Only
- * copies newer than `newerThan` are checked against the history, so a
+ * copies used since `own.lastUsedAt` are checked against the history, so a
  * conversation whose own copy is the newest costs a store read per account.
  */
-export function newestCopyElsewhere(
-  otherKeys: readonly string[],
+export function copyElsewhereHoldingMore(
+  others: ReadonlyArray<{ readonly profileId: string; readonly key: string }>,
   messages: Array<{ role: string; content: any }>,
-  newerThan = 0,
+  own: { readonly lastUsedAt: number; readonly held: number },
 ): CopyElsewhere | undefined {
-  const newer = otherKeys.flatMap(key => {
-    const found = lookupSharedSessionResult(key)
-    return found.status === "found" && found.session.lastUsedAt > newerThan ? [{ key, session: found.session }] : []
-  }).sort((left, right) => right.session.lastUsedAt - left.session.lastUsedAt)
-  for (const copy of newer) {
-    const lineage = verifyLineage(stateFromSharedSession(copy.session), messages, {
+  const holdingMore = others.flatMap(other => {
+    const found = lookupSharedSessionResult(other.key)
+    if (found.status !== "found" || found.session.lastUsedAt <= own.lastUsedAt) return []
+    const lineage = verifyLineage(stateFromSharedSession(found.session), messages, {
       compactionSurvival: process.env.MERIDIAN_COMPACTION_SURVIVAL === "1",
     })
-    if (lineage.type !== "diverged") return { ...copy, lineage }
-  }
-  return undefined
+    const held = messagesHeld(lineage, messages)
+    return held > own.held ? [{ copy: { ...other, session: found.session, lineage }, held }] : []
+  }).sort((left, right) =>
+    right.held - left.held
+    || Number(right.copy.lineage.type === "continuation") - Number(left.copy.lineage.type === "continuation")
+    || right.copy.session.lastUsedAt - left.copy.session.lastUsedAt)
+  return holdingMore[0]?.copy
 }
 
 /** Look up a session by the Claude SDK session ID returned in responses.

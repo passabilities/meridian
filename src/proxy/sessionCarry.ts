@@ -16,9 +16,9 @@
  *
  * File work only. Which session is carried, and when, is the server's.
  */
-import { mkdir, readdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises"
+import { mkdir, readdir, readFile, stat, writeFile } from "node:fs/promises"
 import { basename, dirname, join } from "node:path"
-import { randomUUID } from "node:crypto"
+import { setTimeout as sleep } from "node:timers/promises"
 
 /**
  * The longest folder name the CLI gives a project directory as it is. Longer
@@ -37,7 +37,9 @@ async function isFile(path: string): Promise<boolean> {
   try {
     return (await stat(path)).isFile()
   } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === "ENOENT") return false
+    // ENOTDIR: a path through a file, as one beside the project folders gives.
+    const code = (error as NodeJS.ErrnoException).code
+    if (code === "ENOENT" || code === "ENOTDIR") return false
     throw error
   }
 }
@@ -85,24 +87,74 @@ export function transcriptAs(text: string, sessionId: string): string {
   }).join("\n")
 }
 
+/** The UUIDs of a transcript's records, each its own line. */
+function recordUuids(text: string): Set<string> {
+  const uuids = new Set<string>()
+  for (const line of text.split("\n")) {
+    if (!line.trim()) continue
+    let record: unknown
+    try {
+      record = JSON.parse(line)
+    } catch {
+      // A torn last line, still being written: not a record yet.
+      continue
+    }
+    if (typeof record === "object" && record !== null && "uuid" in record && typeof record.uuid === "string") uuids.add(record.uuid)
+  }
+  return uuids
+}
+
+/**
+ * How often a transcript still missing a record is read again: the CLI
+ * batches its transcript writes on a timer this long (2.1.284).
+ */
+const RECORD_POLL_MS = 100
+
+export interface CopyTranscriptOptions {
+  /**
+   * Records the copy must hold, by UUID: the session's last turn. The
+   * session's previous process can still be writing that turn when the next
+   * request arrives (the CLI batches its writes, and the process exits after
+   * the turn is answered), and a copy taken before it lands would resume
+   * without it.
+   */
+  readonly holding?: readonly string[]
+  /** How long to wait for them, in milliseconds. */
+  readonly waitMs?: number
+  /** Ends the wait, as the request that wants the copy is cancelled. */
+  readonly signal?: AbortSignal
+}
+
 /**
  * Copy a transcript into another config directory, into the same project
- * folder, as session `sessionId`. The file appears whole or not at all, and
- * only its owner can read it, as the CLI keeps its own (0600): it holds the
- * conversation. Returns its path.
+ * folder, as session `sessionId`, once it holds every record in `holding`.
+ * Only its owner can read the copy, as the CLI keeps its own (0600): it holds
+ * the conversation. It is written in place, never over a file already there:
+ * nothing reads the session until it is handed out as the conversation's, and
+ * one cut short is deleted with the prepared session it is
+ * (sessionLifecycle.ts). Returns its path.
  */
-export async function copyTranscriptAs(sourcePath: string, targetConfigDir: string, sessionId: string): Promise<string> {
+export async function copyTranscriptAs(
+  sourcePath: string,
+  targetConfigDir: string,
+  sessionId: string,
+  { holding = [], waitMs = 0, signal }: CopyTranscriptOptions = {},
+): Promise<string> {
+  const deadline = Date.now() + waitMs
+  let text: string
+  for (;;) {
+    if (signal?.aborted) throw signal.reason
+    text = await readFile(sourcePath, "utf8")
+    const uuids = recordUuids(text)
+    const missing = holding.filter(uuid => !uuids.has(uuid))
+    if (missing.length === 0) break
+    const left = deadline - Date.now()
+    if (left <= 0) throw new Error(`the transcript does not hold the session's last turn (${missing.join(", ")})`)
+    await sleep(Math.min(RECORD_POLL_MS, left), undefined, { signal })
+  }
   const folder = join(targetConfigDir, "projects", basename(dirname(sourcePath)))
   const target = join(folder, `${sessionId}.jsonl`)
-  const text = transcriptAs(await readFile(sourcePath, "utf8"), sessionId)
   await mkdir(folder, { recursive: true, mode: 0o700 })
-  const partial = `${target}.${randomUUID()}.partial`
-  try {
-    await writeFile(partial, text, { flag: "wx", mode: 0o600 })
-    await rename(partial, target)
-  } catch (error) {
-    await rm(partial, { force: true })
-    throw error
-  }
+  await writeFile(target, transcriptAs(text, sessionId), { flag: "wx", mode: 0o600 })
   return target
 }

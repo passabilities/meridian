@@ -17,7 +17,7 @@
  * when `writeTranscripts` is on.
  */
 import { describe, it, expect, beforeEach, afterEach } from "bun:test"
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs"
+import { appendFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { installSdkMock } from "./sdkMock"
@@ -28,12 +28,21 @@ import { assistantMessage, resolveMockSdkSessionId } from "./helpers"
 interface SeenQuery {
   dir: string
   resume: string | undefined
+  /** The session the turn is written to. */
+  target: string
   prompt: string
   /** The resumed session's transcript, as the CLI would have read it. */
   resumedFrom?: string
 }
 let seen: SeenQuery[] = []
 let writeTranscripts = false
+/**
+ * When the next turn's reply reaches its transcript: this many milliseconds
+ * after the turn ends, as the CLI's batched writes can leave it, or never.
+ */
+let nextReplyWritten: number | "never" | undefined
+/** An account whose API refuses every turn. */
+let refusing: string | undefined
 
 async function promptText(prompt: unknown): Promise<string> {
   if (typeof prompt === "string") return prompt
@@ -50,13 +59,18 @@ installSdkMock(() => ({
     const dir = params.options?.env?.CLAUDE_CONFIG_DIR ?? "default"
     const cwd = params.options?.cwd ?? process.cwd()
     const sessionId = resolveMockSdkSessionId(params.options, "return-trip-session")
+    const replyWritten = nextReplyWritten
+    nextReplyWritten = undefined
     return (async function* () {
       const prompt = await promptText(params.prompt)
-      const query: SeenQuery = { dir, resume: params.options?.resume, prompt }
+      const query: SeenQuery = { dir, resume: params.options?.resume, target: sessionId, prompt }
       seen.push(query)
+      if (refusing && dir.endsWith(`/${refusing}`)) throw new Error("API Error: 429 rate limited")
+      const reply = { ...assistantMessage([{ type: "text", text: `answer from ${dir}` }]), session_id: sessionId }
       if (writeTranscripts) {
         // As the CLI: a resume reads the session from this config directory
-        // only, and the turn is written to the session it forks into.
+        // only, and the turn is written to the session it forks into, each
+        // record under the uuid the SDK reports for it.
         let earlier = ""
         if (query.resume) {
           const from = transcriptPath(dir, cwd, query.resume)
@@ -66,9 +80,11 @@ installSdkMock(() => ({
         }
         const to = transcriptPath(dir, cwd, sessionId)
         mkdirSync(join(to, ".."), { recursive: true })
-        writeFileSync(to, `${earlier}${JSON.stringify({ type: "user", sessionId, prompt })}\n${JSON.stringify({ type: "assistant", sessionId, text: `answer from ${dir}` })}\n`)
+        const replyRecord = `${JSON.stringify({ type: "assistant", sessionId, uuid: reply.uuid, text: `answer from ${dir}` })}\n`
+        writeFileSync(to, `${earlier}${JSON.stringify({ type: "user", sessionId, prompt })}\n${replyWritten === undefined ? replyRecord : ""}`)
+        if (typeof replyWritten === "number") setTimeout(() => appendFileSync(to, replyRecord), replyWritten)
       }
-      yield { ...assistantMessage([{ type: "text", text: `answer from ${dir}` }]), session_id: sessionId }
+      yield reply
     })()
   },
   createSdkMcpServer: () => ({ type: "sdk", name: "test", instance: {} }),
@@ -88,6 +104,7 @@ const { createProxyServer, clearSessionCache } = await import("../proxy/server")
 const { resetActiveProfile } = await import("../proxy/profiles")
 const { __setFetchOAuthUsageOverride, resetOAuthUsageCache } = await import("../proxy/oauthUsage")
 const { rateLimitStore } = await import("../proxy/rateLimitStore")
+const { setSessionStoreDir } = await import("../proxy/sessionStore")
 
 type TestApp = { fetch: (r: Request) => Response | Promise<Response> }
 type Message = { role: "user" | "assistant"; content: string }
@@ -142,16 +159,19 @@ let root = ""
 beforeEach(() => {
   seen = []
   writeTranscripts = false
+  nextReplyWritten = undefined
+  refusing = undefined
   root = realpathSync(mkdtempSync(join(tmpdir(), "meridian-return-trip-")))
   resetOAuthUsageCache()
   clearSessionCache()
   resetActiveProfile()
   rateLimitStore.clear()
   __setFetchOAuthUsageOverride(async () => null)
-  for (const key of ["MERIDIAN_ROUTING", "MERIDIAN_PROFILE_ORDER", "MERIDIAN_SESSION_CARRY"]) savedEnv[key] = process.env[key]
+  for (const key of ["MERIDIAN_ROUTING", "MERIDIAN_PROFILE_ORDER", "MERIDIAN_SESSION_CARRY", "MERIDIAN_BUSY_RETRY_DELAY_MS"]) savedEnv[key] = process.env[key]
   process.env.MERIDIAN_ROUTING = "active+priority"
   process.env.MERIDIAN_PROFILE_ORDER = "work,personal"
   delete process.env.MERIDIAN_SESSION_CARRY
+  delete process.env.MERIDIAN_BUSY_RETRY_DELAY_MS
 })
 
 afterEach(() => {
@@ -212,4 +232,143 @@ describe("a conversation that moves to another account and comes back", () => {
     expect(back.resume).toBeUndefined()
     expect(back.prompt).toContain("PERSONAL-ANSWER-3")
   })
+
+  it("resumes its own session when the user rewinds, after a move and back, to a point it holds", async () => {
+    writeTranscripts = true
+    const app = createApp()
+    await setActive(app, "work")
+    await turn(app, "rt-rewind", [{ role: "user", content: "FIRST-QUESTION" }])
+    const workSession = seen.at(-1)!.target
+    await setActive(app, "personal")
+    await turn(app, "rt-rewind", [
+      { role: "user", content: "FIRST-QUESTION" }, { role: "assistant", content: "WORK-ANSWER-1" },
+      { role: "user", content: "SECOND-QUESTION" },
+    ])
+    await turn(app, "rt-rewind", [
+      { role: "user", content: "FIRST-QUESTION" }, { role: "assistant", content: "WORK-ANSWER-1" },
+      { role: "user", content: "SECOND-QUESTION" }, { role: "assistant", content: "PERSONAL-ANSWER-2" },
+      { role: "user", content: "THIRD-QUESTION" },
+    ])
+    // Back on `work`, the user edits the second question. What is left of
+    // the history before it was all written on `work`, and `personal`'s
+    // copy, gone further, holds no more of it.
+    await setActive(app, "work")
+    await turn(app, "rt-rewind", [
+      { role: "user", content: "FIRST-QUESTION" }, { role: "assistant", content: "WORK-ANSWER-1" },
+      { role: "user", content: "SECOND-QUESTION-EDITED" },
+    ])
+    const back = seen.at(-1)!
+    expect(back.dir).toContain("work")
+    expect({ resume: back.resume, replayed: back.prompt.includes("<conversation_history>") }).toEqual({ resume: workSession, replayed: false })
+    expect(back.prompt).toContain("SECOND-QUESTION-EDITED")
+  })
+
+  it("leaves an account's own session as it was when the account it was carried to refuses", async () => {
+    writeTranscripts = true
+    const app = createApp()
+    await setActive(app, "personal")
+    await turn(app, "rt-refused", [{ role: "user", content: "FIRST-QUESTION" }])
+    const personalSession = seen.at(-1)!.target
+    // `work` comes first again and the conversation is carried there, but
+    // its API refuses the turn. The request fails over to `personal`, whose
+    // own copy is as current as the one just carried from it.
+    await setActive(app, "work")
+    refusing = "work"
+    await turn(app, "rt-refused", [
+      { role: "user", content: "FIRST-QUESTION" }, { role: "assistant", content: "PERSONAL-ANSWER-1" },
+      { role: "user", content: "SECOND-QUESTION" },
+    ])
+    expect(seen.some(query => query.dir.endsWith("/work"))).toBe(true)
+    const served = seen.at(-1)!
+    expect(served.dir).toContain("personal")
+    expect(served.resume).toBe(personalSession)
+  })
+
+  it("waits for the reply the other account is still writing before carrying its session", async () => {
+    writeTranscripts = true
+    const app = createApp()
+    await setActive(app, "work")
+    // The turn ends before its reply reaches the transcript: the CLI batches
+    // its writes, and its subprocess can still be exiting when the next
+    // request arrives.
+    nextReplyWritten = 1000
+    await turn(app, "rt-late", [{ role: "user", content: "FIRST-QUESTION" }])
+    const workTurn = seen.at(-1)!
+    await setActive(app, "personal")
+    await turn(app, "rt-late", [
+      { role: "user", content: "FIRST-QUESTION" }, { role: "assistant", content: "WORK-ANSWER-1" },
+      { role: "user", content: "SECOND-QUESTION" },
+    ])
+    const moved = seen.at(-1)!
+    expect(moved.resume).toBeDefined()
+    expect(moved.resumedFrom).toContain(`"text":"answer from ${workTurn.dir}"`)
+  })
+
+  it("replays rather than carry a session whose last reply never reached its transcript", async () => {
+    writeTranscripts = true
+    process.env.MERIDIAN_BUSY_RETRY_DELAY_MS = "10"
+    const app = createApp()
+    await setActive(app, "work")
+    nextReplyWritten = "never"
+    await turn(app, "rt-unwritten", [{ role: "user", content: "FIRST-QUESTION" }])
+    await setActive(app, "personal")
+    await turn(app, "rt-unwritten", [
+      { role: "user", content: "FIRST-QUESTION" }, { role: "assistant", content: "WORK-ANSWER-1" },
+      { role: "user", content: "SECOND-QUESTION" },
+    ])
+    const moved = seen.at(-1)!
+    expect(moved.resume).toBeUndefined()
+    expect(moved.prompt).toContain("WORK-ANSWER-1")
+  })
+
+  it("lets go of a carry cancelled with its request at once", async () => {
+    // Cancelled while it waits for a reply that never lands: the session it
+    // prepared on `personal` is retired for deletion then, not left prepared
+    // until its lease runs out. Manual routing: the account is the one set.
+    writeTranscripts = true
+    process.env.MERIDIAN_ROUTING = "manual"
+    setSessionStoreDir(join(root, "sessions"))
+    try {
+      const app = createApp()
+      await setActive(app, "work")
+      nextReplyWritten = "never"
+      await turn(app, "rt-cancel", [{ role: "user", content: "FIRST-QUESTION" }])
+      await setActive(app, "personal")
+      const personalStates = () => {
+        const sidecar = join(root, "sessions", "session-gc.json")
+        if (!existsSync(sidecar)) return []
+        const { resources } = JSON.parse(readFileSync(sidecar, "utf8")) as {
+          resources: Record<string, { state: string; locator: { configDir: string } }>
+        }
+        return Object.values(resources)
+          .filter(resource => resource.locator.configDir === join(root, "personal"))
+          .map(resource => resource.state)
+      }
+      const cancel = new AbortController()
+      const pending = app.fetch(new Request("http://localhost/v1/messages", {
+        method: "POST",
+        signal: cancel.signal,
+        headers: { "Content-Type": "application/json", "x-opencode-session": "rt-cancel" },
+        body: JSON.stringify({ model: "claude-sonnet-4-5", max_tokens: 128, stream: false, messages: [
+          { role: "user", content: "FIRST-QUESTION" }, { role: "assistant", content: "WORK-ANSWER-1" },
+          { role: "user", content: "SECOND-QUESTION" },
+        ] }),
+      }))
+      await until(() => personalStates().includes("prepared"))
+      cancel.abort()
+      await Promise.resolve(pending).catch((error: unknown) => error)
+      await until(() => !personalStates().includes("prepared"))
+      expect(personalStates()).toContain("retired")
+    } finally {
+      setSessionStoreDir(null)
+    }
+  })
 })
+
+async function until(condition: () => boolean, timeoutMs = 2000): Promise<void> {
+  const deadline = Date.now() + timeoutMs
+  while (!condition()) {
+    if (Date.now() > deadline) throw new Error(`not so after ${timeoutMs} ms`)
+    await new Promise(resolve => setTimeout(resolve, 10))
+  }
+}

@@ -4,7 +4,7 @@
  * copying it into another's, as a new session.
  */
 import { describe, it, expect, beforeEach, afterEach } from "bun:test"
-import { mkdirSync, mkdtempSync, readdirSync, readFileSync, realpathSync, rmSync, statSync, writeFileSync } from "node:fs"
+import { appendFileSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, realpathSync, rmSync, statSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { copyTranscriptAs, findTranscriptFile, projectFolderName, transcriptAs } from "../proxy/sessionCarry"
@@ -67,6 +67,13 @@ describe("findTranscriptFile", () => {
     expect(await findTranscriptFile(join(root, "account"), "missing", "/work/repo")).toBeUndefined()
     expect(await findTranscriptFile(join(root, "empty"), "missing", "/work/repo")).toBeUndefined()
   })
+
+  it("looks past a file among the project folders, as Finder leaves one", async () => {
+    const projects = join(root, "account", "projects")
+    mkdirSync(join(projects, "-work-repo"), { recursive: true })
+    writeFileSync(join(projects, ".DS_Store"), "")
+    expect(await findTranscriptFile(join(root, "account"), "missing", `/${"a".repeat(250)}`)).toBeUndefined()
+  })
 })
 
 describe("copyTranscriptAs", () => {
@@ -92,15 +99,45 @@ describe("copyTranscriptAs", () => {
     expect(statSync(join(root, "to", "projects", "-work-repo")).mode & 0o777).toBe(0o700)
   })
 
-  it("leaves only the whole file, even written twice under one id", async () => {
+  it("never writes over a transcript already there", async () => {
     const source = join(root, "from", "projects", "-work-repo", "s-1.jsonl")
     mkdirSync(join(source, ".."), { recursive: true })
     writeFileSync(source, `${record({ sessionId: "s-1" })}\n`)
-    await copyTranscriptAs(source, join(root, "to"), "s-2")
-    // The carry always names a new session; were it not, the second copy
-    // would replace the first whole, by rename, never leaving a part behind.
-    await copyTranscriptAs(source, join(root, "to"), "s-2")
+    const target = await copyTranscriptAs(source, join(root, "to"), "s-2")
+    // The carry always names a new session; one already there is not its own.
+    writeFileSync(source, `${record({ sessionId: "s-1", uuid: "later" })}\n`)
+    await expect(copyTranscriptAs(source, join(root, "to"), "s-2")).rejects.toThrow()
     expect(readdirSync(join(root, "to", "projects", "-work-repo"))).toEqual(["s-2.jsonl"])
-    expect(readFileSync(join(root, "to", "projects", "-work-repo", "s-2.jsonl"), "utf8")).toBe(`${record({ sessionId: "s-2" })}\n`)
+    expect(readFileSync(target, "utf8")).toBe(`${record({ sessionId: "s-2" })}\n`)
+  })
+
+  it("waits for the records it must hold, which the session's last process may still be writing", async () => {
+    const source = join(root, "from", "projects", "-work-repo", "s-1.jsonl")
+    mkdirSync(join(source, ".."), { recursive: true })
+    writeFileSync(source, `${record({ sessionId: "s-1", uuid: "u-1" })}\n`)
+    setTimeout(() => appendFileSync(source, `${record({ sessionId: "s-1", uuid: "a-1", parentUuid: "u-1" })}\n`), 50)
+    const target = await copyTranscriptAs(source, join(root, "to"), "s-2", { holding: ["a-1"], waitMs: 2000 })
+    expect(readFileSync(target, "utf8").split("\n").filter(Boolean).map(line => JSON.parse(line).uuid)).toEqual(["u-1", "a-1"])
+  })
+
+  it("copies nothing from a transcript that never gets them", async () => {
+    const source = join(root, "from", "projects", "-work-repo", "s-1.jsonl")
+    mkdirSync(join(source, ".."), { recursive: true })
+    // Named only as a parent, the record is not there.
+    writeFileSync(source, `${record({ sessionId: "s-1", uuid: "u-1", parentUuid: "a-1" })}\n`)
+    await expect(copyTranscriptAs(source, join(root, "to"), "s-2", { holding: ["a-1"], waitMs: 50 })).rejects.toThrow("a-1")
+    expect(existsSync(join(root, "to"))).toBe(false)
+  })
+
+  it("stops waiting when its request is cancelled", async () => {
+    const source = join(root, "from", "projects", "-work-repo", "s-1.jsonl")
+    mkdirSync(join(source, ".."), { recursive: true })
+    writeFileSync(source, `${record({ sessionId: "s-1", uuid: "u-1" })}\n`)
+    const cancel = new AbortController()
+    setTimeout(() => cancel.abort(), 20)
+    const started = Date.now()
+    await expect(copyTranscriptAs(source, join(root, "to"), "s-2", { holding: ["a-1"], waitMs: 5000, signal: cancel.signal })).rejects.toThrow()
+    expect(Date.now() - started).toBeLessThan(1000)
+    expect(existsSync(join(root, "to"))).toBe(false)
   })
 })

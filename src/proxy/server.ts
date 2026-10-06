@@ -172,7 +172,8 @@ import { getConversationFingerprint, getPriorityAssignmentKey } from "./session/
 
 import {
   lookupSession,
-  newestCopyElsewhere,
+  copyElsewhereHoldingMore,
+  messagesHeld,
   storeSession,
   rollbackPrioritySessionPublication,
   finalizePrioritySessionPublication,
@@ -808,6 +809,10 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
   // The env name predates the wider refusal set and stays as it is: renaming it
   // would silently drop anyone's existing override.
   const RESUME_REFUSAL_RETRY_DELAY_MS = parseInt(process.env.MERIDIAN_BUSY_RETRY_DELAY_MS ?? "500", 10)
+  // A carry to another account reads the session's transcript itself, with no
+  // CLI to refuse it in that exit window, so it waits for the session's last
+  // turn to land there as long as a resume refused in the window is retried.
+  const CARRY_LAST_TURN_WAIT_MS = RESUME_REFUSAL_RETRY_DELAY_MS * RESUME_REFUSAL_MAX_RETRIES * (RESUME_REFUSAL_MAX_RETRIES + 1) / 2
 
   // Hard ceiling on how long one turn may hold its session lease. The lease is
   // released when the request finishes, which for a stream means when the body
@@ -2876,18 +2881,19 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
         if (lineageResult.type === "undo" && adapterBase === "opencode" && !agentSessionId) {
           lineageResult = { type: "diverged", reason: "missing-session-header" }
         }
-        // A copy of this conversation on another account, used since the one
-        // here and still holding this history: copies are kept per account
-        // and outlive a move, so the one here can be older than the
-        // conversation (newestCopyElsewhere).
+        // A copy of this conversation on another account holding more of
+        // this history than the one here, which would be resumed or which is
+        // missing: copies are kept per account and outlive a move, so the one
+        // here can be behind the conversation (copyElsewhereHoldingMore).
         const ownCopy = durableMappingAtTurn.status === "found" ? durableMappingAtTurn.session : undefined
         const elsewhere = agentSessionId && profileSessionId && !isIndependentSession
-          ? newestCopyElsewhere(
+          && (lineageResult.type !== "diverged" || lineageResult.reason === "not-found")
+          ? copyElsewhereHoldingMore(
               getEffectiveProfiles(finalConfig.profiles)
                 .filter(other => other.id !== profile.id)
-                .map(other => other.id !== "default" ? `${other.id}:${agentSessionId}` : agentSessionId),
+                .map(other => ({ profileId: other.id, key: other.id !== "default" ? `${other.id}:${agentSessionId}` : agentSessionId })),
               lineageMessages,
-              ownCopy?.lastUsedAt ?? 0,
+              { lastUsedAt: ownCopy?.lastUsedAt ?? 0, held: messagesHeld(lineageResult, lineageMessages) },
             )
           : undefined
         // A conversation that comes back to this account after turns on
@@ -2896,7 +2902,7 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
         // elsewhere as a delta, which keeps only the user's side of them, so
         // the model would answer without the replies it gave there.
         if (lineageResult.type !== "diverged" && ownCopy && elsewhere) {
-          diagnosticLog.lineage(`${requestMeta.requestId} the copy of this conversation on ${profile.id} is older than the one on ${elsewhere.key.slice(0, Math.max(0, elsewhere.key.indexOf(":"))) || "the default account"}: it took turns there since.`)
+          diagnosticLog.lineage(`${requestMeta.requestId} the copy of this conversation on ${profile.id} holds less of it than the one on ${elsewhere.profileId}: it took turns there since.`)
           lineageResult = { type: "diverged", reason: "moved-on-elsewhere" }
         }
         /**
@@ -2918,12 +2924,23 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
             if (!sourcePath) return undefined
             const prepared = await prepareForkForPublication(transcriptLocator(randomUUID()), admissionLifecycleOptions)
             target = prepared
-            await copyTranscriptAs(sourcePath, prepared.configDir, prepared.sessionId)
-            const stored = await publishPinnedTranscript(prepared, () => storeSharedSession(
-              key, prepared.sessionId, from.messageCount, from.lineageHash, from.messageHashes, from.sdkMessageUuids,
-              from.contextUsage, from.messageBlockHashes, from.passthroughToolCallAssistantUuid ?? null,
-              from.passthroughToolCallIds ?? null, prepared, undefined, mappingExpectedGeneration,
-            ), admissionLifecycleOptions)
+            // The session's last turn, which its previous process may still
+            // be writing: its reply, and the tool call a passthrough turn
+            // stopped at.
+            const lastTurn = [from.sdkMessageUuids?.findLast(uuid => typeof uuid === "string"), from.passthroughToolCallAssistantUuid]
+              .filter((uuid): uuid is string => typeof uuid === "string")
+            await copyTranscriptAs(sourcePath, prepared.configDir, prepared.sessionId, {
+              holding: lastTurn, waitMs: CARRY_LAST_TURN_WAIT_MS, signal: requestAbort.controller.signal,
+            })
+            assertDurableWritesAllowed()
+            const stored = await publishPinnedTranscript(prepared, () => {
+              assertDurableWritesAllowed()
+              return storeSharedSession(
+                key, prepared.sessionId, from.messageCount, from.lineageHash, from.messageHashes, from.sdkMessageUuids,
+                from.contextUsage, from.messageBlockHashes, from.passthroughToolCallAssistantUuid ?? null,
+                from.passthroughToolCallIds ?? null, prepared, undefined, mappingExpectedGeneration,
+              )
+            }, admissionLifecycleOptions)
             if (stored === false) throw new Error("this account's copy of the conversation changed while it was carried")
             // What was decided for the session and told to it goes with it:
             // its tool deferral, and the deferred tools named in its turns.
@@ -2938,8 +2955,10 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
             const message = error instanceof Error ? error.message : String(error)
             claudeLog("session.carry_failed", { error: message })
             diagnosticLog.lineage(`${requestMeta.requestId} carrying the conversation's session to ${profile.id} failed (${message}); replaying its history instead.`)
+            // Not under the request's admission signal: a cancelled request
+            // is a reason to let the copy go, not one to keep it.
             if (target) {
-              await abandonFork(target, admissionLifecycleOptions).catch((abandonError: unknown) => {
+              await abandonFork(target, sessionGcOptions).catch((abandonError: unknown) => {
                 claudeLog("session.carry_abandon_failed", { error: abandonError instanceof Error ? abandonError.message : String(abandonError) })
               })
             }
