@@ -8,8 +8,18 @@
  * token-refresh.test.ts and other tests that swap globalThis.fetch.
  */
 
-import { describe, expect, test, beforeEach } from "bun:test"
-import { fetchOAuthUsage, fetchOAuthUsageResult, resetOAuthUsageCache, toUsageEntry } from "../proxy/oauthUsage"
+import { describe, expect, test, beforeEach, afterEach } from "bun:test"
+import { existsSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs"
+import { tmpdir } from "node:os"
+import { join } from "node:path"
+import {
+  fetchOAuthUsage,
+  fetchOAuthUsageResult,
+  peekOAuthUsage,
+  persistOAuthUsageTo,
+  resetOAuthUsageCache,
+  toUsageEntry,
+} from "../proxy/oauthUsage"
 import type { CredentialStore } from "../proxy/tokenRefresh"
 
 const SAMPLE_RESPONSE = {
@@ -638,5 +648,108 @@ describe("toUsageEntry", () => {
     expect(entry.stale).toBe(true)
     expect(entry.error).toBe("upstream_error")
     expect(entry.failure?.consecutiveFailures).toBe(1)
+  })
+})
+
+// A restart forgot every reading, and the endpoint refuses a read taken soon
+// after another (429), as one is when the run before it read moments earlier:
+// the readings that run took are what a restarted proxy knows of its accounts.
+describe("a reading kept across a restart", () => {
+  let dir: string
+  let file: string
+  const answered = fixedFetch(() => new Response(JSON.stringify(SAMPLE_RESPONSE), { status: 200 }))
+
+  beforeEach(() => {
+    resetOAuthUsageCache()
+    dir = mkdtempSync(join(tmpdir(), "meridian-usage-kept-"))
+    file = join(dir, "usage.json")
+  })
+
+  afterEach(() => {
+    resetOAuthUsageCache()
+    rmSync(dir, { recursive: true, force: true })
+  })
+
+  /** What a restart leaves: nothing in memory, and readings kept in the file again. */
+  function restart(): void {
+    resetOAuthUsageCache()
+    persistOAuthUsageTo(file)
+  }
+
+  test("is what the restarted proxy knows of the account", async () => {
+    persistOAuthUsageTo(file)
+    const read = await fetchOAuthUsage({ force: true, store: makeStore("t"), profileId: "kept", fetchImpl: answered })
+
+    restart()
+
+    expect(peekOAuthUsage("kept")).toEqual({ ...read!, restored: true })
+  })
+
+  test("stands in for a read the endpoint refuses after the restart", async () => {
+    persistOAuthUsageTo(file)
+    const read = await fetchOAuthUsage({ force: true, store: makeStore("t"), profileId: "refused", fetchImpl: answered })
+
+    restart()
+    const refused = await fetchOAuthUsageResult({
+      force: true, store: makeStore("t"), profileId: "refused",
+      fetchImpl: fixedFetch(() => new Response("rate limited", { status: 429, headers: { "Retry-After": "60" } })),
+    })
+
+    expect(refused.snapshot?.windows).toEqual(read!.windows)
+    expect(refused.snapshot?.fetchedAt).toBe(read!.fetchedAt)
+    expect(refused.snapshot?.stale).toBe(true)
+  })
+
+  test("gives way to the next reading, which is kept in its place", async () => {
+    persistOAuthUsageTo(file)
+    await fetchOAuthUsage({ force: true, store: makeStore("t"), profileId: "replaced", fetchImpl: answered })
+    restart()
+    const next = await fetchOAuthUsage({
+      force: true, store: makeStore("t"), profileId: "replaced",
+      fetchImpl: fixedFetch(() => new Response(JSON.stringify({
+        ...SAMPLE_RESPONSE, five_hour: { utilization: 80.0, resets_at: SAMPLE_RESPONSE.five_hour.resets_at },
+      }), { status: 200 })),
+    })
+
+    expect(peekOAuthUsage("replaced")).toEqual(next!)
+    expect(peekOAuthUsage("replaced")?.restored).toBeUndefined()
+    restart()
+    expect(peekOAuthUsage("replaced")?.windows.find(w => w.type === "five_hour")?.utilization).toBeCloseTo(0.8, 5)
+  })
+
+  // Every proxy sharing a session directory keeps its readings in the one file.
+  test("keeps the reading another proxy kept since this one started", async () => {
+    persistOAuthUsageTo(file)
+    const theirs = { windows: [{ type: "five_hour", utilization: 0.5, resetsAt: Date.now() + 60_000 }], extraUsage: null, fetchedAt: Date.now() }
+    writeFileSync(file, JSON.stringify({ version: 1, readings: { theirs } }))
+    await fetchOAuthUsage({ force: true, store: makeStore("t"), profileId: "ours", fetchImpl: answered })
+
+    restart()
+
+    expect(peekOAuthUsage("theirs")).toEqual({ ...theirs, restored: true })
+    expect(peekOAuthUsage("ours")?.restored).toBe(true)
+  })
+
+  test("is readable by its owner only", async () => {
+    persistOAuthUsageTo(file)
+    await fetchOAuthUsage({ force: true, store: makeStore("t"), profileId: "private", fetchImpl: answered })
+
+    expect(statSync(file).mode & 0o777).toBe(0o600)
+  })
+
+  test("is not kept unless the proxy keeps readings", async () => {
+    await fetchOAuthUsage({ force: true, store: makeStore("t"), profileId: "unkept", fetchImpl: answered })
+
+    expect(existsSync(file)).toBe(false)
+  })
+
+  test("a file that cannot be read restores nothing, and the next reading replaces it", async () => {
+    writeFileSync(file, "{ not json")
+
+    persistOAuthUsageTo(file)
+    expect(peekOAuthUsage("damaged")).toBeUndefined()
+    await fetchOAuthUsage({ force: true, store: makeStore("t"), profileId: "damaged", fetchImpl: answered })
+
+    expect(JSON.parse(readFileSync(file, "utf8")).readings.damaged.fetchedAt).toBe(peekOAuthUsage("damaged")!.fetchedAt)
   })
 })

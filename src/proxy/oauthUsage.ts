@@ -20,6 +20,9 @@
  * callers for the same profile share a single in-flight request.
  */
 
+import { randomUUID } from "node:crypto"
+import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs"
+import { dirname } from "node:path"
 import { claudeLog } from "../logger"
 import { parseRetryAfterMs } from "./retryAfter"
 import { createPlatformCredentialStore, refreshOAuthToken, type CredentialStore } from "./tokenRefresh"
@@ -88,6 +91,9 @@ export interface OAuthUsageSnapshot {
   /** Set when this is a previous snapshot served because a fresh fetch
    *  failed transiently (credential-read blip, upstream error). */
   stale?: boolean
+  /** Set when an earlier run of the proxy took this reading, kept on disk
+   *  across its restart (`persistOAuthUsageTo`). The next reading replaces it. */
+  restored?: boolean
 }
 
 /**
@@ -507,6 +513,7 @@ async function fetchOAuthUsageImpl(opts?: FetchOAuthUsageOpts): Promise<RawUsage
       failureByProfile.delete(cacheKey)
       const snapshot = buildSnapshot(result)
       cacheByProfile.set(cacheKey, snapshot)
+      keepReading(cacheKey, snapshot)
       return { snapshot, error: null }
     } catch (err) {
       claudeLog("oauth_usage.fetch_failed", { profile: cacheKey, error: err instanceof Error ? err.message : String(err) })
@@ -533,10 +540,119 @@ export function peekOAuthUsage(profileId?: string | null): OAuthUsageSnapshot | 
   return cacheByProfile.get(profileId ?? DEFAULT_KEY)
 }
 
-/** Test-only / shutdown helper — clears all cached snapshots and pending fetches. */
+/**
+ * Where each profile's last-good reading is kept across a restart, or null
+ * while readings are kept in memory only (the default; `startProxyServer`
+ * sets it).
+ *
+ * A restart forgets every reading, and the endpoint refuses a read taken soon
+ * after another of the same account (429), as one is when the run before the
+ * restart read it moments earlier: without these, the first move after a
+ * restart is placed by the configured order (server.ts `awaitFallbackUsage`).
+ * One file serves every proxy sharing a session directory, so each write
+ * replaces one profile's reading and keeps the others'.
+ */
+let keptReadings: { readonly file: string } | null = null
+
+/**
+ * Keep last-good readings in `file` from now on, and take those kept there by
+ * an earlier run as this run's own, marked `restored`. Null stops keeping them.
+ * Returns what stops keeping them in `file`, unless a later call has replaced it.
+ */
+export function persistOAuthUsageTo(file: string | null): () => void {
+  const kept = file === null ? null : { file }
+  keptReadings = kept
+  if (kept) {
+    for (const [cacheKey, reading] of readKeptReadings(kept.file)) {
+      const held = cacheByProfile.get(cacheKey)
+      if (!held || held.fetchedAt < reading.fetchedAt) cacheByProfile.set(cacheKey, { ...reading, restored: true })
+    }
+  }
+  return () => {
+    if (keptReadings === kept) keptReadings = null
+  }
+}
+
+const KEPT_READINGS_VERSION = 1
+
+function readKeptReadings(file: string): Map<string, OAuthUsageSnapshot> {
+  const readings = new Map<string, OAuthUsageSnapshot>()
+  if (!existsSync(file)) return readings
+  let document: unknown
+  try {
+    document = JSON.parse(readFileSync(file, "utf8"))
+  } catch (err) {
+    claudeLog("oauth_usage.kept_readings_unreadable", { file, error: err instanceof Error ? err.message : String(err) })
+    return readings
+  }
+  if (!isRecord(document) || document.version !== KEPT_READINGS_VERSION || !isRecord(document.readings)) {
+    claudeLog("oauth_usage.kept_readings_unreadable", { file, error: "unknown format" })
+    return readings
+  }
+  for (const [cacheKey, value] of Object.entries(document.readings)) {
+    const reading = keptReading(value)
+    if (reading) readings.set(cacheKey, reading)
+  }
+  return readings
+}
+
+/** Write `snapshot` as `cacheKey`'s kept reading, unless the file holds a later one. Never throws. */
+function keepReading(cacheKey: string, snapshot: OAuthUsageSnapshot): void {
+  const file = keptReadings?.file
+  if (!file) return
+  const temporary = `${file}.${process.pid}.${randomUUID()}.tmp`
+  try {
+    const readings = readKeptReadings(file)
+    const kept = readings.get(cacheKey)
+    if (kept && kept.fetchedAt > snapshot.fetchedAt) return
+    readings.set(cacheKey, { windows: snapshot.windows, extraUsage: snapshot.extraUsage, fetchedAt: snapshot.fetchedAt })
+    mkdirSync(dirname(file), { recursive: true, mode: 0o700 })
+    writeFileSync(temporary, JSON.stringify({ version: KEPT_READINGS_VERSION, readings: Object.fromEntries(readings) }), { mode: 0o600 })
+    renameSync(temporary, file)
+  } catch (err) {
+    claudeLog("oauth_usage.keep_reading_failed", { profile: cacheKey, error: err instanceof Error ? err.message : String(err) })
+  } finally {
+    rmSync(temporary, { force: true })
+  }
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value)
+}
+
+function isNumberOrNull(value: unknown): value is number | null {
+  return value === null || (typeof value === "number" && Number.isFinite(value))
+}
+
+function keptReading(value: unknown): OAuthUsageSnapshot | null {
+  if (!isRecord(value) || typeof value.fetchedAt !== "number" || !Number.isFinite(value.fetchedAt)) return null
+  if (!Array.isArray(value.windows)) return null
+  const windows: OAuthUsageWindow[] = []
+  for (const window of value.windows) {
+    if (!isRecord(window) || typeof window.type !== "string") return null
+    if (!isNumberOrNull(window.utilization) || !isNumberOrNull(window.resetsAt)) return null
+    windows.push({ type: window.type, utilization: window.utilization, resetsAt: window.resetsAt })
+  }
+  const extraUsage = value.extraUsage === null ? null : keptExtraUsage(value.extraUsage)
+  if (extraUsage === undefined) return null
+  return { windows, extraUsage, fetchedAt: value.fetchedAt }
+}
+
+/** Undefined when `value` is not an `OAuthExtraUsageInfo`. */
+function keptExtraUsage(value: unknown): OAuthExtraUsageInfo | undefined {
+  if (!isRecord(value)) return undefined
+  const { isEnabled, monthlyLimit, usedCredits, utilization, currency } = value
+  if (typeof isEnabled !== "boolean" || typeof monthlyLimit !== "number" || typeof usedCredits !== "number") return undefined
+  if (!isNumberOrNull(utilization) || typeof currency !== "string") return undefined
+  return { isEnabled, monthlyLimit, usedCredits, utilization, currency }
+}
+
+/** Test-only / shutdown helper — clears all cached snapshots and pending
+ *  fetches, and stops keeping readings on disk (the file stays). */
 export function resetOAuthUsageCache(): void {
   cacheByProfile.clear()
   inflightByProfile.clear()
   rateLimitedUntilByProfile.clear()
   failureByProfile.clear()
+  keptReadings = null
 }

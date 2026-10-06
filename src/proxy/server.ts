@@ -20,7 +20,7 @@ import { processSessionTree, truncateSessionKey, type SessionTreeRegistration } 
 import { AbortableSemaphore, getProcessSdkSemaphore, type SemaphoreLease } from "./concurrency"
 import { InflightRegistry, isLoopbackPeer, onResponseDone, type InflightHandle } from "./inflight"
 import { closeServerWithGracePeriod, trackServerConnections } from "./shutdown"
-import { fetchOAuthUsage, fetchOAuthUsageResult, toUsageEntry, peekOAuthUsage } from "./oauthUsage"
+import { fetchOAuthUsage, fetchOAuthUsageResult, toUsageEntry, peekOAuthUsage, persistOAuthUsageTo } from "./oauthUsage"
 import { resolveSdkWorkingDirectory } from "./cwd"
 import type { Context } from "hono"
 import { DEFAULT_PROXY_CONFIG, resolveBackendConfig } from "./types"
@@ -1489,14 +1489,17 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
 
   /**
    * Have something read of each of these accounts before a move is placed
-   * among them: start the read of any with nothing known that has not been
-   * read lately, and wait for those under way, no longer than
-   * FALLBACK_USAGE_WAIT_MS. Right after a restart nothing has been read, and a
-   * move placed by the configured order can land a conversation, and every
-   * conversation refused with it, on an account at its cap.
+   * among them: start the read of any with nothing known, or known only from
+   * before a restart, that has not been read lately, and wait for those under
+   * way, no longer than FALLBACK_USAGE_WAIT_MS. Right after a restart nothing
+   * has been read by this run, and a move placed by the configured order can
+   * land a conversation, and every conversation refused with it, on an account
+   * at its cap. A reading the run before it kept (`persistOAuthUsageTo`) places
+   * the move when the read is refused, as one taken soon after another is.
    */
   async function awaitFallbackUsage(profileIds: readonly string[]): Promise<void> {
-    const unknown = profileIds.filter(id => hasUsageEndpoint(id) && fallbackRoomWindows(id) === undefined)
+    const unknown = profileIds.filter(id => hasUsageEndpoint(id)
+      && (fallbackRoomWindows(id) === undefined || peekOAuthUsage(id)?.restored === true))
     if (unknown.length === 0) return
     refreshFallbackUsage(unknown)
     const reads = unknown.flatMap(id => fallbackUsageReads.get(id) ?? [])
@@ -10544,6 +10547,11 @@ export async function startProxyServer(config: Partial<ProxyConfig> = {}): Promi
   } = createProxyServer(config)
   if (initPlugins) await initPlugins()
 
+  // What the run before this one read of each account's usage: the endpoint
+  // refuses a read taken soon after another (429), so the first move after a
+  // restart is otherwise placed knowing nothing of the accounts it may go to.
+  const stopKeepingUsageReadings = persistOAuthUsageTo(join(getSessionStoreDir(), "usage.json"))
+
   // Only the owned HTTP-server lifecycle starts a periodic sweep. Embedders
   // using createProxyServer().app still sweep opportunistically after managed
   // commits without accumulating hidden timers they cannot close.
@@ -10745,6 +10753,8 @@ export async function startProxyServer(config: Partial<ProxyConfig> = {}): Promi
         } else if (!finalConfig.silent) {
           console.warn("[PROXY] Skipping final session GC because revoked requests have not settled.")
         }
+        // Last, so a reading taken while draining is still kept for the next run.
+        stopKeepingUsageReadings()
       })()
       return closePromise
     },

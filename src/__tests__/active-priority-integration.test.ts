@@ -10,6 +10,9 @@
  * a spent account visible in EVERY mode.
  */
 import { describe, it, expect, mock, beforeEach, afterEach, setSystemTime } from "bun:test"
+import { mkdtempSync, rmSync } from "node:fs"
+import { tmpdir } from "node:os"
+import { join } from "node:path"
 import { installSdkMock } from "./sdkMock"
 import { installLoggerMock } from "./loggerMock"
 import { installMcpToolsMock } from "./mcpToolsMock"
@@ -94,7 +97,7 @@ installMcpToolsMock(() => ({
 
 const { createProxyServer, clearSessionCache } = await import("../proxy/server")
 const { resetActiveProfile } = await import("../proxy/profiles")
-const { __setFetchOAuthUsageOverride, fetchOAuthUsage, resetOAuthUsageCache } = await import("../proxy/oauthUsage")
+const { __setFetchOAuthUsageOverride, fetchOAuthUsage, persistOAuthUsageTo, resetOAuthUsageCache } = await import("../proxy/oauthUsage")
 type CredentialStore = import("../proxy/tokenRefresh").CredentialStore
 const { rateLimitStore } = await import("../proxy/rateLimitStore")
 const { telemetryStore } = await import("../telemetry")
@@ -1023,4 +1026,86 @@ describe("the fallback a refused request moves to", () => {
     expect(Date.now() - startedAt).toBeLessThan(5_000)
     expect(servedBy()).toEqual(["work", "personal"])
   }, 20_000)
+
+  // A restart forgets what was read, and the endpoint refuses a read taken
+  // soon after another (429), as it does when the run before the restart read
+  // the same accounts moments earlier: what that run read, kept on disk,
+  // places the first move.
+  describe("after a restart", () => {
+    let dir: string
+    beforeEach(() => {
+      dir = mkdtempSync(join(tmpdir(), "meridian-ap-usage-"))
+      persistOAuthUsageTo(join(dir, "usage.json"))
+    })
+    afterEach(() => {
+      resetOAuthUsageCache()
+      rmSync(dir, { recursive: true, force: true })
+    })
+    /** What a restart leaves: nothing in memory, and the readings kept on disk loaded again. */
+    function restart(): void {
+      resetOAuthUsageCache()
+      persistOAuthUsageTo(join(dir, "usage.json"))
+    }
+    /** Usage reads refused as the endpoint refuses one taken soon after another. */
+    function refuseUsageReads() {
+      __setFetchOAuthUsageOverride(async opts => {
+        const profileId = String(opts?.profileId)
+        usageReads.push(profileId)
+        return fetchOAuthUsage({
+          profileId, force: true,
+          store: { read: async () => ({ claudeAiOauth: { accessToken: "token", refreshToken: "refresh", expiresAt: Date.now() + HOUR } }), write: async () => true },
+          fetchImpl: async () => new Response(JSON.stringify({ type: "error", error: { type: "rate_limit_error", message: "Rate limited. Please try again later." } }), {
+            status: 429, headers: { "content-type": "application/json", "retry-after": "60" },
+          }),
+        })
+      })
+    }
+
+    it("is the one with the most room by what the run before it read moments earlier", async () => {
+      await seedUsage("personal", { weekly: 97 })
+      await seedUsage("spare", { weekly: 10 })
+      restart()
+      refuseUsageReads()
+      const app = createTestApp()
+      await setActive(app, "work")
+      failingDirs.add("ap-work")
+      expect((await post(app)).status).toBe(200)
+      expect(servedBy()).toEqual(["work", "spare"])
+    })
+
+    it("is the one with the most room by what the run before it read, when the reads that would replace it are refused", async () => {
+      await seedUsage("personal", { weekly: 97 })
+      await seedUsage("spare", { weekly: 10 })
+      setSystemTime(new Date(Date.now() + 10 * 60_000))
+      try {
+        restart()
+        refuseUsageReads()
+        const app = createTestApp()
+        await setActive(app, "work")
+        failingDirs.add("ap-work")
+        expect((await post(app)).status).toBe(200)
+        expect(servedBy()).toEqual(["work", "spare"])
+        expect([...new Set(usageReads)].filter(id => id !== "work").sort()).toEqual(["personal", "spare"])
+      } finally {
+        setSystemTime()
+      }
+    })
+
+    it("is placed by reads that work rather than by what the run before it read ten minutes earlier", async () => {
+      await seedUsage("personal", { weekly: 97 })
+      await seedUsage("spare", { weekly: 10 })
+      setSystemTime(new Date(Date.now() + 10 * 60_000))
+      try {
+        restart()
+        answerUsageReads({ personal: 10, spare: 97 })
+        const app = createTestApp()
+        await setActive(app, "work")
+        failingDirs.add("ap-work")
+        expect((await post(app)).status).toBe(200)
+        expect(servedBy()).toEqual(["work", "personal"])
+      } finally {
+        setSystemTime()
+      }
+    })
+  })
 })
