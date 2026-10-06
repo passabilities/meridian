@@ -109,11 +109,21 @@ const { setSessionStoreDir } = await import("../proxy/sessionStore")
 type TestApp = { fetch: (r: Request) => Response | Promise<Response> }
 type Message = { role: "user" | "assistant"; content: string }
 
-async function turn(app: TestApp, session: string, messages: Message[]) {
+/**
+ * One turn of the conversation, keyed by `session`, or, for null, by its
+ * fingerprint: a client that sends no session key (ForgeCode), working in the
+ * test's directory.
+ */
+async function turn(app: TestApp, session: string | null, messages: Message[]) {
   const res = await app.fetch(new Request("http://localhost/v1/messages", {
     method: "POST",
-    headers: { "Content-Type": "application/json", "x-opencode-session": session },
-    body: JSON.stringify({ model: "claude-sonnet-4-5", max_tokens: 128, stream: false, messages }),
+    headers: session === null
+      ? { "Content-Type": "application/json", "x-meridian-agent": "forgecode" }
+      : { "Content-Type": "application/json", "x-opencode-session": session },
+    body: JSON.stringify({
+      model: "claude-sonnet-4-5", max_tokens: 128, stream: false, messages,
+      ...(session === null ? { system: `<current_working_directory>${root}</current_working_directory>` } : {}),
+    }),
   }))
   expect(res.status).toBe(200)
 }
@@ -128,7 +138,7 @@ async function setActive(app: TestApp, profile: string) {
 }
 
 /** The same conversation: a turn on `work`, two on `personal`, then back to `work`. */
-async function awayAndBack(app: TestApp, session: string): Promise<{ moved: SeenQuery; stayed: SeenQuery; back: SeenQuery }> {
+async function awayAndBack(app: TestApp, session: string | null): Promise<{ moved: SeenQuery; stayed: SeenQuery; back: SeenQuery }> {
   await setActive(app, "work")
   const history: Message[] = [{ role: "user", content: "FIRST-QUESTION" }]
   await turn(app, session, history)
@@ -221,6 +231,27 @@ describe("a conversation that moves to another account and comes back", () => {
     expect(back.prompt).toContain("FOURTH-QUESTION")
     expect(back.prompt).not.toContain("<conversation_history>")
     expect(back.prompt).not.toContain("SECOND-QUESTION")
+  })
+
+  // A client that sends no session key is keyed by its conversation's
+  // fingerprint, which is kept per account just the same.
+  it("is not resumed from the session it left there when it is keyed by its fingerprint", async () => {
+    const { back } = await awayAndBack(createApp(), null)
+    const resumedStale = back.resume !== undefined && !back.prompt.includes("PERSONAL-ANSWER-2")
+    expect({ resumedStale, prompt: back.prompt }).toEqual({ resumedStale: false, prompt: expect.stringContaining("FOURTH-QUESTION") })
+    expect(back.prompt).toContain("PERSONAL-ANSWER-3")
+  })
+
+  it("carries its newest session there and back when it is keyed by its fingerprint", async () => {
+    writeTranscripts = true
+    const { moved, back } = await awayAndBack(createApp(), null)
+    expect(moved.resume).toBeDefined()
+    expect(moved.resumedFrom).toContain("FIRST-QUESTION")
+    expect(moved.prompt).not.toContain("<conversation_history>")
+    expect(back.resume).toBeDefined()
+    expect(back.resumedFrom).toContain("THIRD-QUESTION")
+    expect(back.prompt).toContain("FOURTH-QUESTION")
+    expect(back.prompt).not.toContain("<conversation_history>")
   })
 
   it("replays instead of carrying when MERIDIAN_SESSION_CARRY=0", async () => {

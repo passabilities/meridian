@@ -7815,13 +7815,18 @@ FROM=<profile> TO=<profile> bun scripts/e2e-session-carry-live.mjs    # two real
 
 ### Verified
 
-HTTP, mocked SDK: 8 tests (`account-return-trip.test.ts`):
+HTTP, mocked SDK: 10 tests (`account-return-trip.test.ts`):
 
 - With nothing to carry, the way back is a replay of the whole history. Before
   the guard this test failed on the stale resume above.
 - With transcripts, the carry works both ways: the move and the way back each
   resume the newest session, and neither turn is replayed.
 - `MERIDIAN_SESSION_CARRY=0` replays both moves.
+- A client that sends no session key (ForgeCode), whose conversation is kept
+  under its fingerprint per account just the same: the guard and the carry
+  both hold for it (2 tests). Until 2026-10-06 they needed a session key, and
+  such a conversation coming back was sent "SECOND-QUESTION … THIRD-QUESTION …
+  FOURTH-QUESTION" on the account's stale copy.
 
 An independent review of the first version found five defects, each now a test
 that failed first:
@@ -7865,9 +7870,6 @@ turn was written.
 
 ### Not covered
 
-- A conversation with no session key (a fingerprint-keyed client): the guard and
-  the carry need a key, and such a conversation still resumes an account's own
-  copy when it comes back.
 - An attested OpenCode priority route, which keeps its own fresh replay on every
   move.
 - A copy written in another working directory than the one the SDK child runs
