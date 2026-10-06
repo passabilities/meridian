@@ -194,12 +194,25 @@ const relay = Bun.serve({ hostname: "127.0.0.1", port: 0, idleTimeout: 255, asyn
   const kind = isSummary(body.messages ?? []) ? "summary" : toolNamed(tools, "Read") ? "turn" : "side"
   const entry = { requestId, conversation: agentId ? `agent-${subagentOf(body.messages ?? []) || agentId}` : "main", agentId, kind, body, at: Date.now() }
   clientRequests.push(entry)
+  request.signal.addEventListener("abort", () => { if (!entry.ended) entry.droppedByClient = true })
   const response = await fetch(proxyUrl + url.pathname + url.search, { method: "POST", headers, body: raw, signal: AbortSignal.timeout(300_000) })
-  if (response.ok) return response
   // What the client was told, kept for the report: telemetry keeps only the error's type.
-  const answer = await response.text()
-  entry.refusal = `${response.status} ${answer.slice(0, 400)}`
-  return new Response(answer, { status: response.status, headers: response.headers })
+  if (!response.ok) {
+    const answer = await response.text()
+    entry.refusal = `${response.status} ${answer.slice(0, 400)}`
+    return new Response(answer, { status: response.status, headers: response.headers })
+  }
+  if (!response.body || !(response.headers.get("content-type") ?? "").includes("text/event-stream")) return response
+  // A stream can still carry an error event after its 200.
+  const decoder = new TextDecoder()
+  let seen = ""
+  const watched = response.body.pipeThrough(new TransformStream({ transform(chunk, controller) {
+    seen = (seen + decoder.decode(chunk, { stream: true })).slice(-4_000)
+    const at = seen.indexOf("event: error")
+    if (at !== -1 && !entry.refusal) entry.refusal = `200, then ${seen.slice(at, at + 400).replace(/\n/g, " ")}`
+    controller.enqueue(chunk)
+  }, flush() { if (!entry.ended) entry.ended = Date.now() } }))
+  return new Response(watched, { status: response.status, headers: response.headers })
 } })
 
 const failures = []
@@ -307,11 +320,14 @@ try {
   // design (claudecode.ts, agentSummaryReplayMessages).
   const replays = queries.filter(query => query.textPrompt?.includes("<conversation_history>") && !query.textPrompt.includes(SUMMARY_PROMPT))
   check(replays.length === 0, "no SDK query replays a conversation", `${queries.length} queries, ${replays.length} replayed`)
-  // The summaries: one call each, and every one of them answered.
+  // The summaries: one call each at most, and every one the client waited for
+  // answered. The client drops a summary it no longer wants, as it does direct.
   const summaryCalls = upstreamCalls.filter(call => call.kind === "summary")
   const summaryRows = summaries.map(entry => rowOf.get(entry.requestId))
-  check(summaryCalls.length === summaries.length && summaryRows.every(row => row?.status === 200), "each progress summary is answered with one Messages call",
-    `${summaries.length} summaries, ${summaryCalls.length} call(s), statuses ${[...new Set(summaryRows.map(row => row?.status ?? "missing"))].join(",")}`)
+  const dropped = summaries.filter(entry => entry.droppedByClient).length
+  check(summaryCalls.length <= summaries.length && summaryCalls.length >= summaries.length - dropped
+    && summaries.every(entry => entry.droppedByClient || rowOf.get(entry.requestId)?.status === 200), "each progress summary is answered with one Messages call",
+    `${summaries.length} summaries${dropped ? `, ${dropped} dropped by the client` : ""}, ${summaryCalls.length} call(s), statuses ${[...new Set(summaryRows.map(row => row?.status ?? "missing"))].join(",")}`)
   // The client sends one every 30 seconds for each subagent still running.
   // Answered in a session of its own, a summary still begins with what its
   // subagent's turns begin with, the tools and the system prompt, so the API

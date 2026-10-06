@@ -7759,6 +7759,7 @@ subscription.
 bun scripts/e2e-claude-code-parallel-subagents.mjs                   # 4 subagents, Fable 5.1; scripted API, no model calls
 bun scripts/e2e-claude-code-parallel-subagents.mjs claude-opus-5-5
 AGENTS=12 bun scripts/e2e-claude-code-parallel-subagents.mjs         # more than the 10 SDK children run at once
+PROFILES=2 MERIDIAN_ROUTING=active+priority bun scripts/e2e-claude-code-parallel-subagents.mjs   # every request through priority dispatch
 ```
 
 ### Verified
@@ -7771,10 +7772,28 @@ calls, with every SDK query after its first a resume. The main thread was
 and each summary was one call carrying the subagent's 27,339 characters of
 tools and 3,602 of system prompt ahead of a 2,482-character replay.
 
+Under `PROFILES=2 MERIDIAN_ROUTING=active+priority` (2026-10-06, with E88 and
+E89), the gate checks that every request went through priority dispatch:
+
+- 4 subagents: PASS, 32 of 32 requests dispatched.
+- 12 subagents, 12 runs, at a load average near 40 on 10 cores: 7 passed
+  whole. In all 12, every subagent finished, every request was dispatched,
+  and no SDK query replayed a conversation. In each of the other 5, one
+  request failed before any Messages call was made (`500 api_error` in
+  telemetry), a turn asked again by the client, once a progress summary.
+  The one failure whose answer was captured was `cannot capture SDK writer
+  process incarnation`: the `ps` probe of a new SDK child
+  (`processIncarnation.ts`) outlasting its 2 s under that load. The gate now
+  records what the client is answered, and tells a summary the client
+  dropped from one that failed.
+
 ### Not covered
 
 The client's interactive mode, a subagent's own subagents, compaction while
-subagents run, and accounts switching mid-run (E85).
+subagents run, and accounts switching mid-run (E85). The `ps` probe above
+can fail a request when many SDK children start at once on a saturated host;
+the client asks again, and nothing reaches the API. It was not in the owner's
+working proxy's log (500 lines, 2026-10-06).
 
 ## E85: A conversation that moves between accounts
 
