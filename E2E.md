@@ -1033,6 +1033,9 @@ curl -s -X PUT -H 'Content-Type: application/json' -d '{"checkForUpdates":false}
 | E81 | [Deferred tools named in a Claude Code conversation's turns](#e81-deferred-tools-named-in-a-claude-code-conversations-turns) | **Automated, no model calls, not in CI**: `bun scripts/e2e-claude-code-deferred-tools-in-turns.mjs` — real proxy, SDK and CLI against a scripted API, four turns in which an MCP tool connects and another disconnects. Asserts the deferred tools are named in the turn, all of them first and then only what came or went, with the system prompt, the loaded tools and every earlier message unchanged from call to call. **Live, needs a Claude Max profile**: `PROFILE=<profile> bun scripts/e2e-claude-code-deferred-tools-in-turns-live.mjs` — the model names a tool that connected after the first turn, and each turn reads the one before from cache. **Run before releases touching tool deferral, the Claude Code adapter or transform, or the SDK/CLI version** | 2026-10-06 |
 | E82 | [Where an active+priority failover goes](#e82-where-an-activepriority-failover-goes) | **Automated, no model calls**: `bun test src/__tests__/routing.test.ts src/__tests__/active-priority-integration.test.ts` — the fallback order by room and the 24-hour weekly reset, and when usage is read. **Live, needs a Claude Max profile out of one model's allowance and two others**: `ACTIVE=<profile> bun scripts/e2e-fallback-order-live.mjs` — a refused request lands on the first account of the room order that serves it, with the configured order set the other way round. **Run before releases touching routing, failover or usage reads** | 2026-10-06 |
 | E83 | [What Meridian adds to a Claude Code client's system prompt](#e83-what-meridian-adds-to-a-claude-code-clients-system-prompt) | **Automated, no model calls, not in CI**: `bun scripts/e2e-claude-code-system-turns.mjs` (E77's gate) — the real client over 127.0.0.1: the system prompt the API receives is the client's and the replay note, without the working-directory note, the scratchpad counter-instruction, the deferred tools' names or a second identity line. **Live**: `SPENT=<profile> ROOM=<profile> bun scripts/e2e-claude-code-account-switch-live.mjs` prints the prompt each turn carried, to set beside a direct run. **Run before releases touching the Claude Code adapter or transform, the SDK child's environment, or the client, SDK or CLI version** | 2026-10-06 |
+| E84 | [Parallel background subagents through the proxy](#e84-parallel-background-subagents-through-the-proxy) | **Automated, no model calls, not in CI**: `bun scripts/e2e-claude-code-parallel-subagents.mjs [model]` — the real client starts several subagents in the background at once, each through tool rounds and a progress summary: every conversation resumes, one Messages call per request, each call's messages beginning with the call before. `AGENTS=12` goes past the 10 SDK children run at once. **Run before releases touching session resume, the turn lease, progress summaries or the Claude Code adapter** | 2026-10-06 |
+| E85 | [A conversation that moves between accounts](#e85-a-conversation-that-moves-between-accounts) | **Automated**: `bun test src/__tests__/account-return-trip.test.ts`. **No model calls, not in CI**: `bun scripts/e2e-session-carry-cli.mjs [claude]` — a session copied into another config directory resumes in the real CLI with its turns structured and its system prompt. **Live, needs two Claude Max profiles**: `FROM=<profile> TO=<profile> bun scripts/e2e-session-carry-live.mjs` — there and back, each move resumed, nothing replayed. **Run before releases touching session mapping, routing, the session lifecycle or the CLI version** | 2026-10-06 |
+| E86 | [A conversation across a proxy restart](#e86-a-conversation-across-a-proxy-restart) | **Automated, no model calls, not in CI**: `bun scripts/e2e-claude-code-proxy-restart.mjs [model]` — turn 1 through one proxy process, turn 2 through a new one sharing its session store: a resume, no replay, turn 1's messages unchanged. **Run before releases touching session persistence or startup** | 2026-10-06 |
 
 | P1 | [Profile: List & Auth Status](#p1-profile-list--auth-status) | `/profiles/list` returns profiles with emails, login status, auth timestamps | - |
 | P2 | [Profile: Switch via API](#p2-profile-switch-via-api) | `POST /profiles/active` switches profile; health endpoint reflects new email | - |
@@ -7731,6 +7734,154 @@ subagent 7%.
 A request from another host, a forwarded one, or one whose directory the child
 does not run in still gets the working-directory note. The replay note (640
 characters) and the SDK child's own `# Environment` block (about 440) remain.
+
+## E84: Parallel background subagents through the proxy
+
+**What it proves:** the orchestrator shape holds through Meridian. A main
+thread starts several subagents at once, in the background as Claude Code runs
+them by default, and each works through its tool rounds while the others do.
+One round of each outlasts the client's 30-second progress-summary timer, so
+the client forks every subagent for a summary while that round runs. Every
+conversation, the main thread and each subagent, resumes request after
+request with one Messages call each, every call's messages beginning with the
+call before it, so the API can read them from cache. The summaries are
+answered on their own, each with its subagent's tools and system prompt ahead
+of a short replay, so those are read from cache too. The subagents' cache is
+written for five minutes and the main thread's for an hour, as on a
+subscription.
+
+### Run it
+
+```bash
+bun scripts/e2e-claude-code-parallel-subagents.mjs                   # 4 subagents, Fable 5.1; scripted API, no model calls
+bun scripts/e2e-claude-code-parallel-subagents.mjs claude-opus-5-5
+AGENTS=12 bun scripts/e2e-claude-code-parallel-subagents.mjs         # more than the 10 SDK children run at once
+```
+
+### Verified
+
+2026-10-06, client 2.1.291, CLI 2.1.291 (resolved by the proxy), scripted API:
+Fable 5.1 with 4 subagents (50 s), Opus 5.5 with 4 and Fable 5.1 with 12, all
+PASS. Each subagent made 5 requests, `new` and then 4 `continuation`s, in 5
+calls, with every SDK query after its first a resume. The main thread was
+`new` and then `continuation`s. Each subagent was forked once for a summary,
+and each summary was one call carrying the subagent's 27,339 characters of
+tools and 3,602 of system prompt ahead of a 2,482-character replay.
+
+### Not covered
+
+The client's interactive mode, a subagent's own subagents, compaction while
+subagents run, and accounts switching mid-run (E85).
+
+## E85: A conversation that moves between accounts
+
+**What it proves:** a conversation that moves to another account takes its
+SDK session with it, and one that comes back to an account it used before is
+served from where it went on since, not from where it left.
+
+Each account's SDK child keeps its sessions in that account's config
+directory, and Meridian keeps a copy of each conversation's mapping per
+account, which a profile switch leaves in place. Before, two things went wrong
+on a move:
+
+- A conversation that moved to an account holding no copy of it was replayed
+  there from the client's history, flattened into one user message of
+  bracketed text without the model's thinking. A replayed turn re-plans: 12K to
+  38K output tokens against 0.3K to 2.7K for a resumed turn of the same
+  sessions (Fable 5.1 subagents, 2026-10-05).
+- A conversation that came back to an account resumed the session it had left
+  there, and was sent the turns taken elsewhere as a resume delta, which keeps
+  only the user's side. With a mocked SDK, the model on the old account was
+  sent "SECOND-QUESTION … THIRD-QUESTION … FOURTH-QUESTION", with the two
+  answers given on the other account gone.
+
+Now an account resumes its own copy only if no other account's copy that
+holds the same history was used since. Otherwise the newest copy's transcript
+is copied into this account's config directory as a new session, with its
+message UUIDs (`sessionCarry.ts`). That copy is stored as this account's copy
+and resumed like any other. A move then costs the new account its prompt
+cache, as switching accounts costs a direct client.
+
+### Run it
+
+```bash
+bun test src/__tests__/account-return-trip.test.ts                    # HTTP, mocked SDK
+bun scripts/e2e-session-carry-cli.mjs [path to claude]                # the real CLI against a scripted API; no model calls
+FROM=<profile> TO=<profile> bun scripts/e2e-session-carry-live.mjs    # two real accounts, three short turns
+```
+
+### Verified
+
+HTTP, mocked SDK: 3 tests (`account-return-trip.test.ts`):
+
+- With nothing to carry, the way back is a replay of the whole history. Before
+  the guard this test failed on the stale resume above.
+- With transcripts, the carry works both ways: the move and the way back each
+  resume the newest session, and neither turn is replayed.
+- `MERIDIAN_SESSION_CARRY=0` replays both moves.
+
+The real CLI against a scripted API, 2.1.291 and 2.1.284: a session copied
+into a second config directory resumes there with `--resume --fork-session`.
+Turn 2's request carries turn 1 as `user, system, assistant[tool_use],
+user[tool_result], assistant[text], user`, with the same 5,891-character system
+prompt, and the turn is written under the second directory only.
+
+Live, 2026-10-06, client 2.1.291, Haiku 4.5 with thinking on, two Claude
+Max profiles, the active profile switched between turns (tokens per turn):
+
+| Turn | Account | Session | Cache write | Cache read | Output |
+|---|---|---|---|---|---|
+| 1 | first | new | 21,374 | 0 | 182 |
+| 2 | second | carried, resumed | 21,751 | 0 | 42 |
+| 3 | first again | carried back, resumed | 609 | 21,374 | 42 |
+
+The model knew each earlier answer, one SDK query per turn and none replayed.
+Turn 1's thinking, signed under the first account, was accepted under the
+second. Back on the first account, the carried prompt began byte for byte as
+turn 1's did, so that account's cache, still warm, was read, and only the new
+turn was written.
+
+### Not covered
+
+- A conversation with no session key (a fingerprint-keyed client): the guard and
+  the carry need a key, and such a conversation still resumes an account's own
+  copy when it comes back.
+- An attested OpenCode priority route, which keeps its own fresh replay on every
+  move.
+- A copy written in another working directory than the one the SDK child runs
+  in, and a transcript that is gone: both are replayed as before.
+- A conversation whose newest copy is a compaction or an undo of the history at
+  hand: replayed.
+
+## E86: A conversation across a proxy restart
+
+**What it proves:** a conversation resumes across a proxy restart (a deploy, or
+the supervisor bringing a crashed proxy back) instead of being replayed. Its
+mapping and its SDK transcript are on disk. What a process keeps only in
+memory (the deferred tools it named to a session, the deferral pin) is told
+again or decided again, and changes no message already sent.
+
+### Run it
+
+```bash
+bun scripts/e2e-claude-code-proxy-restart.mjs [model]   # real client, proxy, SDK and CLI; scripted API; no model calls
+```
+
+Turn 1 (a tool round and an answer) runs through one proxy process. Turn 2
+runs through a new process with the same config directory and session store.
+
+### Verified
+
+2026-10-06, client 2.1.291, Fable 5.1: turn 2 was a `continuation` that
+resumed the session turn 1 left, in one SDK query and no replay. The API
+received turn 1's messages unchanged, with the new turn after them.
+
+### Not covered
+
+A turn under way when the proxy stops is cut off and is replayed when the
+client retries it. A cache older than its lifetime is written again however
+the conversation resumes: five minutes for a subagent's, an hour for a main
+thread's.
 
 ## Concurrent transcript publication
 
