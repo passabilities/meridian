@@ -436,7 +436,8 @@ the layout stays off for the life of the process.
 A side call also holds its conversation up for as long as it is waited on, and
 has no long thinking pause to outlast, so it runs under its own, shorter
 upstream idle limit (`MERIDIAN_UPSTREAM_AUXILIARY_IDLE_MS`): a check the model
-API never answers is given up on, and retried by the client, sooner.
+API never answers is given up on, and retried by the client, sooner. Neither
+limit runs while a request waits for an SDK slot, which asks the model nothing.
 
 **A session header is identity, never authentication.** Polytoken's native
 `X-Polytoken-Session` header is the cleanest example: the trimmed header value

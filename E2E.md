@@ -1038,6 +1038,7 @@ curl -s -X PUT -H 'Content-Type: application/json' -d '{"checkForUpdates":false}
 | E86 | [A conversation across a proxy restart](#e86-a-conversation-across-a-proxy-restart) | **Automated, no model calls, not in CI**: `bun scripts/e2e-claude-code-proxy-restart.mjs [model]` — turn 1 through one proxy process, turn 2 through a new one sharing its session store: a resume, no replay, turn 1's messages unchanged. **Run before releases touching session persistence or startup** | 2026-10-06 |
 | E87 | [A client that goes away stops the model](#e87-a-client-that-goes-away-stops-the-model) | **Automated**: `bun test src/__tests__/priority-client-cancel.test.ts`. **No model calls, not in CI, needs a build**: `npm run build && bun scripts/e2e-claude-code-priority-cancel.mjs [model]` — the real client killed before any output, the built proxy under Node: the SDK child's request closed within 5 s, manual and active+priority. **Run before releases touching request cancellation, priority dispatch or the HTTP server** | 2026-10-06 |
 | E88 | [Where a failover goes before anything is read, and back to where the conversation was](#e88-where-a-failover-goes-before-anything-is-read-and-back-to-where-the-conversation-was) | **Automated**: `bun test src/__tests__/routing.test.ts src/__tests__/active-priority-integration.test.ts` — the first move after a restart waits up to 3 s for the fallbacks' usage reads and goes by room; a conversation refused again goes back to the fallback it used, across a restart too. **Live, needs a Claude Max profile out of one model's allowance and two others**: `COLD=1 ACTIVE=<profile> bun scripts/e2e-fallback-order-live.mjs` — E82's gate with nothing read in the proxy before the request. **Run before releases touching routing, failover, usage reads or startup** | 2026-10-06 |
+| E89 | [A request waiting for an SDK slot is not timed as the model's silence](#e89-a-request-waiting-for-an-sdk-slot-is-not-timed-as-the-models-silence) | **Automated**: `bun test src/__tests__/stream-idle-guard.test.ts src/__tests__/proxy-concurrency-coordination.test.ts`. **No model calls, not in CI**: `bun scripts/e2e-slot-wait-idle.mjs [model]` — one SDK slot held 25 s by a streaming turn: a queued progress summary and a queued streamed turn each wait past their limits and are answered, not "Upstream stalled". **Run before releases touching the SDK slot queue, the upstream idle limits or streaming** | 2026-10-06 |
 
 | P1 | [Profile: List & Auth Status](#p1-profile-list--auth-status) | `/profiles/list` returns profiles with emails, login status, auth timestamps | - |
 | P2 | [Profile: Switch via API](#p2-profile-switch-via-api) | `POST /profiles/active` switches profile; health endpoint reflects new email | - |
@@ -7984,7 +7985,7 @@ under priority routing to end at the cancel.
 
 The parallel-subagents gate (E84) with `PROFILES=2
 MERIDIAN_ROUTING=active+priority` passed with 4 subagents, all 32 requests
-through priority dispatch (2026-10-06, with E88). The run first
+through priority dispatch (2026-10-06, with E88 and E89). The run first
 recorded here had not used that routing: the gate cleared every `MERIDIAN_*`
 setting before starting its proxy and checked no route. It now keeps the
 routing it is given and checks that every request went through it.
@@ -8072,6 +8073,61 @@ active account, and not once it is out itself.
   room order.
 - An account whose usage cannot be read (an API-key profile, a read that
   fails) is placed as E82 places one with no usage known.
+
+## E89: A request waiting for an SDK slot is not timed as the model's silence
+
+**What it proves:** a streamed request that waits for one of the SDK slots
+(`MERIDIAN_MAX_CONCURRENT`, 10 by default) is not answered "Upstream stalled"
+for the wait. The upstream idle limit runs from when it has a slot, as it
+always has for a request sent without streaming.
+
+Under an orchestrator every slot can be held by subagents' turns. On the
+owner's working proxy on 2026-10-06, 06:44 to 07:00, an orchestrator's
+subagents on Opus and Sonnet: of 499 requests, those answered had waited a
+median 40 s for a slot (11 s to 106 s), and 128 streamed requests were
+answered `upstream_timeout`. 107 of them were subagents' new sessions,
+progress summaries and side calls among them, cut at the 30 s side-call limit
+with nothing from the model; a few were turns cut at the 90 s limit. A
+stream's guard started when the stream did, ahead of the wait for a slot; the
+SDK query's own guard, which starts with the query, was not the one that
+fired.
+
+Now a request notes when it begins waiting for a slot and clears that once it
+has one (`runSdkQueryAttempt`), and the stream's guard runs no window through
+that wait (`guardUpstreamIdle`, `waitingOnUpstreamSince`).
+
+### Run it
+
+```bash
+bun test src/__tests__/stream-idle-guard.test.ts src/__tests__/proxy-concurrency-coordination.test.ts
+bun scripts/e2e-slot-wait-idle.mjs [model]   # the proxy, SDK and CLI against a scripted API, one SDK slot; no model calls
+```
+
+### Verified
+
+Unit (`stream-idle-guard.test.ts`): through three limits' worth of waiting
+nothing stalls, and once the source starts, the stall comes a whole limit
+later. HTTP, mocked SDK (`proxy-concurrency-coordination.test.ts`): a streamed
+progress summary queued 400 ms behind a turn holding the only slot, under a
+150 ms limit, is answered once it is asked. Before, it was answered "Upstream
+stalled: no data for 154ms".
+
+The proxy, SDK and CLI (2.1.291) against a scripted API, one slot, a turn
+holding it 25 s while streaming a word a second (`e2e-slot-wait-idle.mjs`,
+2026-10-06):
+
+| Queued request | Limit | Before (ca46feb) | After |
+|---|---|---|---|
+| A subagent's progress summary | 10 s | "Upstream stalled: no data for 10003ms", the model never asked | answered, after 25.0 s waiting for the slot |
+| Another conversation's streamed turn | 15 s | "Upstream stalled: no data for 15009ms", the model never asked | answered, after 29.5 s waiting |
+
+### Not covered
+
+- The wait itself: under load requests still queue for a slot, a progress
+  summary as a turn does. `MERIDIAN_MAX_CONCURRENT` sets how many SDK children
+  run at once.
+- The wait for the conversation's previous turn (the session lease) comes
+  before a stream's guard starts, as before.
 
 ## Concurrent transcript publication
 

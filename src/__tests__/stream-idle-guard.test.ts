@@ -152,6 +152,39 @@ describe("guardUpstreamIdle", () => {
     }
   })
 
+  it("runs no limit while the source waits for something other than upstream, and the whole limit from when it starts", async () => {
+    const src = makeSource<number>()
+    const clock = makeFakeClock()
+    // Undefined while the source waits for a slot; then when it began waiting on upstream.
+    let waitingOnUpstreamSince: number | undefined
+    const stalls: number[] = []
+    let error: unknown
+    const pending = (async () => {
+      for await (const _ of guardUpstreamIdle(src.iterable, 90, ms => stalls.push(ms), clock.clock, undefined, () => waitingOnUpstreamSince)) { /* drain */ }
+    })().catch(caught => { error = caught })
+    try {
+      for (let timers = 1; timers <= 3; timers++) {
+        await clock.waitForScheduled(timers)
+        clock.advance(90)
+      }
+      await clock.waitForScheduled(4)
+      await new Promise<void>(resolve => setImmediate(resolve))
+      expect(error).toBeUndefined()
+
+      waitingOnUpstreamSince = clock.clock.now()
+      clock.advance(60)
+      await new Promise<void>(resolve => setImmediate(resolve))
+      expect(error).toBeUndefined()
+      clock.advance(30)
+      await new Promise<void>(resolve => setImmediate(resolve))
+      expect(error).toBeInstanceOf(UpstreamIdleError)
+      expect(stalls).toEqual([90])
+    } finally {
+      src.finish()
+      await pending
+    }
+  })
+
   it("resets the deadline for model progress between pings", async () => {
     const src = makeSource<{ type: string; event: { type: string } }>()
     const clock = makeFakeClock()

@@ -112,12 +112,20 @@ function yieldToIo(): Promise<void> {
   return new Promise((resolve) => setImmediate(() => setImmediate(resolve)))
 }
 
+/**
+ * `waitingOnUpstreamSince`, when given, says when the source last began
+ * waiting on upstream, or undefined while it waits on something else (an SDK
+ * slot): that wait asks the model nothing, so no window runs through it, and
+ * the window runs from when the source began waiting on upstream if that is
+ * later than its last message.
+ */
 export async function* guardUpstreamIdle<T>(
   source: AsyncIterable<T>,
   idleMs: number,
   onStall?: (sinceLastMs: number) => void,
   clock: IdleGuardClock = realClock,
   onLateDeadline?: (late: LateIdleDeadline) => void,
+  waitingOnUpstreamSince?: () => number | undefined,
 ): AsyncGenerator<T> {
   if (idleMs <= 0) {
     yield* source
@@ -125,6 +133,12 @@ export async function* guardUpstreamIdle<T>(
   }
   const it = source[Symbol.asyncIterator]()
   let lastAt = clock.now()
+  /** Where the idle window starts; undefined while none runs. */
+  const windowStart = (): number | undefined => {
+    if (!waitingOnUpstreamSince) return lastAt
+    const since = waitingOnUpstreamSince()
+    return since === undefined ? undefined : Math.max(lastAt, since)
+  }
   try {
     while (true) {
       // Start the next pull and swallow any late rejection if we abandon it
@@ -132,22 +146,28 @@ export async function* guardUpstreamIdle<T>(
       const nextP = it.next()
       nextP.catch(() => {})
 
-      let timer: IdleTimerHandle | undefined
       let deadlineAt = 0
-      const idle = new Promise<typeof IDLE>((resolve) => {
-        const remaining = Math.max(0, idleMs - (clock.now() - lastAt))
-        deadlineAt = clock.now() + remaining
-        timer = clock.setTimeout(() => resolve(IDLE), remaining)
-      })
-
       let res: IteratorResult<T> | typeof IDLE
-      try {
-        res = await Promise.race([nextP, idle])
-      } finally {
-        if (timer !== undefined) clock.clearTimeout(timer)
+      while (true) {
+        let timer: IdleTimerHandle | undefined
+        const idle = new Promise<typeof IDLE>((resolve) => {
+          const remaining = Math.max(0, idleMs - (clock.now() - (windowStart() ?? clock.now())))
+          deadlineAt = clock.now() + remaining
+          timer = clock.setTimeout(() => resolve(IDLE), remaining)
+        })
+        try {
+          res = await Promise.race([nextP, idle])
+        } finally {
+          if (timer !== undefined) clock.clearTimeout(timer)
+        }
+        if (res !== IDLE || !waitingOnUpstreamSince) break
+        // The window moved while this timer ran: the source was waiting on
+        // something else, or began waiting on upstream since it was set.
+        const start = windowStart()
+        if (start !== undefined && clock.now() - start >= idleMs) break
       }
       if (res === IDLE) {
-        const sinceLastMs = clock.now() - lastAt
+        const sinceLastMs = clock.now() - (windowStart() ?? lastAt)
         const lateMs = clock.now() - deadlineAt
         if (lateMs > IDLE_DEADLINE_LATE_MS) {
           // The loop was blocked, so upstream data may be waiting behind this

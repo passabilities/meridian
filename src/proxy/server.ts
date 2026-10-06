@@ -331,6 +331,12 @@ interface RequestMeta {
   /** Start of the SDK attempt currently running — the TTFB anchor. */
   currentSdkStartedAt?: number
   /**
+   * When this request began waiting for an SDK slot, while it does
+   * (runSdkQueryAttempt). It has asked the model nothing yet, so a stream's
+   * upstream idle limit does not run through the wait.
+   */
+  sdkSlotWaitingSince?: number
+  /**
    * Captured against the attempt that actually produced the first chunk, not
    * against the request's first attempt: a fresh-replay or failover retry must
    * not report the abandoned attempt's runtime as time-to-first-byte.
@@ -1071,6 +1077,7 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
     // bottleneck" precisely under the load that makes clients cancel.
     const acquireStartedAt = Date.now()
     const leaveSdkQueue = requestMeta.inflight?.enterQueue()
+    requestMeta.sdkSlotWaitingSince = acquireStartedAt
     let lease: SemaphoreLease
     try {
       lease = await sdkSemaphore.acquire(signal)
@@ -1078,6 +1085,7 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
       requestMeta.sdkQueueWaitMs += Date.now() - acquireStartedAt
       throw error
     } finally {
+      requestMeta.sdkSlotWaitingSince = undefined
       leaveSdkQueue?.()
     }
     requestMeta.sdkQueueWaitMs += lease.waitedMs
@@ -6077,6 +6085,10 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
                 }),
                 undefined,
                 logLateIdleDeadline("stream", upstreamIdle.ms),
+                // From the SDK attempt's start: a request waiting for a slot,
+                // all of them held by an orchestrator's subagents, has asked
+                // the model nothing.
+                () => requestMeta.sdkSlotWaitingSince !== undefined ? undefined : requestMeta.currentSdkStartedAt ?? 0,
               )
               try {
                 for await (const message of guardedResponse) {

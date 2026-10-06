@@ -1463,6 +1463,31 @@ describe("SDK and Session concurrency coordination", () => {
     controls[0]?.release()
   }, 15_000)
 
+  // A request waiting for an SDK slot has asked the model nothing yet. Under
+  // an orchestrator, every slot held by subagents' turns, a stream's limit used
+  // to run through that wait: its progress summaries were answered "Upstream
+  // stalled" before they were asked, and a turn that waited lost that much of
+  // the time the model has to think.
+  it("does not count a streamed request's wait for an SDK slot as the model's silence", async () => {
+    process.env.MERIDIAN_UPSTREAM_AUXILIARY_IDLE_MS = "150"
+    const app = createProxyServer({ port: 0, host: "127.0.0.1", silent: true }).app
+
+    // A turn holds the only slot well past the summary's limit.
+    const turnP = app.fetch(claudeCodeRequest([{ role: "user", content: "Run the tests" }], `claude-code-slot-${crypto.randomUUID()}`))
+    const turnControl = await waitForControl(0)
+    const summaryP = app.fetch(claudeCodeAgentSummaryRequest(SUBAGENT_NEXT_ROUND, `claude-code-slot-summary-${crypto.randomUUID()}`, "a4a81dc1bbf7ee837"))
+    await Bun.sleep(400)
+    expect(queryCalls).toBe(1)
+    turnControl.release()
+    expect((await turnP).status).toBe(200)
+
+    // Then it is asked, and answered within its limit.
+    ;(await waitForControl(1)).release()
+    const events = await (await summaryP).text()
+    expect(events).not.toContain("upstream_timeout")
+    expect(events).toContain("ok")
+  }, 15_000)
+
   it("aborts a wedged turn without releasing its fencing lease early", async () => {
     process.env.MERIDIAN_MAX_CONCURRENT = "2"
     process.env.MERIDIAN_SESSION_TURN_MAX_HOLD_MS = "2000"
