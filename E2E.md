@@ -1037,6 +1037,7 @@ curl -s -X PUT -H 'Content-Type: application/json' -d '{"checkForUpdates":false}
 | E85 | [A conversation that moves between accounts](#e85-a-conversation-that-moves-between-accounts) | **Automated**: `bun test src/__tests__/account-return-trip.test.ts`. **No model calls, not in CI**: `bun scripts/e2e-session-carry-cli.mjs [claude]` — a session copied into another config directory resumes in the real CLI with its turns structured and its system prompt; `bun scripts/e2e-session-carry-proxy.mjs [model]` — through the proxy, SDK and CLI, a client with no session key and one that compacted on the other account each come back with the other account's answers as messages. **Live, needs two Claude Max profiles**: `FROM=<profile> TO=<profile> bun scripts/e2e-session-carry-live.mjs` — there and back, each move resumed, nothing replayed. **Run before releases touching session mapping, routing, the session lifecycle or the CLI version** | 2026-10-06 |
 | E86 | [A conversation across a proxy restart](#e86-a-conversation-across-a-proxy-restart) | **Automated, no model calls, not in CI**: `bun scripts/e2e-claude-code-proxy-restart.mjs [model]` — turn 1 through one proxy process, turn 2 through a new one sharing its session store: a resume, no replay, turn 1's messages unchanged. **Run before releases touching session persistence or startup** | 2026-10-06 |
 | E87 | [A client that goes away stops the model](#e87-a-client-that-goes-away-stops-the-model) | **Automated**: `bun test src/__tests__/priority-client-cancel.test.ts`. **No model calls, not in CI, needs a build**: `npm run build && bun scripts/e2e-claude-code-priority-cancel.mjs [model]` — the real client killed before any output, the built proxy under Node: the SDK child's request closed within 5 s, manual and active+priority. **Run before releases touching request cancellation, priority dispatch or the HTTP server** | 2026-10-06 |
+| E88 | [Where a failover goes before anything is read, and back to where the conversation was](#e88-where-a-failover-goes-before-anything-is-read-and-back-to-where-the-conversation-was) | **Automated**: `bun test src/__tests__/routing.test.ts src/__tests__/active-priority-integration.test.ts` — the first move after a restart waits up to 3 s for the fallbacks' usage reads and goes by room; a conversation refused again goes back to the fallback it used, across a restart too. **Live, needs a Claude Max profile out of one model's allowance and two others**: `COLD=1 ACTIVE=<profile> bun scripts/e2e-fallback-order-live.mjs` — E82's gate with nothing read in the proxy before the request. **Run before releases touching routing, failover, usage reads or startup** | 2026-10-06 |
 
 | P1 | [Profile: List & Auth Status](#p1-profile-list--auth-status) | `/profiles/list` returns profiles with emails, login status, auth timestamps | - |
 | P2 | [Profile: Switch via API](#p2-profile-switch-via-api) | `POST /profiles/active` switches profile; health endpoint reflects new email | - |
@@ -7981,8 +7982,12 @@ under priority routing to end at the cancel.
 | manual | closed 1,524 ms after the client went | closed 1,514 ms after |
 | active+priority | 2 requests still open 20 s later | closed 28 ms after |
 
-The parallel-subagents gate (E84) with `PROFILES=2` and active+priority, so
-that every request goes through priority dispatch, passed with 4 subagents.
+The parallel-subagents gate (E84) with `PROFILES=2
+MERIDIAN_ROUTING=active+priority` passed with 4 subagents, all 32 requests
+through priority dispatch (2026-10-06, with E88). The run first
+recorded here had not used that routing: the gate cleared every `MERIDIAN_*`
+setting before starting its proxy and checked no route. It now keeps the
+routing it is given and checks that every request went through it.
 
 ### Not covered
 
@@ -7998,6 +8003,75 @@ that every request goes through priority dispatch, passed with 4 subagents.
   the built proxy under Node is the fix.
 - Live accounts: the gate shows the SDK child's API request closed, not an
   account's usage.
+
+## E88: Where a failover goes before anything is read, and back to where the conversation was
+
+**What it proves:** in `active+priority`, the first failover after a restart is
+placed by the fallbacks' room, as E82 places any other; and a conversation the
+active account refuses again goes back to the fallback it used, which holds
+its session and whose cache may still be warm, after a restart too.
+
+Before, right after a restart nothing had been read of the fallbacks' usage.
+The reads started with the first refusal, in the background, so that request,
+and every conversation refused with it, moved by the configured order, onto
+accounts that might be at their cap. A conversation the active account
+refused again once its bench was over went to the head of the room order, not
+back to the fallback that held it, and wrote its whole prompt there. A restart
+also forgot where conversations had gone.
+
+Now a request about to move with nothing read of an account it could go to
+waits for that read, 3 s at most, and the accounts left after a refusal are
+placed again by what is known then. The reads still run only while a move is
+near, at most once in five minutes an account (E82). The fallback a
+conversation used comes right after the active account, or first while the
+active account is out. After a restart, the fallback whose copy of the
+conversation was used last, within the hour a prompt stays cached, stands in.
+
+### Run it
+
+```bash
+bun test src/__tests__/routing.test.ts src/__tests__/active-priority-integration.test.ts
+COLD=1 ACTIVE=<profile out of MODEL's allowance> bun scripts/e2e-fallback-order-live.mjs
+```
+
+`COLD=1` reads the order in a process of its own, so the proxy has read
+nothing of any account's usage when the request comes, as after a restart.
+
+### Pass criteria
+
+E82's, with nothing read before the request; and no account behind the one
+that serves it in the room order is tried on the way.
+
+### Verified
+
+HTTP, mocked SDK (`active-priority-integration.test.ts`), 5 tests, each RED
+before the change:
+
+- The first move after a restart, nothing read: served by the account with the
+  most room, not the configured order's first, at 97% of its weekly limit.
+- A request that comes while those reads are out (each takes 1 s) is placed by
+  what they read. With the wait taken out of the request's path, it went to
+  the account at 97%.
+- A read that never answers (10 s) holds a refused request less than 5 s; it
+  then moves by the configured order.
+- A conversation the active account refuses again after its bench (11 minutes
+  on), with another fallback since the roomier: back to the fallback it used.
+- The same in a new proxy process on the same session store.
+
+Unit (`routing.test.ts`), 2 tests: the previous fallback comes right after the
+active account, and not once it is out itself.
+
+### Not covered
+
+- A conversation goes back to the fallback it used whatever that account's
+  room, as it stays on it while the active account is out (E82): that account
+  holds its session, so the move needs no carry. When its cache has gone cold
+  and it is near its cap, the conversation can be refused there soon after and
+  move again, writing its prompt twice.
+- After a restart, a fallback used more than an hour before: the order is the
+  room order.
+- An account whose usage cannot be read (an API-key profile, a read that
+  fails) is placed as E82 places one with no usage known.
 
 ## Concurrent transcript publication
 

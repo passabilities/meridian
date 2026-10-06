@@ -49,12 +49,15 @@ for (let k = 1; k <= AGENTS; k++) {
   for (let round = 1; round <= ROUNDS; round++) writeFileSync(fixture(k, round), `agent ${k} round ${round} ${randomUUID()}\n`)
 }
 
+// The routing asked for outlives the sweep of the shell's Meridian settings.
+const ROUTING = process.env.MERIDIAN_ROUTING
 for (const key of Object.keys(process.env)) {
   if (key.startsWith("MERIDIAN_") || key.startsWith("CLAUDE_PROXY_")) delete process.env[key]
 }
 Object.assign(process.env, {
   MERIDIAN_CONFIG_DIR: join(root, "config"), MERIDIAN_SESSION_DIR: join(root, "sessions"),
   MERIDIAN_PASSTHROUGH: "1", MERIDIAN_TELEMETRY_PERSIST: "0",
+  ...(ROUTING ? { MERIDIAN_ROUTING: ROUTING } : {}),
   // The fixture profile authenticates with an API key, so the SDK child needs
   // nothing from the user's own Claude config; its transcripts stay under root.
   CLAUDE_CONFIG_DIR: join(root, "claude-config"),
@@ -189,8 +192,14 @@ const relay = Bun.serve({ hostname: "127.0.0.1", port: 0, idleTimeout: 255, asyn
   const agentId = request.headers.get("x-claude-code-agent-id")
   const tools = (body.tools ?? []).map(tool => tool.name)
   const kind = isSummary(body.messages ?? []) ? "summary" : toolNamed(tools, "Read") ? "turn" : "side"
-  clientRequests.push({ requestId, conversation: agentId ? `agent-${subagentOf(body.messages ?? []) || agentId}` : "main", agentId, kind, body, at: Date.now() })
-  return fetch(proxyUrl + url.pathname + url.search, { method: "POST", headers, body: raw, signal: AbortSignal.timeout(300_000) })
+  const entry = { requestId, conversation: agentId ? `agent-${subagentOf(body.messages ?? []) || agentId}` : "main", agentId, kind, body, at: Date.now() }
+  clientRequests.push(entry)
+  const response = await fetch(proxyUrl + url.pathname + url.search, { method: "POST", headers, body: raw, signal: AbortSignal.timeout(300_000) })
+  if (response.ok) return response
+  // What the client was told, kept for the report: telemetry keeps only the error's type.
+  const answer = await response.text()
+  entry.refusal = `${response.status} ${answer.slice(0, 400)}`
+  return new Response(answer, { status: response.status, headers: response.headers })
 } })
 
 const failures = []
@@ -243,12 +252,20 @@ try {
     .sort(([a], [b]) => a.localeCompare(b)).map(([key, count]) => `${key} ${count}`).join(", ")
   console.log(`  note  client requests: ${kinds(clientRequests)}`)
   console.log(`  note  Messages calls:  ${kinds(upstreamCalls)}`)
+  for (const entry of clientRequests.filter(entry => entry.refusal)) console.log(`  note  ${entry.conversation}/${entry.kind} was answered ${entry.refusal}`)
   check(outcome === "done" && finished.size === AGENTS, `the main thread starts ${AGENTS} subagents and every one finishes`,
     `${finished.size} finished${outcome === "done" ? "" : `; stderr ${JSON.stringify(String(stderr).trim().slice(-300))}`}`)
 
   const rows = telemetryStore.getRecent({ limit: 2000 })
   const rowOf = new Map(rows.map(row => [row.requestId, row]))
   const agents = Array.from({ length: AGENTS }, (_, index) => `agent-${index + 1}`)
+  if (/priority/i.test(ROUTING ?? "")) {
+    // Priority dispatch numbers each request's attempts; no other routing does.
+    const clientRows = clientRequests.map(entry => rowOf.get(entry.requestId))
+    const dispatched = clientRows.filter(row => row?.routeAttempt !== undefined)
+    check(clientRows.length > 0 && dispatched.length === clientRows.length, `every request is routed by ${ROUTING}`,
+      `${dispatched.length} of ${clientRows.length} through priority dispatch; route kinds ${[...new Set(clientRows.map(row => row?.routeKind ?? "missing"))].join(", ")}`)
+  }
   const summaries = clientRequests.filter(entry => entry.kind === "summary")
   check(summaries.length > 0, "the client forks the subagents for progress summaries while their long rounds run",
     agents.map(name => `${name} ${summaries.filter(entry => entry.conversation === name).length}`).join(", "))
@@ -257,7 +274,9 @@ try {
   for (const name of ["main", ...agents]) {
     const turns = clientRequests.filter(entry => entry.conversation === name && entry.kind === "turn")
     const turnRows = turns.map(entry => rowOf.get(entry.requestId))
-    const lineage = turnRows.map(row => row ? `${row.lineageType}${row.isResume ? "" : "(fresh)"}` : "missing")
+    const lineage = turnRows.map(row => row
+      ? `${row.lineageType}${row.isResume ? "" : "(fresh)"}${row.status === 200 ? "" : ` [${row.status} ${row.error ?? ""}]`}`
+      : "missing")
     const expected = name === "main" ? turns.length >= 2 : turns.length === ROUNDS + 1
     check(expected && turnRows.every(row => row?.status === 200) && turnRows[0]?.lineageType === "new"
       && turnRows.slice(1).every(row => row.lineageType === "continuation" && row.isResume === true),
