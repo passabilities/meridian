@@ -132,12 +132,13 @@ import {
   type PriorityAssignment,
   type RoutingMode,
 } from "./routing"
-import { diagnoseLimit, type LimitDiagnosis } from "./limitDetection"
+import { diagnoseLimit, limitModelScope, spentAllowanceResetAt, windowedModel, type LimitDiagnosis } from "./limitDetection"
 import { SpentStore, FailoverEventLog } from "./profileHealth"
 import {
   retryAfterSeconds,
   retryAfterHeaders,
   retryAfterBodyFields,
+  withRetryAfter,
   OVERLOADED_RETRY_AFTER_SECONDS,
 } from "./retryAfter"
 import { getSetting, setSetting, TELEMETRY_SETTING_LIMITS } from "../settings" 
@@ -667,6 +668,9 @@ type PriorityDispatchOptions = {
   readonly body: any
   readonly requestMeta: RequestMeta
   readonly candidateIds: readonly string[]
+  /** Every account this request could have gone to, tried here or already
+   *  benched: the ones whose return a refused client is waiting for. */
+  readonly poolIds: readonly string[]
   readonly sessionKey: string | null
   readonly wantsStream: boolean
   readonly currentProfileId: string | undefined
@@ -1206,6 +1210,25 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
     return resolveCooldownUntil(profileCooldownWindows(profileId), now, PRIORITY_DEFAULT_COOLDOWN_MS)
   }
 
+  /** How long one model stays off an account: until the reset Anthropic gave
+   *  for that model's allowance, else the account-wide bench's conservative
+   *  default, so a mis-mark self-heals just the same. The allowance is a
+   *  weekly one, hence the weekly cap. */
+  function modelCooldownUntil(resetsAt: number | null | undefined, now: number): number {
+    return resetsAt && resetsAt > now
+      ? Math.min(resetsAt, now + cooldownCapMs("seven_day"))
+      : now + PRIORITY_DEFAULT_COOLDOWN_MS
+  }
+
+  /** The model whose allowance a request draws on: the one it names, when
+   *  that has an allowance of its own, else the tier the request is run as.
+   *  A model id the proxy does not know is run as Sonnet, and so is a
+   *  request that names no model. */
+  function allowanceModel(requested: unknown): string | undefined {
+    const model = typeof requested === "string" ? requested : "sonnet"
+    return windowedModel(model) ?? windowedModel(mapModelToClaudeModel(model))
+  }
+
   /** When this account's own usage windows say it frees up, or null when
    *  nothing proves a window is spent. Feeds `Retry-After` (#901) — telling a
    *  client to wait until a boundary that was never the problem is worse than
@@ -1299,7 +1322,7 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
    *  failed transiently) is not authoritative about the current window, so
    *  it's skipped too — the conservative default is the safer thing to
    *  leave standing. */
-  function refinePriorityCooldown(profileId: string): void {
+  function refinePriorityCooldown(profileId: string, scoped?: { model: string; refusal: LimitDiagnosis }): void {
     const target = getEffectiveProfiles(finalConfig.profiles).find(p => p.id === profileId)
     // Only `claude-max` profiles have credentials this can consult. `api`
     // profiles authenticate with a key and have no usage endpoint; `oauth-token`
@@ -1321,6 +1344,15 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
           resetsAt: w.resetsAt,
           exhausted: (w.utilization ?? 0) >= 1,
         }))
+        // The refusal was of one model's allowance: its own window says when
+        // that returns, under the same gate, and the account-wide windows
+        // below are still worth the look they always got.
+        const modelReset = scoped ? spentAllowanceResetAt(scoped.refusal, scoped.model, usage.windows) : null
+        if (scoped && modelReset && modelReset > now) {
+          const until = modelCooldownUntil(modelReset, now)
+          priorityExhaustion.mark(profileId, until, "rate_limit_error", scoped.model)
+          claudeLog("priority.cooldown_refined", { profile: profileId, until, source: "oauth_usage", model: scoped.model })
+        }
         // Sentinel: resolveCooldownUntil falls back to `now + defaultMs` when
         // nothing is exhausted. Passing 0 makes that fallback identifiable, so
         // a snapshot showing a healthy account refines nothing and tier 3's
@@ -1476,6 +1508,7 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
     // frees up, not the last one tried. Tracked across the loop so the caller's
     // Retry-After names the pool's earliest opening (#901).
     let earliestPoolReset: number | null = null
+    const requestedModel = allowanceModel(options.body?.model)
     for (const [attempt, candidate] of options.candidateIds.entries()) {
       const exposure: PriorityAttemptExposure = { committed: false }
       const priorityPublication = options.durableRoute && options.publicationTurn
@@ -1494,6 +1527,7 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
       // failover back into one row with its account chain
       // (telemetry/routeChain.ts). Nothing is correlated here.
       const attemptMeta = { ...forkAttemptMeta(options.requestMeta, attempt), routeAttempt: attempt + 1 }
+      const attemptStartedAt = Date.now()
       const inner = await handleMessages(options.context, attemptMeta, {
         body: options.body,
         forcedProfileId: candidate,
@@ -1542,15 +1576,39 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
       // Only a quota refusal has a reset to look up. Both cooldown tiers read
       // the account's five-hour window, which says nothing about entitlement.
       const quotaRefusal = isQuotaRefusal(reason)
-      const cooldownUntil = quotaRefusal
-        ? priorityCooldownUntil(candidate, Date.now())
-        : Date.now() + PRIORITY_DEFAULT_COOLDOWN_MS
-      priorityExhaustion.mark(candidate, cooldownUntil, reason)
+      // The account that refused one model's allowance is still serving the
+      // others: keep that model off it and leave the rest where it is. Only
+      // on what this attempt was told: the record has to be the one this
+      // attempt wrote, and an SDK event read into it one that came with this
+      // attempt (`limitModelScope`).
+      const spent = quotaRefusal ? spentProfiles.get(candidate) : undefined
+      const refusal = spent && spent.at >= attemptStartedAt ? spent.diagnosis : undefined
+      const refusedModel = limitModelScope(refusal, requestedModel, attemptStartedAt)
+      const scoped = refusal && refusedModel !== undefined ? { model: refusedModel, refusal } : undefined
+      const cooldownUntil = scoped
+        // Until the reset the SDK gave with the refusal, else the one the last
+        // usage read has for that model's window. Not the diagnosis's own for
+        // a refusal known by its wording, which is that window's reset whether
+        // or not the read shows it spent (`spentAllowanceResetAt`).
+        ? modelCooldownUntil(
+            (scoped.refusal.source === "sdk_event" ? scoped.refusal.resetsAt : null)
+              ?? spentAllowanceResetAt(scoped.refusal, scoped.model, peekOAuthUsage(candidate)?.windows),
+            Date.now(),
+          )
+        : quotaRefusal
+          ? priorityCooldownUntil(candidate, Date.now())
+          : Date.now() + PRIORITY_DEFAULT_COOLDOWN_MS
+      priorityExhaustion.mark(candidate, cooldownUntil, reason, scoped?.model)
       if (earliestPoolReset === null || cooldownUntil < earliestPoolReset) {
         earliestPoolReset = cooldownUntil
       }
-      claudeLog("priority.exhausted", { profile: candidate, until: cooldownUntil, reason })
-      if (quotaRefusal) refinePriorityCooldown(candidate)
+      claudeLog("priority.exhausted", {
+        profile: candidate,
+        until: cooldownUntil,
+        reason,
+        ...(scoped ? { model: scoped.model } : {}),
+      })
+      if (quotaRefusal) refinePriorityCooldown(candidate, scoped)
       lastError = sniffed.errorPayload
       lastStatus = inner.status
       previous = candidate
@@ -1581,25 +1639,39 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
     // before the client can retry; failure stays fail-closed and never advances
     // to another account or returns a retryable account-shaped response.
     if (!settleAttempt("release")) return unavailableAttemptResponse()
-    // Surface the LAST tried profile's error (owner decision). Stream sniff
-    // consumed the inner body, so reconstruct the exact frame for SSE requests.
-    // The SSE frame carries its own `retry_after` field, relayed verbatim from
-    // whichever attempt produced it — headers are unavailable to a stream.
-    if (options.wantsStream) {
-      return new Response(`event: error\ndata: ${JSON.stringify(lastError)}\n\n`, {
-        status: 200,
-        headers: { "content-type": "text/event-stream; charset=utf-8", "cache-control": "no-cache" },
-      })
-    }
     // The wait belongs to the POOL, not to the last account tried: the caller
     // can proceed as soon as ANY candidate frees up. `earliestPoolReset` is a
     // real observed boundary when a quota refusal supplied one and the
     // conservative default otherwise, so it is always safe to say (#901).
+    //
+    // And to the whole pool, not the accounts tried on this request: one
+    // benched before it was skipped, and may be the first back. Seen live on
+    // 2026-10-05 with every account out of Fable: only the active one was
+    // tried again, its allowance five days from returning, and the client was
+    // told to wait a day for an account that reopened in four minutes.
+    for (const id of options.poolIds) {
+      const until = priorityExhaustion.benchedUntil(id, requestedModel)
+      if (until !== null && (earliestPoolReset === null || until < earliestPoolReset)) earliestPoolReset = until
+    }
     const poolRetryAfter = retryAfterSeconds({
-      status: lastStatus,
+      // A refused stream was a 200 before its refusal existed, and what its
+      // frame reports is a rate limit all the same.
+      status: lastStatus === 200 && isQuotaRefusal(previousReason) ? 429 : lastStatus,
       resetAtMs: earliestPoolReset,
     })
-    return new Response(JSON.stringify(lastError), {
+    // Surface the LAST tried profile's error (owner decision), with the pool's
+    // wait in place of that account's own: the field in the body is the only
+    // hint a streaming client gets, and on the JSON path it mirrors the header.
+    const refused = withRetryAfter(lastError, poolRetryAfter)
+    // Stream sniff consumed the inner body, so reconstruct the frame for SSE
+    // requests.
+    if (options.wantsStream) {
+      return new Response(`event: error\ndata: ${JSON.stringify(refused)}\n\n`, {
+        status: 200,
+        headers: { "content-type": "text/event-stream; charset=utf-8", "cache-control": "no-cache" },
+      })
+    }
+    return new Response(JSON.stringify(refused), {
       status: lastStatus,
       headers: { "content-type": "application/json", ...retryAfterHeaders(poolRetryAfter) },
     })
@@ -2074,13 +2146,17 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
                 assignment = priorityAssignments.get(sessionKey)
               }
 
+              // An account out for one model only is out for this request
+              // when this is the model it asks for.
+              const requestedModel = allowanceModel(body.model)
+              const isBenched = (id: string): boolean => priorityExhaustion.isExhausted(id, requestedModel)
               const shouldPromote = assignment !== undefined
                 && durableRoute !== undefined
                 && routeMappingIsCurrent
                 && assignment.profileId !== preferred
                 && order.includes(assignment.profileId)
-                && !priorityExhaustion.isExhausted(assignment.profileId)
-                && !priorityExhaustion.isExhausted(preferred)
+                && !isBenched(assignment.profileId)
+                && !isBenched(preferred)
                 && shouldPromotePriorityAssignment({
                   policy: failbackPolicy,
                   assignment,
@@ -2090,7 +2166,7 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
               const assignedProfile = assignment?.profileId
               const assignmentIsHealthy = assignedProfile !== undefined
                 && order.includes(assignedProfile)
-                && !priorityExhaustion.isExhausted(assignedProfile)
+                && !isBenched(assignedProfile)
               const retainOnlyProfile = durableRoute && !promotionTurn
                 ? assignedProfile
                 : undefined
@@ -2101,18 +2177,20 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
                 }, 503, TRANSIENT_RETRY_AFTER_HEADERS)
               }
               let candidates: string[]
+              let pool: readonly string[] = order
               if (routingMode === ACTIVE_PRIORITY) {
                 const activeId = resolveProfile(finalConfig.profiles, finalConfig.defaultProfile).id
+                if (!order.includes(activeId)) pool = [activeId, ...order]
                 candidates = retainOnlyProfile
                   ? [retainOnlyProfile]
                   : chooseActivePriorityCandidates(
                       activeId,
                       order,
-                      id => priorityExhaustion.isExhausted(id),
+                      isBenched,
                       assignedProfile,
                     )
               } else {
-                const pick = choosePriorityProfile(order, id => priorityExhaustion.isExhausted(id))
+                const pick = choosePriorityProfile(order, isBenched)
                 const first = retainOnlyProfile
                   ?? (shouldPromote
                     ? preferred
@@ -2124,13 +2202,15 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
                 // that the durable route has no authenticated authority to adopt.
                 candidates = retainOnlyProfile
                   ? [retainOnlyProfile]
-                  : [first, ...order.filter(id => id !== first && !priorityExhaustion.isExhausted(id))]
+                  : [first, ...order.filter(id => id !== first && !isBenched(id))]
               }
               return dispatchPriority({
                 context: c,
                 body,
                 requestMeta,
                 candidateIds: candidates,
+                // A request held to one account has nobody else to wait for.
+                poolIds: retainOnlyProfile ? candidates : pool,
                 sessionKey,
                 wantsStream: body.stream === true,
                 currentProfileId: assignedProfile,
@@ -8868,6 +8948,9 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
       activeProfile: getActiveProfileId() || finalConfig.defaultProfile || undefined,
       spent: spentProfiles.snapshot(),
       exhausted: priorityExhaustion.snapshot(),
+      // Accounts out for one model while they serve the rest. One that is out
+      // altogether as well, for another reason, is in `exhausted` too.
+      exhaustedModels: priorityExhaustion.modelSnapshot(),
       asOf: Date.now(),
     })
   })
