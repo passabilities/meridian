@@ -1034,7 +1034,7 @@ curl -s -X PUT -H 'Content-Type: application/json' -d '{"checkForUpdates":false}
 | E82 | [Where an active+priority failover goes](#e82-where-an-activepriority-failover-goes) | **Automated, no model calls**: `bun test src/__tests__/routing.test.ts src/__tests__/active-priority-integration.test.ts` — the fallback order by room and the 24-hour weekly reset, and when usage is read. **Live, needs a Claude Max profile out of one model's allowance and two others**: `ACTIVE=<profile> bun scripts/e2e-fallback-order-live.mjs` — a refused request lands on the first account of the room order that serves it, with the configured order set the other way round. **Run before releases touching routing, failover or usage reads** | 2026-10-06 |
 | E83 | [What Meridian adds to a Claude Code client's system prompt](#e83-what-meridian-adds-to-a-claude-code-clients-system-prompt) | **Automated, no model calls, not in CI**: `bun scripts/e2e-claude-code-system-turns.mjs` (E77's gate) — the real client over 127.0.0.1: the system prompt the API receives is the client's and the replay note, without the working-directory note, the scratchpad counter-instruction, the deferred tools' names or a second identity line. **Live**: `SPENT=<profile> ROOM=<profile> bun scripts/e2e-claude-code-account-switch-live.mjs` prints the prompt each turn carried, to set beside a direct run. **Run before releases touching the Claude Code adapter or transform, the SDK child's environment, or the client, SDK or CLI version** | 2026-10-06 |
 | E84 | [Parallel background subagents through the proxy](#e84-parallel-background-subagents-through-the-proxy) | **Automated, no model calls, not in CI**: `bun scripts/e2e-claude-code-parallel-subagents.mjs [model]` — the real client starts several subagents in the background at once, each through tool rounds and a progress summary: every conversation resumes, one Messages call per request, each call's messages beginning with the call before. `AGENTS=12` goes past the 10 SDK children run at once; `PROFILES=2 MERIDIAN_ROUTING=active+priority` sends every request through priority dispatch. **Run before releases touching session resume, the turn lease, progress summaries or the Claude Code adapter** | 2026-10-06 |
-| E85 | [A conversation that moves between accounts](#e85-a-conversation-that-moves-between-accounts) | **Automated**: `bun test src/__tests__/account-return-trip.test.ts`. **No model calls, not in CI**: `bun scripts/e2e-session-carry-cli.mjs [claude]` — a session copied into another config directory resumes in the real CLI with its turns structured and its system prompt. **Live, needs two Claude Max profiles**: `FROM=<profile> TO=<profile> bun scripts/e2e-session-carry-live.mjs` — there and back, each move resumed, nothing replayed. **Run before releases touching session mapping, routing, the session lifecycle or the CLI version** | 2026-10-06 |
+| E85 | [A conversation that moves between accounts](#e85-a-conversation-that-moves-between-accounts) | **Automated**: `bun test src/__tests__/account-return-trip.test.ts`. **No model calls, not in CI**: `bun scripts/e2e-session-carry-cli.mjs [claude]` — a session copied into another config directory resumes in the real CLI with its turns structured and its system prompt; `bun scripts/e2e-session-carry-proxy.mjs [model]` — through the proxy, SDK and CLI, a client with no session key and one that compacted on the other account each come back with the other account's answers as messages. **Live, needs two Claude Max profiles**: `FROM=<profile> TO=<profile> bun scripts/e2e-session-carry-live.mjs` — there and back, each move resumed, nothing replayed. **Run before releases touching session mapping, routing, the session lifecycle or the CLI version** | 2026-10-06 |
 | E86 | [A conversation across a proxy restart](#e86-a-conversation-across-a-proxy-restart) | **Automated, no model calls, not in CI**: `bun scripts/e2e-claude-code-proxy-restart.mjs [model]` — turn 1 through one proxy process, turn 2 through a new one sharing its session store: a resume, no replay, turn 1's messages unchanged. **Run before releases touching session persistence or startup** | 2026-10-06 |
 | E87 | [A client that goes away stops the model](#e87-a-client-that-goes-away-stops-the-model) | **Automated**: `bun test src/__tests__/priority-client-cancel.test.ts`. **No model calls, not in CI, needs a build**: `npm run build && bun scripts/e2e-claude-code-priority-cancel.mjs [model]` — the real client killed before any output, the built proxy under Node: the SDK child's request closed within 5 s, manual and active+priority. **Run before releases touching request cancellation, priority dispatch or the HTTP server** | 2026-10-06 |
 
@@ -7810,6 +7810,7 @@ costs a direct client.
 ```bash
 bun test src/__tests__/account-return-trip.test.ts                    # HTTP, mocked SDK
 bun scripts/e2e-session-carry-cli.mjs [path to claude]                # the real CLI against a scripted API; no model calls
+bun scripts/e2e-session-carry-proxy.mjs [model]                       # the proxy, SDK and CLI against a scripted API; no model calls
 FROM=<profile> TO=<profile> bun scripts/e2e-session-carry-live.mjs    # two real accounts, three short turns
 ```
 
@@ -7855,6 +7856,17 @@ that failed first:
   until its lease ran out; it is now retired at once.
 - A stray file among the project folders (`.DS_Store`) failed the search for a
   transcript (`session-carry.test.ts`).
+
+The proxy, the SDK and the real CLI (2.1.291) against a scripted API, two
+API-key accounts sharing the CLI's config directory, the active profile
+switched between turns (`e2e-session-carry-proxy.mjs`, 2026-10-06). What each
+turn sent the model, read where the SDK child's request lands:
+
+| Check | Before (ca46feb) | After |
+|---|---|---|
+| No session key (ForgeCode): the move | replayed, flattened | resumed |
+| No session key: the way back | resumed the stale copy, sent "KEYLESS-Q2 second question KEYLESS-Q3 third question KEYLESS-Q4 fourth question", the second account's answers gone | resumed, both answers as assistant messages |
+| Keyed, compacted on the other account: the way back | replayed, flattened | resumed the session it went on in |
 
 The real CLI against a scripted API, 2.1.291 and 2.1.284: a session copied
 into a second config directory resumes there with `--resume --fork-session`.
