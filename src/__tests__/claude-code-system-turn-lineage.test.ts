@@ -74,12 +74,46 @@ describe("Claude Code system turns in lineage", () => {
     expect(canonicalize(messages)).toEqual([{ role: "system", content: [text(tokensLeft(1))] }])
   })
 
-  it("retains a system turn that would be left with nothing", () => {
+  it("retains a system turn that would be left with nothing when anything follows it", () => {
     const messages = [
       { role: "system", content: [text(BATCHING)] },
       { role: "system", content: BATCHING },
+      { role: "user", content: [toolResult("a")] },
     ]
     expect(canonicalize(messages)).toEqual(messages)
+  })
+
+  // claude-cli 2.1.294 on claude-fable-5-1 also ends a tool-result request with
+  // a system turn holding the reminder alone, and the next request carries no
+  // trace of that turn: the reply sits where it was. Live, 2026-10-07/08: 187
+  // subagent rounds replayed `modified-history`, stored digest eff8768460e3.
+  const reminderOnly: Message[] = [...head,
+    { role: "user", content: [toolResult("a"), toolResult("b")] },
+    { role: "system", content: [text(BATCHING)] },
+  ]
+  const afterReminderOnly: Message[] = [...head,
+    { role: "user", content: [toolResult("a"), toolResult("b")] },
+    { role: "assistant", content: [toolUse("c")] },
+    { role: "user", content: [toolResult("c")] },
+    { role: "system", content: [text(BATCHING)] },
+  ]
+
+  it("leaves out a trailing system turn that holds only the one-request reminder", () => {
+    for (const turn of [[text(BATCHING)], [cached(BATCHING)], BATCHING]) {
+      const request = [...reminderOnly.slice(0, -1), { role: "system", content: turn }]
+      expect(canonicalize(request)).toEqual(reminderOnly.slice(0, -1))
+    }
+  })
+
+  it("resumes the round after a reminder-only system turn the client never sends again", () => {
+    const stored = canonicalize(reminderOnly)
+    expect(verifyLineage(stateFor(stored), canonicalize(afterReminderOnly)))
+      .toMatchObject({ type: "continuation", resumeFrom: reminderOnly.length - 1 })
+  })
+
+  it("keeps a trailing system turn that holds anything besides the reminder", () => {
+    const messages = [...reminderOnly.slice(0, -1), { role: "system", content: [text("A notice of some other kind."), text(BATCHING)] }]
+    expect(canonicalize(messages)).toEqual([...reminderOnly.slice(0, -1), { role: "system", content: [text("A notice of some other kind.")] }])
   })
 
   it("retains everything outside a system turn, breakpoint or not", () => {

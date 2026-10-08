@@ -6792,6 +6792,37 @@ cached prefix. The known wording is matched as well, for a turn with no
 breakpoint. Message positions are kept, and the request the model reads is
 untouched: the reminder is still delivered with its round.
 
+#### A system turn that is the reminder alone (claude-cli 2.1.294)
+
+On 2026-10-07/08 the user's orchestrators (client 2.1.294) sent Fable
+subagent rounds ending in a system turn that held the reminder and nothing
+else, and the next request carried no trace of it: the reply sat where the
+turn had been.
+
+```
+request k     … user[tool_result]  system[ "First privately list what you need next; …" ]
+request k+1   … user[tool_result]  assistant[thinking, text, tool_use]  user[tool_result]
+              system[ "First privately list what you need next; …" ]
+```
+
+The token notice is the CLI's `totalTokensReminder` (default
+`padded-countdown`), which its own budget settings leave out at times, so the
+turn can be the reminder alone. Stored as the tail of the lineage, it made
+every later round `modified-history`. From that proxy's persisted telemetry
+(Oct 6 18:38 to Oct 8 06:43; private, not in the repository): 187 Fable
+rounds replayed, every one with the same stored digest `eff8768460e3`, which
+is `system: [reminder]` hashed the way `lineage.ts` hashes a message. That
+came to 41.1M cache writes, about 226K each, where a resumed round of the
+same subagents wrote 21K. They came in bursts (Oct 7 13:00-17:00, Oct 8
+01:00-06:00): within one subagent the first three rounds resumed, then every
+round after replayed.
+
+Such a turn is left out of the lineage, but only at the end of a request, so
+no other message moves. The reply's SDK message UUID is recorded where the
+client puts the reply next time (`replyPosition`, the lineage's length). Before,
+it went after the request's last message, one past where the reply then sits,
+so an undo there would have rolled back to the wrong message.
+
 ### Run it
 
 ```bash
@@ -6839,15 +6870,27 @@ pure function and `passthrough-early-stop-integration.test.ts` ("one-request
 reminder") holds three requests through the mocked SDK; both fail without the
 hook.
 
+2026-10-08, the reminder alone: `claude-code-system-turn-lineage.test.ts`
+("reminder-only") and `passthrough-early-stop-integration.test.ts`
+("reminder-only system turn", streamed and not) failed before the change. The
+pure test failed with the live diagnosis exactly (`modified-history`, stored
+digest `eff8768460e3…`). The integration test also holds where the reply's
+SDK UUID is recorded. The E77 gate with client 2.1.294 still passes, main
+thread and subagent, but it does not reach this shape: that client sent the
+two-block turn on every round, and `CLAUDE_CODE_TOTAL_TOKENS_REMINDER=off` in
+the gate's environment did not change that. The real-traffic check is
+whether `eff8768460e3` replays stop once the user's proxy runs this build.
+
 ### Not covered
 
 - A subagent of a live session on the real model. The shapes are the client's
   own, but no Fable call has been made through a proxy with the fix.
-- A system turn that is nothing but a one-request reminder. The client would
-  then send one message fewer in the next request, and a canonicalizer cannot
-  remove a message: resume indexes are by position. Not seen on 2.1.284 or
-  2.1.289, where the token notice is always there.
-- Sessions stored before the fix. Their lineage has the reminder in it, so
+- A system turn that is nothing but a one-request reminder anywhere but the
+  end of a request. It keeps its place, since resume indexes are by position;
+  the client has only been seen sending it last.
+- The reminder alone through the real client: no gate makes the client send
+  it (see Verified).
+- Sessions stored before either fix. Their lineage has the reminder in it, so
   their next tool round replays once more and resumes from then on.
 - Linux and Windows.
 
