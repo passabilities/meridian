@@ -1039,6 +1039,7 @@ curl -s -X PUT -H 'Content-Type: application/json' -d '{"checkForUpdates":false}
 | E87 | [A client that goes away stops the model](#e87-a-client-that-goes-away-stops-the-model) | **Automated**: `bun test src/__tests__/priority-client-cancel.test.ts`. **No model calls, not in CI, needs a build**: `npm run build && bun scripts/e2e-claude-code-priority-cancel.mjs [model]` — the real client killed before any output, the built proxy under Node: the SDK child's request closed within 5 s, manual and active+priority. **Run before releases touching request cancellation, priority dispatch or the HTTP server** | 2026-10-06 |
 | E88 | [Where a failover goes before anything is read, and back to where the conversation was](#e88-where-a-failover-goes-before-anything-is-read-and-back-to-where-the-conversation-was) | **Automated**: `bun test src/__tests__/routing.test.ts src/__tests__/active-priority-integration.test.ts src/__tests__/oauth-usage.test.ts src/__tests__/proxy-usage-kept.test.ts` — the first move after a restart waits up to 3 s for the fallbacks' usage reads and goes by room, or by what the run before it read when the endpoint refuses those reads; a conversation refused again goes back to the fallback it used, across a restart too. **Live, needs a Claude Max profile out of one model's allowance and two others**: `RESTART=1 REFUSED=1 ACTIVE=<profile> bun scripts/e2e-fallback-order-live.mjs` — E82's gate sent to a proxy restarted while the endpoint refuses its reads. **Run before releases touching routing, failover, usage reads or startup** | 2026-10-06 |
 | E89 | [A request waiting for an SDK slot is not timed as the model's silence](#e89-a-request-waiting-for-an-sdk-slot-is-not-timed-as-the-models-silence) | **Automated**: `bun test src/__tests__/stream-idle-guard.test.ts src/__tests__/proxy-concurrency-coordination.test.ts`. **No model calls, not in CI**: `bun scripts/e2e-slot-wait-idle.mjs [model]` — one SDK slot held 25 s by a streaming turn: a queued progress summary and a queued streamed turn each wait past their limits and are answered, not "Upstream stalled". **Run before releases touching the SDK slot queue, the upstream idle limits or streaming** | 2026-10-06 |
+| E90 | [The main thread's recap and suggestion are not turns of it](#e90-the-main-threads-recap-and-suggestion-are-not-turns-of-it) | **Automated**: `bun test src/__tests__/claude-code-adapter.test.ts src/__tests__/passthrough-early-stop-integration.test.ts` (`-t "recap"`, `-t "as a turn of the conversation"`) — Claude Code's `away_summary` and `prompt_suggestion` forks run as side calls answered from a short replay, the conversation's mapping untouched, and the user's next message resumes. No gate drives the interactive client that sends them. **Run before releases touching side calls, lineage, or the client version** | 2026-10-08 |
 
 | P1 | [Profile: List & Auth Status](#p1-profile-list--auth-status) | `/profiles/list` returns profiles with emails, login status, auth timestamps | - |
 | P2 | [Profile: Switch via API](#p2-profile-switch-via-api) | `POST /profiles/active` switches profile; health endpoint reflects new email | - |
@@ -8265,6 +8266,85 @@ holding it 25 s while streaming a word a second (`e2e-slot-wait-idle.mjs`,
   run at once.
 - The wait for the conversation's previous turn (the session lease) comes
   before a stream's guard starts, as before.
+
+## E90: The main thread's recap and suggestion are not turns of it
+
+**What it proves:** Claude Code's two forks of the main thread, the recap
+shown to a user coming back and the next-prompt suggestion, run as side calls:
+they never become the conversation's stored tail, and the user's next message
+resumes the conversation instead of replaying it.
+
+claude-cli (2.1.294) builds both with its fork query (`querySource`
+`away_summary` and `prompt_suggestion`, `skipCacheWrite`): the conversation's
+session id, its whole history, and one user message holding the prompt. Their
+openings, from the binary:
+
+```
+away_summary        "The user stepped away and is coming back. Recap in under 40 words, …"
+prompt_suggestion   "[SUGGESTION MODE: Suggest what the user might naturally type next into Claude Code.]"
+```
+
+Meridian took each for a turn of the main conversation, resumed it, and stored
+the prompt as the conversation's tail. The user's reply after it sits at that
+position, so it classified `undo` when the reply was one message ("Undo
+detected … prefix overlap N-1/N, rollback UUID: none", so a full replay), or
+`modified-history` when more came with it.
+
+From the user's proxy's persisted telemetry, Oct 6 18:38 to Oct 8 06:43
+(private, not in the repository): 28 `modified-history` replays of Opus main
+threads, every one with a stored tail that hashes to one of the two prompts
+(`a8b1dc5bfce7` the recap, `336bcd9d1fa7` the suggestion). There were also 30
+`undo` replays of main threads whose stored history differed from the request
+only in its last message. Together about 17M cache writes, for conversations of 50 to 400
+messages, at the one-hour rate. In the client's transcripts, twice at 05:51
+and 05:52: an `away_summary` entry, then a one-character reply ("r", "1"),
+then the undo replay two seconds later. At the end of the window 21 stored
+main threads had the recap prompt as their tail.
+
+`isClaudeCodeAuxiliaryRequest` now recognises both forks by their prompt
+opening their final user message (trailing `system` turns allowed), like the
+progress summary. A side call skips session lookup, publication and the turn
+lease. Its own session is replayed from `sideForkReplayMessages`: the
+conversation's opening message, the last message the user typed, and the
+latest step (the latest assistant turn and the prompt), each clipped. That is
+what the recap ("the overall goal and current task, then the one next action")
+and the suggestion ("the user's recent messages and original request") read.
+
+### Run it
+
+```bash
+bun test src/__tests__/claude-code-adapter.test.ts -t "recap"
+bun test src/__tests__/passthrough-early-stop-integration.test.ts -t "as a turn of the conversation"
+```
+
+### Pass criteria
+
+- Either fork is recognised with its prompt sent as a string or a text block,
+  and with a system turn trailing it. A reply quoting the prompt, the user's
+  own reply, and a request without a session key are not recognised.
+- Through the mocked SDK: the fork runs in a fresh session with the prompt in
+  its replay, the conversation's stored mapping is exactly as its turn left
+  it, and the user's reply after the fork resumes that turn's session.
+
+### Verified
+
+2026-10-08: both test files failed before the change. The adapter test failed
+on recognition and the replay; the integration test, for both forks, on the
+fork resuming the conversation's session.
+
+### Not covered
+
+- The real client. It sends these forks only in an interactive session (the
+  recap when the user comes back, the suggestion when a turn ends waiting for
+  them); no gate drives one. The real-traffic check is whether `undo` and
+  `modified-history` replays with these stored tails stop once the user's
+  proxy runs this build.
+- The answer's quality from the shorter replay against the whole transcript;
+  both are a UI hint, never part of the conversation.
+- `hook_prompt`, which the CLI groups with these forks; not seen live, and its
+  prompt is not matched.
+- Sessions already stored with one of these prompts as their tail: their next
+  message replays once more.
 
 ## Concurrent transcript publication
 

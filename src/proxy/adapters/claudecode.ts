@@ -216,30 +216,42 @@ function hasClassifierShape(request: { tools?: unknown; stream?: unknown; stop_s
 /** How the CLI's background-agent progress prompt (`agent_summary`) opens. */
 const AGENT_SUMMARY_PROMPT = "Describe your most recent action in 3-5 words using present tense (-ing)."
 
-function isAgentSummaryPromptBlock(block: unknown): boolean {
+/**
+ * How the CLI's main-thread forks open (2.1.294): the recap for a user coming
+ * back (`away_summary`) and the next-prompt suggestion (`prompt_suggestion`).
+ */
+const MAIN_THREAD_FORK_PROMPTS = [
+  "The user stepped away and is coming back. Recap in under 40 words",
+  "[SUGGESTION MODE: Suggest what the user might naturally type next into Claude Code.]",
+] as const
+
+const opensAgentSummary = (text: string): boolean => text.startsWith(AGENT_SUMMARY_PROMPT)
+const opensMainThreadFork = (text: string): boolean => MAIN_THREAD_FORK_PROMPTS.some(prompt => text.startsWith(prompt))
+
+function isPromptBlock(block: unknown, opens: (text: string) => boolean): boolean {
   if (!block || typeof block !== "object") return false
   const { type, text } = block as { type?: unknown; text?: unknown }
-  return type === "text" && typeof text === "string" && text.startsWith(AGENT_SUMMARY_PROMPT)
+  return type === "text" && typeof text === "string" && opens(text)
 }
 
 /**
- * Where the progress-summary fork carries the CLI's summary prompt: its final
- * user message. Mid-conversation `system` messages may trail that message, as
- * they do any turn; nothing else may. -1 when the request is not that fork.
+ * Where a fork carries the CLI's prompt: its final user message.
+ * Mid-conversation `system` messages may trail that message, as they do any
+ * turn; nothing else may. -1 when the request is not that fork.
  */
-function agentSummaryPromptIndex(messages: unknown[]): number {
+function forkPromptIndex(messages: unknown[], opens: (text: string) => boolean): number {
   const index = messages.findLastIndex(message => (message as { role?: unknown } | null)?.role !== "system")
   const last = messages[index]
   if (!last || typeof last !== "object") return -1
   const { role, content } = last as { role?: unknown; content?: unknown }
   if (role !== "user") return -1
-  if (typeof content === "string") return content.startsWith(AGENT_SUMMARY_PROMPT) ? index : -1
+  if (typeof content === "string") return opens(content) ? index : -1
   if (!Array.isArray(content)) return -1
-  return content.some(isAgentSummaryPromptBlock) ? index : -1
+  return content.some(block => isPromptBlock(block, opens)) ? index : -1
 }
 
-function endsWithAgentSummaryPrompt(request: { messages?: unknown }): boolean {
-  return Array.isArray(request.messages) && agentSummaryPromptIndex(request.messages) >= 0
+function endsWithForkPrompt(request: { messages?: unknown }, opens: (text: string) => boolean): boolean {
+  return Array.isArray(request.messages) && forkPromptIndex(request.messages, opens) >= 0
 }
 
 /**
@@ -263,21 +275,32 @@ function endsWithAgentSummaryPrompt(request: { messages?: unknown }): boolean {
  * a row spent 18K-36K output tokens re-planning before a tool call, against
  * 2.7K on the resumed turn between them.
  *
+ * The main thread's own forks do it too: the recap shown to a user coming back
+ * (`away_summary`) and the next-prompt suggestion (`prompt_suggestion`) send
+ * the conversation's session id, its whole history and one prompt. Read as a
+ * turn, the prompt became the stored tail, and the user's reply after it came
+ * back `undo` (same length) with no rollback point, or `modified-history`:
+ * the whole main thread replayed. Live, 2026-10-07/08: 58 replays of Opus main
+ * threads of 50-400 messages, at the one-hour cache rate; the stored tails
+ * hashed to exactly these two prompts.
+ *
  * The CLI names its request class in `x-claude-code-request-class`, but sends
  * it only with `CLAUDE_CODE_GATEWAY_HINT_HEADERS=1`, to a first-party base URL,
  * or under a remote flag — through Meridian it is normally absent. When present
  * it decides outright. Otherwise the side call's shape does. The classifier's:
  * a session key, no tools, not streamed, and a stop sequence closing its
- * verdict tag. The summary fork's: a session key and the summary prompt
- * opening a text block of its final user message. The streamed session-start
- * request, compaction and main turns all fall outside both. If a future CLI
- * changes those stop sequences or that prompt, detection falls back to today's
- * behavior rather than isolating a real turn.
+ * verdict tag. A fork's: a session key and the fork's prompt opening a text
+ * block of its final user message. The streamed session-start request,
+ * compaction and main turns all fall outside both. If a future CLI changes
+ * those stop sequences or prompts, detection falls back to today's behavior
+ * rather than isolating a real turn.
  */
 export function isClaudeCodeAuxiliaryRequest(requestClass: string | undefined, body: unknown): boolean {
   if (requestClass !== undefined) return requestClass === "auxiliary"
   if (!body || typeof body !== "object") return false
-  if (!hasClassifierShape(body) && !endsWithAgentSummaryPrompt(body)) return false
+  if (!hasClassifierShape(body) && !endsWithForkPrompt(body, opensAgentSummary) && !endsWithForkPrompt(body, opensMainThreadFork)) {
+    return false
+  }
   return extractClaudeCodeSessionId(body) !== undefined
 }
 
@@ -331,7 +354,7 @@ export function claudeCodePromptCacheLifetime(agentId: string | undefined, body:
 const AGENT_SUMMARY_FIELD_MAX = 2_000
 
 function clipSummaryText(text: string): string {
-  if (text.length <= AGENT_SUMMARY_FIELD_MAX || text.startsWith(AGENT_SUMMARY_PROMPT)) return text
+  if (text.length <= AGENT_SUMMARY_FIELD_MAX || opensAgentSummary(text) || opensMainThreadFork(text)) return text
   return `${text.slice(0, AGENT_SUMMARY_FIELD_MAX)}\n[… ${text.length - AGENT_SUMMARY_FIELD_MAX} more characters omitted]`
 }
 
@@ -378,22 +401,81 @@ export function agentSummaryReplayMessages(body: unknown): Array<{ role: string;
   if (!body || typeof body !== "object") return undefined
   const { messages } = body as { messages?: unknown }
   if (!Array.isArray(messages)) return undefined
-  const prompt = agentSummaryPromptIndex(messages)
+  const prompt = forkPromptIndex(messages, opensAgentSummary)
   if (prompt < 0) return undefined
   const latest = messages.findLastIndex((message: unknown, index: number) =>
-    index < prompt && (message as { role?: unknown } | null)?.role === "assistant")
+    index < prompt && roleOf(message) === "assistant")
   if (latest <= 0) return undefined
-  const step = messages.slice(latest, prompt + 1).flatMap((message: unknown) => {
-    if (!message || typeof message !== "object") return []
-    const { role, content } = message as { role?: unknown; content?: unknown }
-    return typeof role === "string" ? [{ ...message, role, content: clipSummaryContent(content) }] : []
-  })
   return [
     {
       role: "user",
       content: `[Meridian: this progress summary is answered from the latest step only; ${latest} earlier message${latest === 1 ? "" : "s"} left out.]`,
     },
-    ...step,
+    ...clippedMessages(messages.slice(latest, prompt + 1)),
+  ]
+}
+
+function roleOf(message: unknown): unknown {
+  return (message as { role?: unknown } | null)?.role
+}
+
+function clippedMessages(messages: unknown[]): Array<{ role: string; content: unknown }> {
+  return messages.flatMap((message: unknown) => {
+    if (!message || typeof message !== "object") return []
+    const { role, content } = message as { role?: unknown; content?: unknown }
+    return typeof role === "string" ? [{ ...message, role, content: clipSummaryContent(content) }] : []
+  })
+}
+
+/** Text the user typed: anything outside the CLI's reminders. */
+function hasTypedText(text: unknown): boolean {
+  return typeof text === "string" && text.replace(/<system-reminder>[\s\S]*?<\/system-reminder>/g, "").trim().length > 0
+}
+
+function isTypedUserMessage(message: unknown): boolean {
+  if (roleOf(message) !== "user") return false
+  const { content } = message as { content?: unknown }
+  if (typeof content === "string") return hasTypedText(content)
+  return Array.isArray(content) && content.some((block: unknown) =>
+    isPromptBlock(block, hasTypedText))
+}
+
+/**
+ * What a recap or a next-prompt suggestion is answered from: the
+ * conversation's opening message, the last message the user typed, and its
+ * latest step (the latest assistant turn and the prompt), each clipped.
+ *
+ * NOTE: agent-specific (claude-code). The CLI sends these forks with the main
+ * thread's whole transcript so that they read its prompt cache. Through
+ * Meridian a side call is answered from a session of its own, so the whole
+ * transcript would be written to the cache again for a 40-word recap or a
+ * 2-12 word suggestion. The recap leads with "the overall goal and current
+ * task, then the one next action"; the suggestion reads "the user's recent
+ * messages and original request" and what the latest turn asked of them.
+ *
+ * Undefined when the request is not one of those forks, or leaves nothing out;
+ * the request is then replayed as sent.
+ */
+export function sideForkReplayMessages(body: unknown): Array<{ role: string; content: unknown }> | undefined {
+  if (!body || typeof body !== "object") return undefined
+  const { messages } = body as { messages?: unknown }
+  if (!Array.isArray(messages)) return undefined
+  const prompt = forkPromptIndex(messages, opensMainThreadFork)
+  if (prompt < 0) return undefined
+  const latest = messages.findLastIndex((message: unknown, index: number) => index < prompt && roleOf(message) === "assistant")
+  const opening = messages.findIndex((message: unknown) => roleOf(message) === "user")
+  if (latest < 0 || opening < 0 || opening >= latest) return undefined
+  const typed = messages.findLastIndex((message: unknown, index: number) =>
+    index > opening && index < latest && isTypedUserMessage(message))
+  const kept = [messages[opening], ...(typed >= 0 ? [messages[typed]] : []), ...messages.slice(latest, prompt + 1)]
+  const leftOut = prompt + 1 - kept.length
+  if (leftOut <= 0) return undefined
+  return [
+    {
+      role: "user",
+      content: `[Meridian: answered from the conversation's opening message, the last message the user typed and its latest step; ${leftOut} earlier message${leftOut === 1 ? "" : "s"} left out.]`,
+    },
+    ...clippedMessages(kept),
   ]
 }
 
@@ -548,9 +630,9 @@ export const claudeCodeAdapter: AgentAdapter = {
     return isClaudeCodeAuxiliaryRequest(c.req.header(CLAUDE_CODE_REQUEST_CLASS_HEADER), body)
   },
 
-  /** See `agentSummaryReplayMessages`. */
+  /** See `agentSummaryReplayMessages` and `sideForkReplayMessages`. */
   getAuxiliaryReplayMessages(_c: Context, body?: unknown): Array<{ role: string; content: unknown }> | undefined {
-    return agentSummaryReplayMessages(body)
+    return agentSummaryReplayMessages(body) ?? sideForkReplayMessages(body)
   },
 
   /** See `claudeCodeAuxiliaryPromptGrows`. */

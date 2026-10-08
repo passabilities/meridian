@@ -11,7 +11,7 @@
  */
 import { describe, it, expect } from "bun:test"
 import type { Context } from "hono"
-import { agentSummaryReplayMessages, CLAUDE_CODE_AGENT_ID_HEADER, claudeCodeAdapter, claudeCodeAuxiliaryPromptGrows, claudeCodeSessionKey, isClaudeCodeAuxiliaryRequest } from "../proxy/adapters/claudecode"
+import { agentSummaryReplayMessages, CLAUDE_CODE_AGENT_ID_HEADER, claudeCodeAdapter, claudeCodeAuxiliaryPromptGrows, claudeCodeSessionKey, isClaudeCodeAuxiliaryRequest, sideForkReplayMessages } from "../proxy/adapters/claudecode"
 
 describe("claudeCodeAdapter — identity", () => {
   it("has name 'claude-code'", () => {
@@ -748,6 +748,119 @@ describe("agentSummaryReplayMessages — what a progress summary is answered fro
     expect(claudeCodeAdapter.getAuxiliaryReplayMessages?.(ctx, fork(threeRounds)))
       .toEqual(agentSummaryReplayMessages(fork(threeRounds)))
     expect(claudeCodeAdapter.getAuxiliaryReplayMessages?.(ctx, fork(threeRounds.slice(0, 4)))).toBeUndefined()
+  })
+})
+
+// The CLI's main-thread forks, from the 2.1.294 binary: the recap shown to a
+// user coming back (`away_summary`) and the next-prompt suggestion
+// (`prompt_suggestion`). Each sends the conversation's session id, its whole
+// history and one prompt. Read as turns, their prompt became the stored tail,
+// and the user's reply after them replayed the main thread (live 2026-10-07/08:
+// 58 replays of Opus main threads of 50-400 messages; stored digests
+// a8b1dc5bfce7 and 336bcd9d1fa7 are these two prompts).
+const AWAY_SUMMARY_PROMPT = "The user stepped away and is coming back. Recap in under 40 words, 1-2 plain sentences, no markdown. Lead with the overall goal and current task, then the one next action. Skip root-cause narrative, fix internals, secondary to-dos, and em-dash tangents."
+const SUGGESTION_PROMPT = [
+  "[SUGGESTION MODE: Suggest what the user might naturally type next into Claude Code.]",
+  "",
+  "FIRST: Look at the user's recent messages and original request.",
+  "",
+  "Reply with ONLY the suggestion, no quotes or explanation.",
+].join("\n")
+
+describe("isClaudeCodeAuxiliaryRequest — the main thread's recap and next-prompt suggestion", () => {
+  const history = [
+    { role: "user", content: "Invoke the /sss-agents:sss-groom slash command for SSS-101" },
+    { role: "assistant", content: [{ type: "text", text: "Phase 8 is waiting for you: reply 1 to approve, r to revise." }] },
+  ]
+  const main = (messages: unknown[]) => ({
+    model: "claude-opus-5-5",
+    stream: true,
+    tools: [{ name: "Read", input_schema: { type: "object" } }],
+    messages,
+    metadata: { user_id: JSON.stringify({ session_id: "conv-1" }) },
+  })
+
+  it("recognises either fork by the prompt ending its history", () => {
+    for (const prompt of [AWAY_SUMMARY_PROMPT, SUGGESTION_PROMPT]) {
+      expect(isClaudeCodeAuxiliaryRequest(undefined, main([...history, { role: "user", content: prompt }]))).toBe(true)
+      expect(isClaudeCodeAuxiliaryRequest(undefined, main([...history, { role: "user", content: [{ type: "text", text: prompt }] }]))).toBe(true)
+      expect(isClaudeCodeAuxiliaryRequest(undefined, main([...history, { role: "user", content: prompt },
+        { role: "system", content: "<total_tokens>900000 tokens left</total_tokens>" }]))).toBe(true)
+    }
+  })
+
+  it("leaves the user's reply after either fork alone", () => {
+    expect(isClaudeCodeAuxiliaryRequest(undefined, main([...history, { role: "user", content: "r" }]))).toBe(false)
+    expect(isClaudeCodeAuxiliaryRequest(undefined, main([...history,
+      { role: "user", content: `What does this prompt do? ${AWAY_SUMMARY_PROMPT}` }]))).toBe(false)
+  })
+
+  it("requires a Claude Code session key", () => {
+    expect(isClaudeCodeAuxiliaryRequest(undefined, { ...main([...history, { role: "user", content: AWAY_SUMMARY_PROMPT }]), metadata: undefined }))
+      .toBe(false)
+  })
+})
+
+describe("sideForkReplayMessages — what a recap or a suggestion is answered from", () => {
+  const read = (id: string) => ({ role: "assistant", content: [{ type: "tool_use", id, name: "Read", input: { file_path: `${id}.ts` } }] })
+  const result = (id: string, content: string) => ({ role: "user", content: [{ type: "tool_result", tool_use_id: id, content }] })
+  const fork = (messages: unknown[]) => ({
+    model: "claude-opus-5-5",
+    stream: true,
+    tools: [{ name: "Read", input_schema: { type: "object" } }],
+    messages,
+    metadata: { user_id: JSON.stringify({ session_id: "conv-1" }) },
+  })
+  const opening = { role: "user", content: "Invoke the /sss-agents:sss-groom slash command for SSS-101" }
+  const typed = { role: "user", content: [{ type: "text", text: "<system-reminder>Stay on task.</system-reminder>" }, { type: "text", text: "go on with phase 8" }] }
+  const latest = { role: "assistant", content: [{ type: "text", text: "Phase 8 is waiting for you: reply 1 to approve, r to revise." }] }
+  const conversation = [
+    opening,
+    { role: "system", content: "# Environment\nYou have been invoked in the following environment:" },
+    read("a"), result("a", "export const a = 1"),
+    typed,
+    read("b"), result("b", "export const b = 2"),
+    latest,
+  ]
+
+  it("keeps the opening message, the user's latest words and the latest step", () => {
+    for (const prompt of [AWAY_SUMMARY_PROMPT, SUGGESTION_PROMPT]) {
+      const replay = sideForkReplayMessages(fork([...conversation, { role: "user", content: prompt }]))
+      expect(replay?.slice(1)).toEqual([opening, typed, latest, { role: "user", content: prompt }])
+      expect(replay?.[0]?.role).toBe("user")
+      expect(replay?.[0]?.content).toContain("5 earlier messages")
+    }
+  })
+
+  it("clips a long message it keeps", () => {
+    const longAnswer = { role: "assistant", content: [{ type: "text", text: "A long plan. ".repeat(2_000) }] }
+    const rendered = JSON.stringify(sideForkReplayMessages(fork([...conversation.slice(0, -1), longAnswer, { role: "user", content: AWAY_SUMMARY_PROMPT }])))
+    expect(rendered.length).toBeLessThan(6_000)
+    expect(rendered).toContain("more characters omitted")
+    expect(rendered).toContain(AWAY_SUMMARY_PROMPT)
+  })
+
+  it("replays the request as sent when it leaves nothing out", () => {
+    expect(sideForkReplayMessages(fork([opening, latest, { role: "user", content: AWAY_SUMMARY_PROMPT }]))).toBeUndefined()
+  })
+
+  it("leaves every other request alone", () => {
+    expect(sideForkReplayMessages(fork([...conversation, { role: "user", content: "r" }]))).toBeUndefined()
+    expect(sideForkReplayMessages(fork([...conversation.slice(0, -1), { role: "user", content: [{ type: "tool_result", tool_use_id: "b", content: "x" },
+      { type: "text", text: "Describe your most recent action in 3-5 words using present tense (-ing)." }] }]))).toBeUndefined()
+  })
+
+  it("rejects malformed shapes without throwing", () => {
+    expect(sideForkReplayMessages(undefined)).toBeUndefined()
+    for (const messages of [undefined, null, "not an array", [], [null], [{ role: "user" }], [null, { role: "user", content: AWAY_SUMMARY_PROMPT }]]) {
+      expect(() => sideForkReplayMessages(fork(messages as unknown[]))).not.toThrow()
+    }
+  })
+
+  it("is what the adapter offers the proxy for an auxiliary request", () => {
+    const ctx = { req: { header: () => undefined } } as unknown as Parameters<typeof claudeCodeAdapter.getSessionId>[0]
+    const body = fork([...conversation, { role: "user", content: SUGGESTION_PROMPT }])
+    expect(claudeCodeAdapter.getAuxiliaryReplayMessages?.(ctx, body)).toEqual(sideForkReplayMessages(body))
   })
 })
 

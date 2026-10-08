@@ -334,8 +334,8 @@ Agent-specific behavior is isolated behind the `AgentAdapter` interface (`adapte
 | `getSessionId(c)` | Extract session ID from request headers |
 | `getAgentMode(c, body)` | Normalize an adapter-specific primary/subagent declaration |
 | `getRootSessionId(c, body)` | Optional conversation root for account routing (sticky and priority assignment): a subagent with a session key of its own stays on its parent's account (Claude Code's Agent tool) |
-| `isAuxiliaryRequest(c, body)` | Declare a side call that shares the conversation's session key: it skips session lookup, publication and the turn lease (Claude Code's auto-mode classifier and background-agent progress summary) |
-| `getAuxiliaryReplayMessages(c, body)` | Optional: the messages such a side call's answer depends on, when that is less than the history it carries; only those are replayed into its session (Claude Code's progress summary: the latest step) |
+| `isAuxiliaryRequest(c, body)` | Declare a side call that shares the conversation's session key: it skips session lookup, publication and the turn lease (Claude Code's auto-mode classifier, background-agent progress summary, and the main thread's recap and next-prompt suggestion) |
+| `getAuxiliaryReplayMessages(c, body)` | Optional: the messages such a side call's answer depends on, when that is less than the history it carries; only those are replayed into its session (Claude Code's progress summary: the latest step; its recap and suggestion: the opening message, the last one the user typed, and the latest step) |
 | `auxiliaryPromptGrows(c, body)` | Optional: true when such a side call repeats the prompt of the one before it and adds to its end; its prompt is then cut into blocks with the proxy's own cache breakpoints so each call reads back what the last wrote (Claude Code's auto-mode classifier: the transcript) |
 | `promptCacheLifetime(c, body)` | Optional: how long the client would have kept this conversation's prompt cache, where the SDK child would choose otherwise; every query the request makes asks the CLI for it, unless the operator's environment already decides (Claude Code's Agent-tool subagents: five minutes, where an SDK query gets the hour of a main conversation) |
 | `extractWorkingDirectory(body)` | Parse working directory from request body |
@@ -408,6 +408,15 @@ subagent's whole context to the cache for every label, so
 assistant turn and the message carrying the prompt, with each tool input and
 output clipped. Lineage, logging and the stored mapping still see the request
 as sent.
+
+The main conversation's key is shared by two forks of the main thread: the
+recap shown to a user coming back (`away_summary`) and the next-prompt
+suggestion (`prompt_suggestion`). Each sends the conversation's history and
+one prompt. Committed as a turn, the prompt became the stored tail, and the
+user's reply after it classified `undo` (same length, no rollback point) or
+`modified-history`, so the whole main thread replayed. `isAuxiliaryRequest`
+recognises both by their prompt, and their replay keeps the conversation's
+opening message, the last message the user typed and the latest step.
 
 The auto-mode classifier is the opposite case: its answer depends on all of
 what it sends, and what it sends is the conversation's transcript again with

@@ -1705,6 +1705,72 @@ describe("Integration: passthrough early stop", () => {
     })
   }
 
+  // NOTE: agent-specific (claude-code). The CLI's main-thread forks, the recap
+  // for a user coming back (`away_summary`) and the next-prompt suggestion
+  // (`prompt_suggestion`), send the conversation's own session id, its history
+  // and one prompt. Run as a turn, the prompt became the stored tail and the
+  // user's reply after it came back `undo` with no rollback point: the whole
+  // main thread replayed (live 2026-10-07/08: 58 Opus main threads of 50-400
+  // messages). The prompt openings are the 2.1.294 binary's.
+  for (const [fork, prompt] of [
+    ["recap", "The user stepped away and is coming back. Recap in under 40 words, 1-2 plain sentences, no markdown. Lead with the overall goal and current task, then the one next action."],
+    ["suggestion", "[SUGGESTION MODE: Suggest what the user might naturally type next into Claude Code.]\n\nReply with ONLY the suggestion, no quotes or explanation."],
+  ] as const) {
+    it(`never stores a Claude Code ${fork} as a turn of the conversation`, async () => {
+      const sessionId = `cc-side-fork-${fork}-${TEST_RUN_ID}`
+      const answer = (id: string, text: string) => [
+        messageStart(id),
+        textBlockStart(0),
+        textDelta(0, text),
+        blockStop(0),
+        messageDelta("end_turn"),
+        messageStop(),
+        assistantMessage([{ type: "text", text }]),
+      ]
+      const history = [
+        { role: "user", content: "Run phase 8 of SSS-101" },
+        { role: "assistant", content: [{ type: "text", text: "Phase 8 is waiting for you: reply 1 to approve, r to revise." }] },
+      ]
+
+      mockMessages = answer("msg_cc_fork_1", "Phase 8 is waiting for you: reply 1 to approve, r to revise.")
+      const first = await postClaudeCode(app, {
+        model: "claude-opus-5-5", max_tokens: 400, stream: true, tools: [READ_TOOL], messages: history.slice(0, 1),
+      }, sessionId)
+      expect(first.status).toBe(200)
+      await first.text()
+      let stored: any
+      for (let i = 0; i < 500 && !stored; i++) {
+        stored = lookupSharedSession(sessionId)
+        if (!stored) await new Promise((resolve) => setTimeout(resolve, 10))
+      }
+      expect(stored?.messageCount).toBe(1)
+
+      mockMessages = answer("msg_cc_fork_side", "Running SSS-101 phase 8; next, approve or revise.")
+      const side = await postClaudeCode(app, {
+        model: "claude-opus-5-5", max_tokens: 400, stream: true, tools: [READ_TOOL],
+        messages: [...history, { role: "user", content: prompt }],
+      }, sessionId)
+      expect(side.status).toBe(200)
+      expect(await side.text()).toContain("next, approve or revise")
+      expect(capturedQueryParamsAll[1].options.resume).toBeUndefined()
+      expect(typeof capturedQueryParamsAll[1].prompt).toBe("string")
+      expect(capturedQueryParamsAll[1].prompt).toContain(prompt)
+      // The conversation's mapping is exactly as its turn left it.
+      expect(lookupSharedSession(sessionId)).toEqual(stored)
+
+      // The user's reply resumes that turn's session.
+      mockMessages = answer("msg_cc_fork_2", "Revising phase 8.")
+      const reply = await postClaudeCode(app, {
+        model: "claude-opus-5-5", max_tokens: 400, stream: true, tools: [READ_TOOL],
+        messages: [...history, { role: "user", content: "r" }],
+      }, sessionId)
+      expect(reply.status).toBe(200)
+      expect(await reply.text()).toContain("Revising phase 8.")
+      expect(capturedQueryParamsAll[2].options.resume).toBe(initialManagedSessionId())
+      expect(typeof capturedQueryParamsAll[2].prompt === "string" ? capturedQueryParamsAll[2].prompt : "").not.toContain("conversation_history")
+    })
+  }
+
   // With no turn lease to wait on, a progress summary runs beside the turn it
   // forks, under the same session key and with the same tools. Handed the
   // session's cached MCP server, the two SDK children shared one server
