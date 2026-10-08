@@ -1026,7 +1026,7 @@ curl -s -X PUT -H 'Content-Type: application/json' -d '{"checkForUpdates":false}
 | E74 | [Claude Code permission-check prompt cache](#e74-claude-code-permission-check-prompt-cache) | **Automated, needs the `claude` CLI** (skips cleanly without it), **no model calls**: `bun scripts/e2e-claude-code-permission-check-cache.mjs` — the REAL Claude Code CLI in `--permission-mode auto`, this checkout's proxy running in a git repository, the real SDK driving this checkout's CLI, and a scripted Messages API that keeps a prompt cache as the API documents it. Asserts each check goes upstream as text blocks carrying only Meridian's cache breakpoints, reads back what the check before it wrote — also after a file in the proxy's directory changes — carries the same prompt as with the layout off, and falls back to the plain prompt when the API refuses the breakpoints. **Run before releases touching auxiliary requests, replay framing or the SDK/CLI version** | 2026-10-05 |
 | E75 | [Deferred-tools tool turn](#e75-deferred-tools-tool-turn) | **Automated, no model calls, runs in CI**: `E2E_CLAUDE_PATH=sdk-bundled bun scripts/e2e-deferred-tool-turn.mjs` — real proxy + SDK + CLI against a scripted Messages API, on a CLI that ignores the hook's stop (the fallback mode of E76's gate). Asserts a tool turn on a session whose deferral is not in effect is asked with `maxTurns` 1, costs ONE Messages call, ends on `error_max_turns` and resumes at the tool boundary with the client's real results (non-stream and stream; one call and two parallel calls), with every tool loaded and no ToolSearch. **Run before releases touching the passthrough turn cap, the SDK `tools` option, or the SDK/CLI version** | 2026-10-05 |
 | E76 | [Tool deferral in passthrough](#e76-tool-deferral-in-passthrough) | **Automated, no model calls, runs in CI**: `E2E_EXPECT=deferral bun scripts/e2e-deferred-tool-turn.mjs` — real proxy + SDK + CLI against a scripted Messages API. Asserts ToolSearch is on offer, the deferred tools are absent from the request and named in the system prompt, a call to a loaded tool is ONE Messages call and a ToolSearch round plus its call is two, a ToolSearch beside a client call keeps its result across the resume, a CLI-rejected call reaches the client once, a search past the budget ends as `max_tokens`, and Haiku 4.5 defers like any model. **Live, needs the `claude` CLI and Claude Max**: `bun scripts/e2e-deferred-tool-turn-live.mjs` — the REAL Claude Code client with a 61-tool MCP server: prompt size with and without deferral, and a deferred tool found and run, one of the server's and one of the client's own. **Live, needs OpenCode**: `bun scripts/e2e-opencode-deferral-live.mjs`. **Needs OpenCode, no model**: `bun scripts/e2e-opencode-deferred-refusal.mjs` — #1192's harness. **Run before releases touching tool deferral, the PreToolUse hook's output, the SDK `tools` option, the adapters' core tool lists, or the SDK/CLI version** | 2026-10-05 |
-| E77 | [Claude Code system turns across tool rounds](#e77-claude-code-system-turns-across-tool-rounds) | **Automated, no model calls, not in CI**: `bun scripts/e2e-claude-code-system-turns.mjs [model]` — the REAL Claude Code client through a real proxy, SDK and CLI against a scripted Messages API. Runs five tool rounds on `claude-fable-5-1`, in the main thread or with `E2E_SUBAGENT=1` in an Agent-tool subagent, and asserts every request after the first is a `continuation` that resumes its SDK session, reaches the API as structured tool turns and not as a replay, and delivers the request's own reminder. **Run before releases touching lineage, the Claude Code adapter, or the client, SDK or CLI version** | 2026-10-05 |
+| E77 | [Claude Code system turns across tool rounds](#e77-claude-code-system-turns-across-tool-rounds) | **Automated, no model calls, not in CI**: `bun scripts/e2e-claude-code-system-turns.mjs [model]` — the REAL Claude Code client through a real proxy, SDK and CLI against a scripted Messages API. Runs five tool rounds on `claude-fable-5-1`, in the main thread or with `E2E_SUBAGENT=1` in an Agent-tool subagent, and asserts every request after the first is a `continuation` that resumes its SDK session, reaches the API as structured tool turns and not as a replay, and delivers the request's own reminder. **Automated**: `bun test src/__tests__/claude-code-system-turn-lineage.test.ts` and `-t "reminder"` in `passthrough-early-stop-integration.test.ts` — also a turn that is the reminder alone (2.1.294), which no gate makes the client send. **Run before releases touching lineage, the Claude Code adapter, or the client, SDK or CLI version** | 2026-10-08 |
 | E78 | [An allowance spent for one model](#e78-an-allowance-spent-for-one-model) | **Live, needs two Claude Max profiles, one out of a model's weekly allowance**: `SPENT=<profile> ROOM=<profile> bun scripts/e2e-model-allowance-failover-live.mjs` — this checkout's proxy started in the gate's process. Asserts a request for the spent model is served by the next account (streamed and not), the spent account is benched for that model alone until Anthropic's reset, another model stays on it, and a pool that refuses the model says how long until one serves it. **Run before releases touching limit detection, routing or the `Retry-After`** | 2026-10-05 |
 | E79 | [The prompt cache lifetime of a Claude Code subagent](#e79-the-prompt-cache-lifetime-of-a-claude-code-subagent) | **Automated, no model calls, not in CI**: `E2E_SUBAGENT=1 ROUNDS=2 bun scripts/e2e-claude-code-system-turns.mjs` — E77's gate. Asserts an Agent-tool subagent's prompt cache is written for five minutes and a main conversation's for an hour, as the client writes them connected directly. **Run before releases touching the Claude Code adapter, the SDK child's environment or the SDK/CLI version** | 2026-10-05 |
 | E80 | [What a Claude Code request carries](#e80-what-a-claude-code-request-carries) | **Automated, no model calls, not in CI**: `E2E_SUBAGENT=1 E2E_MCP_TOOLS=20 ROUNDS=2 bun scripts/e2e-claude-code-system-turns.mjs claude-sonnet-5-5` — E77's gate. Asserts the API receives the client's system prompt with Meridian's notes and no preset, every tool description whole, the tools the client defers itself out of the request at any count, and every SDK query running in the client's directory with nothing of the proxy's in a request. **Live, needs two Claude Max profiles**: `SPENT=<profile> ROOM=<profile> bun scripts/e2e-claude-code-account-switch-live.mjs` — the REAL Claude Code client, a main thread on the active account and a Fable subagent that account has no allowance for: the subagent fails over and resumes on the next account, the main thread stays, both run in the client's directory, and the prompt each turn carried is printed beside a direct run's. **Run before releases touching the Claude Code adapter or transform, tool deferral, the SDK child's environment, routing, or the client, SDK or CLI version** | 2026-10-05 |
@@ -7005,6 +7005,37 @@ cached prefix. The known wording is matched as well, for a turn with no
 breakpoint. Message positions are kept, and the request the model reads is
 untouched: the reminder is still delivered with its round.
 
+#### A system turn that is the reminder alone (claude-cli 2.1.294)
+
+On 2026-10-07/08 the user's orchestrators (client 2.1.294) sent Fable
+subagent rounds ending in a system turn that held the reminder and nothing
+else, and the next request carried no trace of it: the reply sat where the
+turn had been.
+
+```
+request k     … user[tool_result]  system[ "First privately list what you need next; …" ]
+request k+1   … user[tool_result]  assistant[thinking, text, tool_use]  user[tool_result]
+              system[ "First privately list what you need next; …" ]
+```
+
+The token notice is the CLI's `totalTokensReminder` (default
+`padded-countdown`), which its own budget settings leave out at times, so the
+turn can be the reminder alone. Stored as the tail of the lineage, it made
+every later round `modified-history`. From that proxy's persisted telemetry
+(Oct 6 18:38 to Oct 8 06:43; private, not in the repository): 187 Fable
+rounds replayed, every one with the same stored digest `eff8768460e3`, which
+is `system: [reminder]` hashed the way `lineage.ts` hashes a message. That
+came to 41.1M cache writes, about 226K each, where a resumed round of the
+same subagents wrote 21K. They came in bursts (Oct 7 13:00-17:00, Oct 8
+01:00-06:00): within one subagent the first three rounds resumed, then every
+round after replayed.
+
+Such a turn is left out of the lineage, but only at the end of a request, so
+no other message moves. The reply's SDK message UUID is recorded where the
+client puts the reply next time (`replyPosition`, the lineage's length). Before,
+it went after the request's last message, one past where the reply then sits,
+so an undo there would have rolled back to the wrong message.
+
 ### Run it
 
 ```bash
@@ -7070,17 +7101,29 @@ pure function and `passthrough-early-stop-integration.test.ts` ("one-request
 reminder") holds three requests through the mocked SDK; both fail without the
 hook.
 
+2026-10-08, the reminder alone: `claude-code-system-turn-lineage.test.ts`
+("reminder-only") and `passthrough-early-stop-integration.test.ts`
+("reminder-only system turn", streamed and not) failed before the change. The
+pure test failed with the live diagnosis exactly (`modified-history`, stored
+digest `eff8768460e3…`). The integration test also holds where the reply's
+SDK UUID is recorded. The E77 gate with client 2.1.294 still passes, main
+thread and subagent, but it does not reach this shape: that client sent the
+two-block turn on every round, and `CLAUDE_CODE_TOTAL_TOKENS_REMINDER=off` in
+the gate's environment did not change that. The real-traffic check is
+whether `eff8768460e3` replays stop once the user's proxy runs this build.
+
 ### Not covered
 
 - The real model. The requests are the real client's, main thread and
   subagent, but no Fable call has been made through a proxy with the fix.
 - A background agent's progress-summary requests beside its rounds; the
   scripted run produced none.
-- A system turn that is nothing but a one-request reminder. The client would
-  then send one message fewer in the next request, and a canonicalizer cannot
-  remove a message: resume indexes are by position. Not seen on 2.1.284 or
-  2.1.289, where the token notice is always there.
-- Sessions stored before the fix. Their lineage has the reminder in it, so
+- A system turn that is nothing but a one-request reminder anywhere but the
+  end of a request. It keeps its place, since resume indexes are by position;
+  the client has only been seen sending it last.
+- The reminder alone through the real client: no gate makes the client send
+  it (see Verified).
+- Sessions stored before either fix. Their lineage has the reminder in it, so
   their next tool round replays once more and resumes from then on.
 - Linux and Windows.
 

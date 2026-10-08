@@ -2156,6 +2156,10 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
         // not persist it as durable conversation ancestry.
         const lineageMessages = adapter.canonicalizeMessagesForLineage?.(body.messages)
           ?? body.messages
+        // Where the reply sits in the client's next request, which is where its
+        // SDK message UUID is recorded: after the messages the conversation
+        // keeps. A trailing turn sent for this request only is gone by then.
+        const replyPosition = lineageMessages.length
 
         // Native Anthropic server tools (web_search_*, web_fetch_*) can't run
         // through the Max/SDK path — fail fast with an actionable message
@@ -4464,7 +4468,7 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
             ? [...cachedSession.sdkMessageUuids]
             : []
           // Pad to current message count (the last user message has no UUID yet)
-          while (sdkUuidMap.length < allMessages.length) sdkUuidMap.push(null)
+          while (sdkUuidMap.length < replyPosition) sdkUuidMap.push(null)
           let currentClientAssistantUuid: string | null = null
 
           claudeLog("upstream.start", { mode: "non_stream", model })
@@ -4674,7 +4678,7 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
                     await replaceWithFreshTarget("non_stream_resume_replay")
                     currentSessionId = managedForkTarget?.sessionId
                     sdkUuidMap.length = 0
-                    for (let i = 0; i < allMessages.length; i++) sdkUuidMap.push(null)
+                    for (let i = 0; i < replyPosition; i++) sdkUuidMap.push(null)
                     yield* runSdkQueryAttempt(buildQueryOptions({
                       prompt: buildFreshPrompt(allMessages, sanitizeOpts, renderReplayToolName, replayBudgetFor(model), "non_stream_resume_replay"),
                       promptCacheLifetime, wholeToolDescriptions, scratchpadCounterInstruction, model, workingDirectory, clientWorkingDirectory: promptClientWorkingDirectory, clientEnvironmentMayDifferFromProxy, systemContext, claudeExecutable,
@@ -4735,7 +4739,7 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
                     await replaceWithFreshTarget("non_stream_model_fallback")
                     currentSessionId = managedForkTarget?.sessionId
                     sdkUuidMap.length = 0
-                    for (let i = 0; i < allMessages.length; i++) sdkUuidMap.push(null)
+                    for (let i = 0; i < replyPosition; i++) sdkUuidMap.push(null)
                     yield* runSdkQueryAttempt(buildQueryOptions({
                       prompt: buildFreshPrompt(allMessages, sanitizeOpts, renderReplayToolName, replayBudgetFor(model), "non_stream_model_fallback"),
                       promptCacheLifetime, wholeToolDescriptions, scratchpadCounterInstruction, model, workingDirectory, clientWorkingDirectory: promptClientWorkingDirectory, clientEnvironmentMayDifferFromProxy, systemContext, claudeExecutable,
@@ -4958,10 +4962,10 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
                 if (!passthrough || earlyStop.expected.size === 0 || assistantAddedForwardedCall) {
                   sdkUuidMap = withClientAssistantUuid(
                     sdkUuidMap,
-                    allMessages.length,
+                    replyPosition,
                     (message as any).uuid
                   )
-                  currentClientAssistantUuid = sdkUuidMap[allMessages.length] ?? null
+                  currentClientAssistantUuid = sdkUuidMap[replyPosition] ?? null
                 }
                 if (!firstChunkAt) {
                   firstChunkAt = Date.now()
@@ -5432,7 +5436,7 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
                     profileScopedCwd,
                     reconcileReturnedSessionUuids(
                       sdkUuidMap,
-                      allMessages.length,
+                      replyPosition,
                       currentClientAssistantUuid,
                       resumeSessionId,
                       currentSessionId,
@@ -5582,7 +5586,7 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
             let sdkUuidMap: Array<string | null> = (isResume || sdkUndo) && cachedSession?.sdkMessageUuids
               ? [...cachedSession.sdkMessageUuids]
               : []
-            while (sdkUuidMap.length < allMessages.length) sdkUuidMap.push(null)
+            while (sdkUuidMap.length < replyPosition) sdkUuidMap.push(null)
             let currentClientAssistantUuid: string | null = null
 
             let messageStartEmitted = false
@@ -5868,7 +5872,7 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
                       await replaceWithFreshTarget("stream_resume_replay")
                       currentSessionId = managedForkTarget?.sessionId
                       sdkUuidMap.length = 0
-                      for (let i = 0; i < allMessages.length; i++) sdkUuidMap.push(null)
+                      for (let i = 0; i < replyPosition; i++) sdkUuidMap.push(null)
                       yield* runSdkQueryAttempt(buildQueryOptions({
                         prompt: buildFreshPrompt(allMessages, sanitizeOpts, renderReplayToolName, replayBudgetFor(model), "stream_resume_replay"),
                         promptCacheLifetime, wholeToolDescriptions, scratchpadCounterInstruction, model, workingDirectory, clientWorkingDirectory: promptClientWorkingDirectory, clientEnvironmentMayDifferFromProxy, systemContext, claudeExecutable,
@@ -5925,7 +5929,7 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
                       await replaceWithFreshTarget("stream_model_fallback")
                       currentSessionId = managedForkTarget?.sessionId
                       sdkUuidMap.length = 0
-                      for (let i = 0; i < allMessages.length; i++) sdkUuidMap.push(null)
+                      for (let i = 0; i < replyPosition; i++) sdkUuidMap.push(null)
                       yield* runSdkQueryAttempt(buildQueryOptions({
                         prompt: buildFreshPrompt(allMessages, sanitizeOpts, renderReplayToolName, replayBudgetFor(model), "stream_model_fallback"),
                         promptCacheLifetime, wholeToolDescriptions, scratchpadCounterInstruction, model, workingDirectory, clientWorkingDirectory: promptClientWorkingDirectory, clientEnvironmentMayDifferFromProxy, systemContext, claudeExecutable,
@@ -6160,10 +6164,10 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
                   ) {
                     sdkUuidMap = withClientAssistantUuid(
                       sdkUuidMap,
-                      allMessages.length,
+                      replyPosition,
                       (message as any).uuid
                     )
-                    currentClientAssistantUuid = sdkUuidMap[allMessages.length] ?? null
+                    currentClientAssistantUuid = sdkUuidMap[replyPosition] ?? null
                   }
                   if (message.type === "assistant" && !messageStartEmitted) {
                     const unstreamed = (message as { message?: (typeof unstreamedAssistants)[number] }).message
@@ -6663,7 +6667,7 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
                     profileScopedCwd,
                     reconcileReturnedSessionUuids(
                       sdkUuidMap,
-                      allMessages.length,
+                      replyPosition,
                       currentClientAssistantUuid,
                       resumeSessionId,
                       currentSessionId,
@@ -7743,7 +7747,7 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
                     profileScopedCwd,
                     reconcileReturnedSessionUuids(
                       sdkUuidMap,
-                      allMessages.length,
+                      replyPosition,
                       currentClientAssistantUuid,
                       resumeSessionId,
                       currentSessionId,
