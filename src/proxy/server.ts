@@ -279,21 +279,47 @@ const UPSTREAM_IDLE_MS = envInt("UPSTREAM_IDLE_MS", 90_000)
 // arrives, so it follows the environment without a restart.
 const upstreamAuxiliaryIdleMs = (): number => envInt("UPSTREAM_AUXILIARY_IDLE_MS", 30_000)
 
+// The same guard while a turn writes a tool call's input (see
+// guardUpstreamIdle): the model API can send nothing but pings for the whole
+// of one long parameter. Live, 2026-10-07/08, every one of 120 mid-stream
+// stalls at 90 s had a tool call open, and each cut-off call made the model
+// write it again from a replayed conversation. Five minutes covers the large
+// Writes that finished on a direct connection and stays inside the session
+// turn's hold (MERIDIAN_SESSION_TURN_MAX_HOLD_MS, ten minutes). Pylon's turn
+// watchdog aborts at 180s, so for a Pylon client it decides first in that
+// window; nothing else changes for it. Side calls keep their own limit.
+const UPSTREAM_TOOL_INPUT_IDLE_MS = envInt("UPSTREAM_TOOL_INPUT_IDLE_MS", 300_000)
+
 /** The upstream idle limit one request runs under, and the setting it is. */
 interface UpstreamIdleLimit {
   ms: number
   setting: string
+  /** The limit while a tool call's input is being written; 0 for none longer. */
+  toolInputMs: number
 }
 
 function upstreamIdleFor(auxiliary: boolean): UpstreamIdleLimit {
   const ms = upstreamIdleLimitMs(auxiliary, UPSTREAM_IDLE_MS, upstreamAuxiliaryIdleMs())
-  return { ms, setting: ms === UPSTREAM_IDLE_MS ? "MERIDIAN_UPSTREAM_IDLE_MS" : "MERIDIAN_UPSTREAM_AUXILIARY_IDLE_MS" }
+  return {
+    ms,
+    setting: ms === UPSTREAM_IDLE_MS ? "MERIDIAN_UPSTREAM_IDLE_MS" : "MERIDIAN_UPSTREAM_AUXILIARY_IDLE_MS",
+    toolInputMs: auxiliary ? 0 : UPSTREAM_TOOL_INPUT_IDLE_MS,
+  }
+}
+
+/** The limit a stall ran out, and the setting that sets it. */
+function stalledLimit(error: UpstreamIdleError, idle: UpstreamIdleLimit): { ms: number; setting: string } {
+  return error.idleMs !== idle.ms && error.idleMs === idle.toolInputMs
+    ? { ms: error.idleMs, setting: "MERIDIAN_UPSTREAM_TOOL_INPUT_IDLE_MS" }
+    : idle
 }
 
 // How long a passthrough deny may be held waiting for the turn-generation
-// boundary. Derived from UPSTREAM_IDLE_MS, never a standalone number, because
+// boundary. Derived from the idle limits, never a standalone number, because
 // this is the same coordination contract: guardUpstreamIdle owns model-stream
-// liveness, so every other timer must sit ABOVE it and let it decide.
+// liveness, so every other timer must sit ABOVE it and let it decide. That
+// includes the tool-input window: a deny held for one call while the next is
+// written must outlast the writing.
 //
 // The hazard this guards is a CLI version that serialises hook-then-stream, in
 // which case a held deny blocks generation forever. That case is already
@@ -306,7 +332,7 @@ function upstreamIdleFor(auxiliary: boolean): UpstreamIdleLimit {
 //
 // An override BELOW UPSTREAM_IDLE_MS deliberately re-enables that race for
 // regression tests; production defaults must remain above the upstream guard.
-const DENY_HOLD_TIMEOUT_MS = envInt("DENY_HOLD_TIMEOUT_MS", UPSTREAM_IDLE_MS + 30_000)
+const DENY_HOLD_TIMEOUT_MS = envInt("DENY_HOLD_TIMEOUT_MS", Math.max(UPSTREAM_IDLE_MS, UPSTREAM_TOOL_INPUT_IDLE_MS) + 30_000)
 // Consecutive stalls for the same request/session before its 504 becomes terminal.
 // A 5xx tells every client retry policy "transient, try again", so a session
 // that stalls deterministically is replayed forever at full upstream cost. 3
@@ -1120,9 +1146,11 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
       }
       signal.throwIfAborted()
       sdkQuery = query(params)
-      const idleLimitMs = upstreamIdleOf(requestMeta).ms
+      const idleLimit = upstreamIdleOf(requestMeta)
+      const idleLimitMs = idleLimit.ms
       yield* guardUpstreamIdle(sdkQuery, idleLimitMs, (sinceLastMs) =>
-        claudeLog("upstream.stalled", { mode, sinceLastMs, limitMs: idleLimitMs }), undefined, logLateIdleDeadline(mode, idleLimitMs))
+        claudeLog("upstream.stalled", { mode, sinceLastMs, limitMs: idleLimitMs }), undefined, logLateIdleDeadline(mode, idleLimitMs),
+        undefined, idleLimit.toolInputMs)
     } finally {
       try {
         // Production Query objects expose close(); test doubles and older SDK
@@ -5134,10 +5162,10 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
             const idleVerdict = error instanceof UpstreamIdleError
               ? idleStalls.record(
                   idleStallSessionKey,
-                  upstreamIdle.ms,
+                  stalledLimit(error, upstreamIdle).ms,
                   error.sinceLastMs,
                   { key: idleRequestKey, now: performance.now() },
-                  upstreamIdle.setting,
+                  stalledLimit(error, upstreamIdle).setting,
                 )
               : undefined
             const canRecoverAsToolUse = canRecoverCapturedToolUses({
@@ -6096,6 +6124,7 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
                 // all of them held by an orchestrator's subagents, has asked
                 // the model nothing.
                 () => requestMeta.sdkSlotWaitingSince !== undefined ? undefined : requestMeta.currentSdkStartedAt ?? 0,
+                upstreamIdle.toolInputMs,
               )
               try {
                 for await (const message of guardedResponse) {
@@ -7482,10 +7511,10 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
                 // Subsequent identical requests also fail before opening SSE.
                 const verdict = idleStalls.record(
                   idleStallSessionKey,
-                  upstreamIdle.ms,
+                  stalledLimit(error, upstreamIdle).ms,
                   error.sinceLastMs,
                   { key: idleRequestKey, now: performance.now() },
-                  upstreamIdle.setting,
+                  stalledLimit(error, upstreamIdle).setting,
                 )
                 claudeLog("upstream.idle_streak", {
                   model,

@@ -112,12 +112,34 @@ function yieldToIo(): Promise<void> {
   return new Promise((resolve) => setImmediate(() => setImmediate(resolve)))
 }
 
+/** Follow, from the SDK's stream events, which content blocks are a tool call still being written. */
+function trackToolInputs(open: Set<number>, value: unknown): void {
+  if (typeof value !== "object" || value === null) return
+  const { type, event } = value as { type?: unknown; event?: unknown }
+  if (type !== "stream_event" || typeof event !== "object" || event === null) return
+  const { type: eventType, index, content_block: block } = event as { type?: unknown; index?: unknown; content_block?: unknown }
+  if (eventType === "message_start" || eventType === "message_stop") open.clear()
+  else if (eventType === "content_block_start" && typeof index === "number"
+    && (block as { type?: unknown } | null)?.type === "tool_use") open.add(index)
+  else if (eventType === "content_block_stop" && typeof index === "number") open.delete(index)
+}
+
 /**
  * `waitingOnUpstreamSince`, when given, says when the source last began
  * waiting on upstream, or undefined while it waits on something else (an SDK
  * slot): that wait asks the model nothing, so no window runs through it, and
  * the window runs from when the source began waiting on upstream if that is
  * later than its last message.
+ *
+ * `toolInputIdleMs`, when longer than `idleMs`, is the limit while a tool
+ * call's input is being written. The model API can send nothing but pings for
+ * the whole of one long parameter (a file for Write, a subagent's report for
+ * its handback), and a call cut off there reaches the client without its
+ * input, so the model writes it all again. Live, 2026-10-07/08: all 120
+ * mid-stream stalls at 90 s came with a tool call still open, and in the
+ * client's transcripts the cut-off calls were Write and SubagentHandback with
+ * no input or a fragment; large Writes that finished on a direct connection
+ * took up to five minutes.
  */
 export async function* guardUpstreamIdle<T>(
   source: AsyncIterable<T>,
@@ -126,6 +148,7 @@ export async function* guardUpstreamIdle<T>(
   clock: IdleGuardClock = realClock,
   onLateDeadline?: (late: LateIdleDeadline) => void,
   waitingOnUpstreamSince?: () => number | undefined,
+  toolInputIdleMs = 0,
 ): AsyncGenerator<T> {
   if (idleMs <= 0) {
     yield* source
@@ -133,6 +156,8 @@ export async function* guardUpstreamIdle<T>(
   }
   const it = source[Symbol.asyncIterator]()
   let lastAt = clock.now()
+  const openToolInputs = new Set<number>()
+  const limit = (): number => (openToolInputs.size > 0 ? Math.max(idleMs, toolInputIdleMs) : idleMs)
   /** Where the idle window starts; undefined while none runs. */
   const windowStart = (): number | undefined => {
     if (!waitingOnUpstreamSince) return lastAt
@@ -151,7 +176,7 @@ export async function* guardUpstreamIdle<T>(
       while (true) {
         let timer: IdleTimerHandle | undefined
         const idle = new Promise<typeof IDLE>((resolve) => {
-          const remaining = Math.max(0, idleMs - (clock.now() - (windowStart() ?? clock.now())))
+          const remaining = Math.max(0, limit() - (clock.now() - (windowStart() ?? clock.now())))
           deadlineAt = clock.now() + remaining
           timer = clock.setTimeout(() => resolve(IDLE), remaining)
         })
@@ -164,7 +189,7 @@ export async function* guardUpstreamIdle<T>(
         // The window moved while this timer ran: the source was waiting on
         // something else, or began waiting on upstream since it was set.
         const start = windowStart()
-        if (start !== undefined && clock.now() - start >= idleMs) break
+        if (start !== undefined && clock.now() - start >= limit()) break
       }
       if (res === IDLE) {
         const sinceLastMs = clock.now() - (windowStart() ?? lastAt)
@@ -186,11 +211,12 @@ export async function* guardUpstreamIdle<T>(
           } catch {
             // Observer errors must not prevent rejecting the guarded iterator.
           }
-          throw new UpstreamIdleError(idleMs, sinceLastMs)
+          throw new UpstreamIdleError(limit(), sinceLastMs)
         }
       }
       if (res.done) return
       if (isSdkStreamPing(res.value)) continue
+      trackToolInputs(openToolInputs, res.value)
       lastAt = clock.now()
       yield res.value
     }

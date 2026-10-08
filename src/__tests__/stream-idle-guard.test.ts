@@ -213,6 +213,69 @@ describe("guardUpstreamIdle", () => {
     }
   })
 
+  // While the model writes one long tool parameter (a whole file for Write, a
+  // subagent's report for its handback), the API can send nothing but pings
+  // for minutes. Live, 2026-10-07/08: all 120 mid-stream "Upstream stalled"
+  // cut-offs came with a tool call still open, 90 s after the block before it.
+  const toolUseStart = (index: number) =>
+    ({ type: "stream_event", event: { type: "content_block_start", index, content_block: { type: "tool_use", id: `toolu_${index}`, name: "Write", input: {} } } })
+  const blockStop = (index: number) => ({ type: "stream_event", event: { type: "content_block_stop", index } })
+  const ping = { type: "stream_event", event: { type: "ping" } }
+
+  it("gives a tool call's input the longer limit while it is being written", async () => {
+    const src = makeSource<unknown>()
+    const clock = makeFakeClock()
+    const stalls: number[] = []
+    let error: unknown
+    const pending = (async () => {
+      for await (const _ of guardUpstreamIdle(src.iterable, 90, ms => stalls.push(ms), clock.clock, undefined, undefined, 300)) { /* drain */ }
+    })().catch(caught => { error = caught })
+    try {
+      await clock.waitForScheduled(1)
+      src.push(toolUseStart(1))
+      await clock.waitForScheduled(2)
+      clock.advance(150)
+      src.push(ping)
+      await clock.waitForScheduled(3)
+      clock.advance(100)
+      await new Promise<void>(resolve => setImmediate(resolve))
+      expect(error).toBeUndefined()
+      // The input arrives and the block closes: the turn's own limit is back.
+      src.push(blockStop(1))
+      await clock.waitForScheduled(4)
+      clock.advance(90)
+      await new Promise<void>(resolve => setImmediate(resolve))
+      expect(error).toBeInstanceOf(UpstreamIdleError)
+      expect(stalls).toEqual([90])
+    } finally {
+      src.finish()
+      await pending
+    }
+  })
+
+  it("still stalls a tool call's input that stays quiet past the longer limit", async () => {
+    const src = makeSource<unknown>()
+    const clock = makeFakeClock()
+    const stalls: number[] = []
+    let error: unknown
+    const pending = (async () => {
+      for await (const _ of guardUpstreamIdle(src.iterable, 90, ms => stalls.push(ms), clock.clock, undefined, undefined, 300)) { /* drain */ }
+    })().catch(caught => { error = caught })
+    try {
+      await clock.waitForScheduled(1)
+      src.push(toolUseStart(1))
+      await clock.waitForScheduled(2)
+      clock.advance(300)
+      await new Promise<void>(resolve => setImmediate(resolve))
+      expect(error).toBeInstanceOf(UpstreamIdleError)
+      expect((error as InstanceType<typeof UpstreamIdleError>).idleMs).toBe(300)
+      expect(stalls).toEqual([300])
+    } finally {
+      src.finish()
+      await pending
+    }
+  })
+
   it("passes nested pings through when disabled and preserves other event shapes", async () => {
     const ping = { type: "stream_event", event: { type: "ping" } }
     const ordinary = [null, { type: "ping" }, { type: "keep_alive" },
