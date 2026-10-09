@@ -1043,6 +1043,7 @@ curl -s -X PUT -H 'Content-Type: application/json' -d '{"checkForUpdates":false}
 | E91 | [A tool call being written is not an upstream stall](#e91-a-tool-call-being-written-is-not-an-upstream-stall) | **Automated**: `bun test src/__tests__/stream-idle-guard.test.ts src/__tests__/proxy-tool-input-idle.test.ts src/__tests__/turn-limits.test.ts`. **No model calls, not in CI**: `bun scripts/e2e-tool-input-idle.mjs [model]` — the real proxy, SDK and CLI; a `Write` call that gets only pings for longer than the turn's limit reaches the client whole, and a quiet text block still stalls at it (`TOOL_INPUT_LIMIT_MS=0` reproduces the cut-off; `QUIET=400 TOOL_INPUT_LIMIT_MS=900000` holds the call for nearly seven minutes). **Run before releases touching the upstream idle limits, the session turn's hold, streaming or passthrough deny holding** | 2026-10-09 |
 | E92 | [A tool call's input reaches the client as it is written](#e92-a-tool-calls-input-reaches-the-client-as-it-is-written) | **Automated**: `bun test src/__tests__/query.test.ts` (`-t "streamed as it is written"`) — on Anthropic's own API the SDK child gets `CLAUDE_CODE_ENABLE_FINE_GRAINED_TOOL_STREAMING=1`, not behind a gateway or another provider, and an operator's value stands. **No model calls, not in CI**: `bun scripts/e2e-eager-tool-input.mjs [model]` — the real proxy, SDK and CLI; the CLI marks the passthrough Write tool `eager_input_streaming` and its input reaches the client in pieces past the tool-input limit (`EAGER=0` reproduces the held-back, cut-off call). **Run before releases touching the SDK child's environment, streaming or passthrough tools** | 2026-10-09 |
 | E93 | [A refusal after a keep-alive ping still fails over](#e93-a-refusal-after-a-keep-alive-ping-still-fails-over) | **Automated**: `bun test src/__tests__/priority-routing-integration.test.ts` (`-t "keep-alive\|looked past pings"`) — a refusal after the stream's `: ping` fails over, a slow account's pings reach the client, and past `MERIDIAN_ACCOUNT_REFUSAL_WAIT_MS` the stream goes to the client as it is. **No model calls, not in CI**: `bun scripts/e2e-refusal-after-ping.mjs` — the real proxy, SDK and CLI with two stand-in accounts; the refusal 20 s in fails over to the other account (`E2E_MERIDIAN_ROOT` at ca854c0 reproduces the `event: error`). **Run before releases touching priority failover or stream heartbeats** | 2026-10-09 |
+| E94 | [A capped tool turn the CLI answered without streaming](#e94-a-capped-tool-turn-the-cli-answered-without-streaming) | **Automated**: `bun test src/__tests__/passthrough-early-stop-integration.test.ts` (`-t "without streaming"`) — a capped passthrough turn that came as one assistant message, with one or several calls, reaches the client as those calls and a `tool_use` stop, and the next request resumes at them. **No model calls, not in CI**: `bun scripts/e2e-unstreamed-capped-turn.mjs` — the real proxy, SDK and CLI; a stream refused before `message_start` makes the CLI answer without streaming (`E2E_MERIDIAN_ROOT` at 864fd7b reproduces the 500). **Run before releases touching passthrough streaming, turn caps or checkpoints** | 2026-10-09 |
 
 | P1 | [Profile: List & Auth Status](#p1-profile-list--auth-status) | `/profiles/list` returns profiles with emails, login status, auth timestamps | - |
 | P2 | [Profile: Switch via API](#p2-profile-switch-via-api) | `POST /profiles/active` switches profile; health endpoint reflects new email | - |
@@ -8626,6 +8627,68 @@ per run, 20 s each):
 **Not covered:** a real account refusing after a real slot wait. On the live
 proxy, 429 finals with `sdk_queue_wait_ms` over 15 s should stop once this is
 deployed.
+
+## E94: A capped tool turn the CLI answered without streaming
+
+**What it proves:** a passthrough tool turn that reaches the proxy as one
+assistant message, with no stream event, goes to the client as its tool calls
+and a `tool_use` stop. The client's result then resumes the session at those
+calls.
+
+The CLI sends a request again without streaming when its stream is accepted and
+then fails before `message_start`, as a burst `rate_limit_error` does. The turn
+then reaches the proxy only as an assistant message. The proxy captures its
+calls through the hook, and the one-turn cap stops the SDK.
+- The success path already forwarded such a turn. The capped stop's recovery
+  required a message already open on the wire, so it went to the client as
+  `api_error: … Reached maximum number of turns (1)`.
+- The early-stop tracker took only streamed calls as proof that a turn's calls
+  were complete. A turn with none never got a checkpoint, so even a recovered
+  one would have replayed the conversation on its next request.
+
+Live, 2026-10-09 from 09:49: Sonnet subagents on two accounts got "429 Rate
+limited" over and over (one SDK transcript shows seven retries over 75 s). By
+11:56, 280 capped turns had gone to Claude Code as a 500: 215 with one call and
+65 with two to six. Each had been answered and paid for, and was then asked
+again.
+
+The capped stop now opens the message from the unanswered turn
+(`openUnstreamedTurns`, shared with the success path), so its calls go out as
+after a streamed turn. A turn with no stream event settles its checkpoint on the
+tracker alone, as the non-stream path does: its message came whole.
+
+### Run it
+
+```bash
+bun test src/__tests__/passthrough-early-stop-integration.test.ts -t "without streaming"
+bun scripts/e2e-unstreamed-capped-turn.mjs                                         # after
+E2E_MERIDIAN_ROOT=<a checkout at 864fd7b> bun scripts/e2e-unstreamed-capped-turn.mjs  # before
+```
+
+The gate runs the real proxy, SDK and CLI against a scripted Messages API, so no
+model is called. Each streaming request is accepted, then refused with that
+`rate_limit_error` before `message_start`. Each request without streaming is
+answered with a Bash call. A 429 for the request itself does not do it: the CLI
+retried 33 streams over nine minutes and never sent one without streaming.
+
+**Pass criteria** (asserted, non-zero exit on any):
+
+- The CLI answered the turn without streaming after a refused stream.
+- No error reaches the client.
+- The client gets the Bash call with its whole input and a `tool_use` stop.
+- The client's result resumes the session (`isResume`, `continuation`).
+
+**Verified 2026-10-09** (SDK child CLI 2.1.284):
+- Before, at 864fd7b: one refused stream, then the CLI's request without
+  streaming was answered. The client got `api_error: Claude Code returned an
+  error result: Reached maximum number of turns (1)` and no call.
+- After: the client got the Bash call (`{"command":"ls -la src"}`) and a
+  `tool_use` stop. Its result resumed the session. With the tracker change
+  undone, that request replayed into a new session (`isResume=false`).
+
+**Not covered:** a live account's burst refusal. Watch for capped errors with
+`envelope=unopened` and `tools=N/0` in `/telemetry/logs?category=error`; they
+should stop.
 
 ## Concurrent transcript publication
 

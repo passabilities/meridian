@@ -2387,6 +2387,99 @@ describe("Integration: passthrough early stop", () => {
     expect(capturedQueryParamsAll[1].options.resumeSessionAt).toBe(toolTurn.uuid)
   })
 
+  // Live, 2026-10-09 09:49-11:27: the CLI's request got "429 Rate limited"
+  // seven times, and the retry that answered came back without streaming. The
+  // turn reached the proxy as one assistant message with its call captured
+  // and no event on the wire, and the capped stop then went to Claude Code as
+  // a 500 for 180 such turns, each of them answered and paid for.
+  it("stream: hands over a capped tool turn the SDK answered without streaming", async () => {
+    const toolTurn = assistantMessage([
+      { type: "text", text: "Running the check." },
+      { type: "tool_use", id: "unstreamed-capped-tool", name: "read", input: { file_path: "x" } },
+    ])
+    mockMessages = [
+      toolTurn,
+      userDenyMessage("unstreamed-capped-tool"),
+      { type: "result", subtype: "error_max_turns", is_error: true, session_id: "test-session", usage: { output_tokens: 42 } },
+    ]
+    mockTerminalError = new Error("Claude Code returned an error result: Reached maximum number of turns (1)")
+
+    const res = await post(app, {
+      model: "claude-sonnet-4-5",
+      max_tokens: 400,
+      stream: true,
+      tools: [READ_TOOL],
+      messages: [{ role: "user", content: "read x, answered without streaming" }],
+    }, "es-unstreamed-capped")
+    expect(res.status).toBe(200)
+    const events = parseSSE(await res.text())
+    expect(events.map(e => e.event)).not.toContain("error")
+    expect(events.filter(e => e.event === "message_start")).toHaveLength(1)
+    const blocks = events.filter(e => e.event === "content_block_start").map(e => (e.data as { content_block: { type: string } }).content_block)
+    expect(blocks.map(block => block.type)).toEqual(["text", "tool_use"])
+    expect(blocks[1]).toMatchObject({ id: "unstreamed-capped-tool", name: "read" })
+    const toolInput = events.filter(e => e.event === "content_block_delta"
+      && (e.data as { delta: { type: string } }).delta.type === "input_json_delta")
+      .map(e => (e.data as { delta: { partial_json: string } }).delta.partial_json).join("")
+    expect(JSON.parse(toolInput)).toEqual({ file_path: "x" })
+    const stop = events.find(e => e.event === "message_delta")?.data as { delta: { stop_reason: string } } | undefined
+    expect(stop?.delta.stop_reason).toBe("tool_use")
+    expect(events.at(-1)?.event).toBe("message_stop")
+
+    // The client's result then resumes the session at the call, as after a
+    // streamed one.
+    mockTerminalError = undefined
+    mockMessages = [assistantMessage([{ type: "text", text: "the file says X" }])]
+    const next = await post(app, {
+      model: "claude-sonnet-4-5",
+      max_tokens: 400,
+      stream: false,
+      tools: [READ_TOOL],
+      messages: [
+        { role: "user", content: "read x, answered without streaming" },
+        { role: "assistant", content: [
+          { type: "text", text: "Running the check." },
+          { type: "tool_use", id: "unstreamed-capped-tool", name: "read", input: { file_path: "x" } },
+        ] },
+        { role: "user", content: [{ type: "tool_result", tool_use_id: "unstreamed-capped-tool", content: "X" }] },
+      ],
+    }, "es-unstreamed-capped")
+    expect(next.status).toBe(200)
+    expect(capturedQueryParamsAll[1].options.resume).toBe(initialManagedSessionId())
+    expect(capturedQueryParamsAll[1].options.resumeSessionAt).toBe(toolTurn.uuid)
+  })
+
+  // 65 of the live turns carried two to six parallel calls.
+  it("stream: hands over every call of a parallel capped turn answered without streaming", async () => {
+    const toolTurn = assistantMessage([
+      { type: "tool_use", id: "unstreamed-parallel-a", name: "read", input: { file_path: "a" } },
+      { type: "tool_use", id: "unstreamed-parallel-b", name: "read", input: { file_path: "b" } },
+    ])
+    mockMessages = [
+      toolTurn,
+      userDenyMessage("unstreamed-parallel-a"),
+      userDenyMessage("unstreamed-parallel-b"),
+      { type: "result", subtype: "error_max_turns", is_error: true, session_id: "test-session", usage: { output_tokens: 42 } },
+    ]
+    mockTerminalError = new Error("Claude Code returned an error result: Reached maximum number of turns (1)")
+
+    const res = await post(app, {
+      model: "claude-sonnet-4-5",
+      max_tokens: 400,
+      stream: true,
+      tools: [READ_TOOL],
+      messages: [{ role: "user", content: "read a and b, answered without streaming" }],
+    }, "es-unstreamed-parallel")
+    expect(res.status).toBe(200)
+    const events = parseSSE(await res.text())
+    expect(events.map(e => e.event)).not.toContain("error")
+    const calls = events.filter(e => e.event === "content_block_start")
+      .map(e => (e.data as { content_block: { type: string; id?: string } }).content_block)
+    expect(calls.map(block => block.id)).toEqual(["unstreamed-parallel-a", "unstreamed-parallel-b"])
+    const stop = events.find(e => e.event === "message_delta")?.data as { delta: { stop_reason: string } } | undefined
+    expect(stop?.delta.stop_reason).toBe("tool_use")
+  })
+
   // The live SDK delivers its error result BEFORE the iterator throws — verified
   // against the real Agent SDK, which enqueues the result then replaces the exit
   // error with the result text. The fixture above omits that result, so it
