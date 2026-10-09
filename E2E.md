@@ -8624,9 +8624,11 @@ per run, 20 s each):
 - After: refused at 20.7 s, the headers went out at 41.2 s, and the client got
   the working account's answer with no error frame.
 
-**Not covered:** a real account refusing after a real slot wait. On the live
-proxy, 429 finals with `sdk_queue_wait_ms` over 15 s should stop once this is
-deployed.
+**Verified live 2026-10-09**, on the owner's proxy, with no model call of its
+own. Of the refusals that came after the first ping (more than 15 s into their
+attempt), all 23 under ca854c0 (07:38–09:46) reached the client. Under 864fd7b
+(09:46–11:35), 37 of 45 failed over and were answered. Six still reached the
+client: they came 157 to 313 s in, past the two-minute wait.
 
 ## E94: A capped tool turn the CLI answered without streaming
 
