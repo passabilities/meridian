@@ -8555,9 +8555,20 @@ no model calls.
 - After: the tool went out as `mcp__oc__Write (eager)`, and all 1,288
   characters arrived in 10 pieces.
 
+**Verified live 2026-10-09**, on the owner's proxy after it was rebuilt at
+ca854c0 (07:38), with no model call of its own: every SDK child carried
+`CLAUDE_CODE_ENABLE_FINE_GRAINED_TOOL_STREAMING=1` (and
+`CLAUDE_STREAM_IDLE_TIMEOUT_MS=1200000`). The bytes each child received were
+sampled once a second for five minutes (`nettop`), and matched to its SDK
+transcript: a tool call is written between the end of the block before it and
+the end of its own.
+- Three opus[1m] subagent Writes, of 8,461, 12,393 and 1,759 characters, were
+  written over 23.9 s, 35.1 s and 6.2 s.
+- Data arrived in every second of each: about 1.1 KB/s, with no quiet stretch
+  and no jump at the end.
+- Held back, a Write's input would have come as pings, then all at once.
+
 **Not covered:**
-- A live model writing a long Write through the child with the flag on. Run it
-  only with the owner's consent; it spends quota.
 - A tool whose schema has number, boolean, object or array fields: the proxy
   still holds its arguments back until the call ends (`hasRepairableToolInput`),
   so that client sees no progress meanwhile.
