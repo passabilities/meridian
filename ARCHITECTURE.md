@@ -450,7 +450,9 @@ limit runs while a request waits for an SDK slot, which asks the model nothing.
 A turn gets a longer one (`MERIDIAN_UPSTREAM_TOOL_INPUT_IDLE_MS`) while a tool
 call's input is being written: the model API can send nothing but pings for
 the whole of one long parameter, and a call cut off there reaches the client
-without its input (E91).
+without its input (E91). The session turn's hold is derived to sit above that
+window (`turnLimits.ts`), since the turn watchdog would otherwise cut the call
+first.
 
 **A session header is identity, never authentication.** Polytoken's native
 `X-Polytoken-Session` header is the cleanest example: the trimmed header value

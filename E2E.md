@@ -1040,7 +1040,7 @@ curl -s -X PUT -H 'Content-Type: application/json' -d '{"checkForUpdates":false}
 | E88 | [Where a failover goes before anything is read, and back to where the conversation was](#e88-where-a-failover-goes-before-anything-is-read-and-back-to-where-the-conversation-was) | **Automated**: `bun test src/__tests__/routing.test.ts src/__tests__/active-priority-integration.test.ts src/__tests__/oauth-usage.test.ts src/__tests__/proxy-usage-kept.test.ts` — the first move after a restart waits up to 3 s for the fallbacks' usage reads and goes by room, or by what the run before it read when the endpoint refuses those reads; a conversation refused again goes back to the fallback it used, across a restart too. **Live, needs a Claude Max profile out of one model's allowance and two others**: `RESTART=1 REFUSED=1 ACTIVE=<profile> bun scripts/e2e-fallback-order-live.mjs` — E82's gate sent to a proxy restarted while the endpoint refuses its reads. **Run before releases touching routing, failover, usage reads or startup** | 2026-10-06 |
 | E89 | [A request waiting for an SDK slot is not timed as the model's silence](#e89-a-request-waiting-for-an-sdk-slot-is-not-timed-as-the-models-silence) | **Automated**: `bun test src/__tests__/stream-idle-guard.test.ts src/__tests__/proxy-concurrency-coordination.test.ts`. **No model calls, not in CI**: `bun scripts/e2e-slot-wait-idle.mjs [model]` — one SDK slot held 25 s by a streaming turn: a queued progress summary and a queued streamed turn each wait past their limits and are answered, not "Upstream stalled". **Run before releases touching the SDK slot queue, the upstream idle limits or streaming** | 2026-10-06 |
 | E90 | [The main thread's recap and suggestion are not turns of it](#e90-the-main-threads-recap-and-suggestion-are-not-turns-of-it) | **Automated**: `bun test src/__tests__/claude-code-adapter.test.ts src/__tests__/passthrough-early-stop-integration.test.ts` (`-t "recap"`, `-t "as a turn of the conversation"`) — Claude Code's `away_summary` and `prompt_suggestion` forks run as side calls answered from a short replay, the conversation's mapping untouched, and the user's next message resumes. No gate drives the interactive client that sends them. **Run before releases touching side calls, lineage, or the client version** | 2026-10-08 |
-| E91 | [A tool call being written is not an upstream stall](#e91-a-tool-call-being-written-is-not-an-upstream-stall) | **Automated**: `bun test src/__tests__/stream-idle-guard.test.ts src/__tests__/proxy-tool-input-idle.test.ts`. **No model calls, not in CI**: `bun scripts/e2e-tool-input-idle.mjs [model]` — the real proxy, SDK and CLI; a `Write` call that gets only pings for longer than the turn's limit reaches the client whole, and a quiet text block still stalls at it (`TOOL_INPUT_LIMIT_MS=0` reproduces the cut-off). **Run before releases touching the upstream idle limits, streaming or passthrough deny holding** | 2026-10-08 |
+| E91 | [A tool call being written is not an upstream stall](#e91-a-tool-call-being-written-is-not-an-upstream-stall) | **Automated**: `bun test src/__tests__/stream-idle-guard.test.ts src/__tests__/proxy-tool-input-idle.test.ts src/__tests__/turn-limits.test.ts`. **No model calls, not in CI**: `bun scripts/e2e-tool-input-idle.mjs [model]` — the real proxy, SDK and CLI; a `Write` call that gets only pings for longer than the turn's limit reaches the client whole, and a quiet text block still stalls at it (`TOOL_INPUT_LIMIT_MS=0` reproduces the cut-off; `QUIET=400 TOOL_INPUT_LIMIT_MS=900000` holds the call for nearly seven minutes). **Run before releases touching the upstream idle limits, the session turn's hold, streaming or passthrough deny holding** | 2026-10-09 |
 
 | P1 | [Profile: List & Auth Status](#p1-profile-list--auth-status) | `/profiles/list` returns profiles with emails, login status, auth timestamps | - |
 | P2 | [Profile: Switch via API](#p2-profile-switch-via-api) | `POST /profiles/active` switches profile; health endpoint reflects new email | - |
@@ -8374,12 +8374,31 @@ for part of that time). The 141 short `Write` and 18 `SubagentHandback`
 records at 90-120 s are the cut-off ones.
 
 `guardUpstreamIdle` follows tool-call blocks from the SDK's stream events and,
-while one is open, runs `MERIDIAN_UPSTREAM_TOOL_INPUT_IDLE_MS` (default 5
-minutes) instead of the turn's limit; when the block closes the turn's limit
-is back. Side calls never get it. A passthrough deny is held for the longer of
-the two limits plus 30 s, so a call held for the client is never released
-while the next is being written. A stall in that window names
-`MERIDIAN_UPSTREAM_TOOL_INPUT_IDLE_MS` as the setting to raise.
+while one is open, runs `MERIDIAN_UPSTREAM_TOOL_INPUT_IDLE_MS` instead of the
+turn's limit; when the block closes the turn's limit is back. Side calls never
+get it. A passthrough deny is held for the longer of the two limits plus 30 s,
+so a call held for the client is never released while the next is being
+written. A stall in that window names `MERIDIAN_UPSTREAM_TOOL_INPUT_IDLE_MS` as
+the setting to raise.
+
+**2026-10-09: default raised from 5 to 15 minutes.**
+- Live, Oct 8 19:07–22:34: five Fable subagents had the same `Write` cut off at
+  300 s about 43 times. Each attempt replayed the conversation with two more
+  messages ("API Error: Upstream stalled: no data for 300005ms").
+- The session turn's hold (`MERIDIAN_SESSION_TURN_MAX_HOLD_MS`) was 10 minutes
+  and would have cut those calls first. It is now derived to stay 5 minutes
+  above the window: 20 minutes by default.
+- The client does not cut first. Claude Code 2.1.294, pointed at a local
+  stand-in, kept a stream open for 720 s after a `Write` call opened, receiving
+  only the `: ping` comments the proxy sends. That held with default settings,
+  with `CLAUDE_STREAM_IDLE_TIMEOUT_MS` and with `API_TIMEOUT_MS` raised. The
+  300 s cuts were the proxy's.
+- Not covered: the SDK child still ends such a call at about 600 s, then sends
+  the request again. With a 660 s quiet `Write` under a 900 s window
+  (`QUIET=660 TOOL_INPUT_LIMIT_MS=900000`), the call ended at 601 s with
+  0 of 1,288 characters. That happened even with the child's `API_TIMEOUT_MS`
+  at 1,200,000, which it did receive. A tool call written for more than ten
+  minutes is still cut off.
 
 ### Run it
 
@@ -8408,6 +8427,13 @@ while a second conversation's text block goes quiet the same way.
 |---|---|---|---|
 | off (before) | "Upstream stalled: no data for 8003ms", 0 of 1,288 characters of input | stalled at the turn limit | FAIL |
 | 40 s | answered at 22.4 s, 1,288 of 1,288 characters | stalled at the turn limit (10.3 s) | PASS |
+
+2026-10-09, the same, with the tool call quiet for 400 s (`QUIET=400`):
+
+| Tool-input limit | Quiet tool call | Result |
+|---|---|---|
+| 300 s, the old default, at 9e6ca4e | "Upstream stalled: no data for 300004ms", 0 of 1,288 characters | FAIL |
+| 900 s, the new default | answered at 403.0 s, 1,288 of 1,288 characters | PASS |
 
 `stream-idle-guard.test.ts` ("tool call's input") failed before the guard
 change; `proxy-tool-input-idle.test.ts` failed with the server's wiring taken

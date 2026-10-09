@@ -112,7 +112,7 @@ const claudeCode = { "content-type": "application/json", "user-agent": "claude-c
 const WRITE_TOOL = { name: "Write", description: "Write a file", input_schema: { type: "object", properties: { file_path: { type: "string" }, content: { type: "string" } }, required: ["file_path", "content"] } }
 async function streamed(prompt) {
   const response = await fetch(`${proxyUrl}/v1/messages`, {
-    method: "POST", headers: claudeCode, signal: AbortSignal.timeout(240_000),
+    method: "POST", headers: claudeCode, signal: AbortSignal.timeout(Math.max(240_000, (QUIET + 120) * 1_000)),
     body: JSON.stringify({ model: MODEL, max_tokens: 2_000, stream: true, tools: [WRITE_TOOL],
       metadata: { user_id: JSON.stringify({ session_id: randomUUID() }) }, messages: [{ role: "user", content: prompt }] }),
   })

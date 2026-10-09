@@ -15,6 +15,7 @@ import { query } from "@anthropic-ai/claude-agent-sdk"
 import { rateLimitStore } from "./rateLimitStore"
 import { guardUpstreamIdle, UpstreamIdleError, upstreamIdleLimitMs, type LateIdleDeadline } from "./streamIdleGuard"
 import { IdleStallCeilingError, IdleStallTracker, idleStallRequestKey } from "./idleStallCeiling"
+import { DEFAULT_UPSTREAM_TOOL_INPUT_IDLE_MS, resolveSessionTurnMaxHoldMs } from "./turnLimits"
 import { linkRequestAbort, type RequestAbortLink } from "./requestAbort"
 import { processSessionTree, truncateSessionKey, type SessionTreeRegistration } from "./sessionTree"
 import { AbortableSemaphore, getProcessSdkSemaphore, type SemaphoreLease } from "./concurrency"
@@ -283,12 +284,13 @@ const upstreamAuxiliaryIdleMs = (): number => envInt("UPSTREAM_AUXILIARY_IDLE_MS
 // guardUpstreamIdle): the model API can send nothing but pings for the whole
 // of one long parameter. Live, 2026-10-07/08, every one of 120 mid-stream
 // stalls at 90 s had a tool call open, and each cut-off call made the model
-// write it again from a replayed conversation. Five minutes covers the large
-// Writes that finished on a direct connection and stays inside the session
-// turn's hold (MERIDIAN_SESSION_TURN_MAX_HOLD_MS, ten minutes). Pylon's turn
-// watchdog aborts at 180s, so for a Pylon client it decides first in that
-// window; nothing else changes for it. Side calls keep their own limit.
-const UPSTREAM_TOOL_INPUT_IDLE_MS = envInt("UPSTREAM_TOOL_INPUT_IDLE_MS", 300_000)
+// write it again from a replayed conversation; at five minutes the largest
+// Fable Writes were still cut off, over and over (turnLimits.ts). Fifteen
+// minutes, inside the session turn's hold, which is derived to stay above it
+// (MERIDIAN_SESSION_TURN_MAX_HOLD_MS). Pylon's turn watchdog aborts at 180s,
+// so for a Pylon client it decides first in that window; nothing else changes
+// for it. Side calls keep their own limit.
+const UPSTREAM_TOOL_INPUT_IDLE_MS = envInt("UPSTREAM_TOOL_INPUT_IDLE_MS", DEFAULT_UPSTREAM_TOOL_INPUT_IDLE_MS)
 
 /** The upstream idle limit one request runs under, and the setting it is. */
 interface UpstreamIdleLimit {
@@ -867,8 +869,10 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
   // session for the lifetime of the process. On timeout the session degrades to
   // pre-coordination behavior (concurrent turns, possibly a replay), which is
   // recoverable; a permanent deadlock is not. Read per instance (like the busy
-  // retry delay above) so tests don't have to wait out the real ceiling.
-  const SESSION_TURN_MAX_HOLD_MS = envInt("SESSION_TURN_MAX_HOLD_MS", 600_000)
+  // retry delay above) so tests don't have to wait out the real ceiling. The
+  // default stays above the tool-input window, which it would otherwise cut
+  // short (turnLimits.ts).
+  const SESSION_TURN_MAX_HOLD_MS = resolveSessionTurnMaxHoldMs(envInt)
   // The in-memory coordinator prevents overlap only inside this process. Most
   // Meridian deployments run one proxy per terminal, so the same OpenCode
   // session must also be serialized through the shared session directory.
