@@ -267,6 +267,16 @@ not a feature.
 Any value set in Meridian's own environment wins, including setting one of
 these to `0` to opt back in.
 
+On Anthropic's own API it also sets `CLAUDE_CODE_ENABLE_FINE_GRAINED_TOOL_STREAMING=1`,
+so a tool call's input is streamed as it is written (E92). A direct client
+gets this from a server flag, which the subprocess never reads with
+non-essential traffic off. Without it, the API holds back a long parameter,
+such as a Write's whole file, until it is complete, and the stream carries only
+pings meanwhile. Behind a gateway `ANTHROPIC_BASE_URL`, or under another
+provider (Bedrock, Vertex, Foundry and the like), the setting is left to the
+CLI, as it is for a direct client. A value set in Meridian's own environment
+wins.
+
 One thing these do not cover: before WebFetch retrieves a URL, the subprocess
 sends the target hostname to `api.anthropic.com` to check it against a safety
 blocklist. That check is deliberately exempt from

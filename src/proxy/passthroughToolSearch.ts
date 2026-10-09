@@ -269,7 +269,7 @@ export function toolSearchUpstream(
   }
 }
 
-function isFirstPartyBaseUrl(baseUrl: string | undefined): boolean {
+export function isFirstPartyBaseUrl(baseUrl: string | undefined): boolean {
   if (!baseUrl) return true
   try {
     return new URL(baseUrl).host === "api.anthropic.com"
@@ -279,7 +279,7 @@ function isFirstPartyBaseUrl(baseUrl: string | undefined): boolean {
   }
 }
 
-function isTruthyFlag(value: string | undefined): boolean {
+export function isTruthyFlag(value: string | undefined): boolean {
   return value !== undefined && ["1", "true", "yes", "on"].includes(value.toLowerCase().trim())
 }
 

@@ -125,6 +125,38 @@ describe("buildQueryOptions", () => {
     expect(result.options.env?.CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC).toBe("0")
   })
 
+  // With non-essential traffic off the CLI reads none of the server flags, and
+  // `tengu_fgts` is the one that lets a direct client on Anthropic's API stream
+  // a tool call's input as it is written. Without it the API holds a Write's
+  // whole `content` back, and the stream says nothing but pings meanwhile.
+  describe("a tool call's input streamed as it is written", () => {
+    it.each([false, true])("is asked for on Anthropic's API (passthrough=%s)", (passthrough) => {
+      const env = buildQueryOptions(makeContext({ passthrough })).options.env ?? {}
+      expect(env.CLAUDE_CODE_ENABLE_FINE_GRAINED_TOOL_STREAMING).toBe("1")
+    })
+
+    it("is asked for when the base URL is Anthropic's own", () => {
+      const env = buildQueryOptions(makeContext({ envOverrides: { ANTHROPIC_BASE_URL: "https://api.anthropic.com" } })).options.env ?? {}
+      expect(env.CLAUDE_CODE_ENABLE_FINE_GRAINED_TOOL_STREAMING).toBe("1")
+    })
+
+    it.each([
+      ["a gateway base URL from the profile", { envOverrides: { ANTHROPIC_BASE_URL: "http://127.0.0.1:4000" } }],
+      ["a gateway base URL inherited", { cleanEnv: { ANTHROPIC_BASE_URL: "https://llm-gateway.example.com/anthropic" } }],
+      ["Bedrock", { cleanEnv: { CLAUDE_CODE_USE_BEDROCK: "1" } }],
+      ["Vertex", { envOverrides: { CLAUDE_CODE_USE_VERTEX: "true" } }],
+      ["Foundry", { cleanEnv: { CLAUDE_CODE_USE_FOUNDRY: "1" } }],
+    ] as const)("is left to the CLI with %s, as a direct client leaves it", (_label, overrides) => {
+      const env = buildQueryOptions(makeContext(overrides)).options.env ?? {}
+      expect(env.CLAUDE_CODE_ENABLE_FINE_GRAINED_TOOL_STREAMING).toBeUndefined()
+    })
+
+    it("leaves an operator's own setting standing", () => {
+      expect(buildQueryOptions(makeContext({ cleanEnv: { CLAUDE_CODE_ENABLE_FINE_GRAINED_TOOL_STREAMING: "0" } })).options.env?.CLAUDE_CODE_ENABLE_FINE_GRAINED_TOOL_STREAMING).toBe("0")
+      expect(buildQueryOptions(makeContext({ envOverrides: { CLAUDE_CODE_ENABLE_FINE_GRAINED_TOOL_STREAMING: "false" } })).options.env?.CLAUDE_CODE_ENABLE_FINE_GRAINED_TOOL_STREAMING).toBe("false")
+    })
+  })
+
   it("keeps the quiet defaults in passthrough mode", () => {
     const env = buildQueryOptions(makeContext({ passthrough: true })).options.env ?? {}
     expect(env.DISABLE_TELEMETRY).toBe("1")

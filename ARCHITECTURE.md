@@ -452,7 +452,10 @@ call's input is being written: the model API can send nothing but pings for
 the whole of one long parameter, and a call cut off there reaches the client
 without its input (E91). The session turn's hold is derived to sit above that
 window (`turnLimits.ts`), since the turn watchdog would otherwise cut the call
-first.
+first. On Anthropic's own API the SDK child is asked to stream that input as
+it is written (`streamsToolInputEagerly` in `query.ts`, E92), as a direct
+client is by a server flag the child does not read, so the window seldom has
+to wait at all.
 
 **A session header is identity, never authentication.** Polytoken's native
 `X-Polytoken-Session` header is the cleanest example: the trimmed header value

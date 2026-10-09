@@ -1041,6 +1041,7 @@ curl -s -X PUT -H 'Content-Type: application/json' -d '{"checkForUpdates":false}
 | E89 | [A request waiting for an SDK slot is not timed as the model's silence](#e89-a-request-waiting-for-an-sdk-slot-is-not-timed-as-the-models-silence) | **Automated**: `bun test src/__tests__/stream-idle-guard.test.ts src/__tests__/proxy-concurrency-coordination.test.ts`. **No model calls, not in CI**: `bun scripts/e2e-slot-wait-idle.mjs [model]` — one SDK slot held 25 s by a streaming turn: a queued progress summary and a queued streamed turn each wait past their limits and are answered, not "Upstream stalled". **Run before releases touching the SDK slot queue, the upstream idle limits or streaming** | 2026-10-06 |
 | E90 | [The main thread's recap and suggestion are not turns of it](#e90-the-main-threads-recap-and-suggestion-are-not-turns-of-it) | **Automated**: `bun test src/__tests__/claude-code-adapter.test.ts src/__tests__/passthrough-early-stop-integration.test.ts` (`-t "recap"`, `-t "as a turn of the conversation"`) — Claude Code's `away_summary` and `prompt_suggestion` forks run as side calls answered from a short replay, the conversation's mapping untouched, and the user's next message resumes. No gate drives the interactive client that sends them. **Run before releases touching side calls, lineage, or the client version** | 2026-10-08 |
 | E91 | [A tool call being written is not an upstream stall](#e91-a-tool-call-being-written-is-not-an-upstream-stall) | **Automated**: `bun test src/__tests__/stream-idle-guard.test.ts src/__tests__/proxy-tool-input-idle.test.ts src/__tests__/turn-limits.test.ts`. **No model calls, not in CI**: `bun scripts/e2e-tool-input-idle.mjs [model]` — the real proxy, SDK and CLI; a `Write` call that gets only pings for longer than the turn's limit reaches the client whole, and a quiet text block still stalls at it (`TOOL_INPUT_LIMIT_MS=0` reproduces the cut-off; `QUIET=400 TOOL_INPUT_LIMIT_MS=900000` holds the call for nearly seven minutes). **Run before releases touching the upstream idle limits, the session turn's hold, streaming or passthrough deny holding** | 2026-10-09 |
+| E92 | [A tool call's input reaches the client as it is written](#e92-a-tool-calls-input-reaches-the-client-as-it-is-written) | **Automated**: `bun test src/__tests__/query.test.ts` (`-t "streamed as it is written"`) — on Anthropic's own API the SDK child gets `CLAUDE_CODE_ENABLE_FINE_GRAINED_TOOL_STREAMING=1`, not behind a gateway or another provider, and an operator's value stands. **No model calls, not in CI**: `bun scripts/e2e-eager-tool-input.mjs [model]` — the real proxy, SDK and CLI; the CLI marks the passthrough Write tool `eager_input_streaming` and its input reaches the client in pieces past the tool-input limit (`EAGER=0` reproduces the held-back, cut-off call). **Run before releases touching the SDK child's environment, streaming or passthrough tools** | 2026-10-09 |
 
 | P1 | [Profile: List & Auth Status](#p1-profile-list--auth-status) | `/profiles/list` returns profiles with emails, login status, auth timestamps | - |
 | P2 | [Profile: Switch via API](#p2-profile-switch-via-api) | `POST /profiles/active` switches profile; health endpoint reflects new email | - |
@@ -8452,6 +8453,70 @@ out (the quiet call cut at the turn's limit) and passes with it.
   82 replays above, after a client abort or the session watchdog): the proxy
   still drops the mapping when reply content had reached the client, so that
   retry replays.
+
+## E92: A tool call's input reaches the client as it is written
+
+**What it proves:** on Anthropic's own API the SDK child asks for a tool call's
+input to be streamed as it is written, so a long parameter no longer arrives
+as minutes of a stream with nothing but pings.
+
+The CLI marks every tool `eager_input_streaming` when a server flag
+(`tengu_fgts`) says so. Meridian runs it with
+`CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1`, under which it reads no server
+flags at all.
+- Of the 11 profile config directories on the owner's machine, 9 had no flags
+  cached. The other 2 had `tengu_fgts: true` cached, but a probe showed it is
+  not read with non-essential traffic off: 0 of 12 tools marked.
+- The owner's direct client has `tengu_fgts: true` cached.
+
+Without the marking, the API holds a parameter back until it is whole. A
+Write's whole `content` could take longer than the tool-input limit (E91).
+Live, Oct 8 19:07–22:34, the same Write was cut off about 43 times.
+
+`buildQueryOptions` now sets `CLAUDE_CODE_ENABLE_FINE_GRAINED_TOOL_STREAMING=1`
+when the child talks to Anthropic's own API: no gateway `ANTHROPIC_BASE_URL`,
+and no Bedrock, Vertex, Foundry, gateway, Mantle, AWS or Google Cloud provider
+switch. A direct client is left to the CLI with any of those, and so is the
+child. A value set in Meridian's own environment wins.
+
+### Run it
+
+```bash
+bun test src/__tests__/query.test.ts -t "streamed as it is written"
+bun scripts/e2e-eager-tool-input.mjs           # after
+EAGER=0 bun scripts/e2e-eager-tool-input.mjs   # before
+```
+
+The gate runs the real proxy, SDK and CLI against a scripted Messages API, with
+no model calls.
+- The scripted model writes a Write call over 20 s and behaves as the API does:
+  the input goes out in pieces when the request marks the tool
+  `eager_input_streaming`, and is otherwise held back behind pings.
+- The turn limit is 8 s and the tool-input limit 12 s.
+- The account's base URL is the scripted API, which the proxy treats as a
+  gateway. So the run sets the CLI's switch the way an operator would. Which
+  APIs get it by default is the unit test's to show.
+
+**Pass criteria** (asserted, non-zero exit on any):
+
+- The request the CLI sends marks the passthrough Write tool (`mcp__oc__Write`)
+  `eager_input_streaming`.
+- The call is not answered "Upstream stalled".
+- The client gets the whole input.
+- The input reaches the client in more than one piece.
+
+**Verified 2026-10-09** (claude-sonnet-5-5, SDK child CLI 2.1.284):
+- `EAGER=0`: the tool went out unmarked and was cut off ("Upstream stalled:
+  no data for 12002ms"), with 0 of 1,288 characters.
+- After: the tool went out as `mcp__oc__Write (eager)`, and all 1,288
+  characters arrived in 10 pieces.
+
+**Not covered:**
+- A live model writing a long Write through the child with the flag on. Run it
+  only with the owner's consent; it spends quota.
+- A tool whose schema has number, boolean, object or array fields: the proxy
+  still holds its arguments back until the call ends (`hasRepairableToolInput`),
+  so that client sees no progress meanwhile.
 
 ## Concurrent transcript publication
 

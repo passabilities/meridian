@@ -10,7 +10,7 @@ import { isAbsolute, join, posix, resolve, win32 } from "node:path"
 import type { Options, OutputFormat, SdkBeta, SettingSource, ThinkingConfig } from "@anthropic-ai/claude-agent-sdk"
 import { createOpencodeMcpServer } from "../mcpTools"
 import { createPassthroughMcpServer, PASSTHROUGH_MCP_NAME } from "./passthroughTools"
-import { TOOL_SEARCH_TOOL_NAME, TOOL_SEARCH_TURN_BUDGET, deferredToolsAnnouncement, deferredToolsNote } from "./passthroughToolSearch"
+import { TOOL_SEARCH_TOOL_NAME, TOOL_SEARCH_TURN_BUDGET, deferredToolsAnnouncement, deferredToolsNote, isFirstPartyBaseUrl, isTruthyFlag } from "./passthroughToolSearch"
 import { env, envInt } from "../env"
 import type { Effort } from "./effort"
 
@@ -35,6 +35,29 @@ const QUIET_SUBPROCESS_ENV: Record<string, string> = {
   CLAUDE_CODE_DISABLE_FEEDBACK_SURVEY: "1",
   DISABLE_AUTOUPDATER: "1",
   CLAUDE_CODE_DISABLE_OFFICIAL_MARKETPLACE_AUTOINSTALL: "1",
+}
+
+/** The CLI's switches for a provider other than Anthropic's own API (2.1.284). */
+const OTHER_PROVIDER_SWITCHES = [
+  "CLAUDE_CODE_USE_BEDROCK", "CLAUDE_CODE_USE_VERTEX", "CLAUDE_CODE_USE_FOUNDRY", "CLAUDE_CODE_USE_GATEWAY",
+  "CLAUDE_CODE_USE_MANTLE", "CLAUDE_CODE_USE_ANTHROPIC_AWS", "CLAUDE_CODE_USE_ANTHROPIC_GOOGLE_CLOUD",
+] as const
+
+/**
+ * Whether the subprocess will stream a tool call's input as it is written.
+ *
+ * The CLI marks every tool `eager_input_streaming` on Anthropic's own API when
+ * a server flag (`tengu_fgts`) says so, and with non-essential traffic off it
+ * reads no server flags at all. The flag is on in this machine's direct client.
+ * Without it the API holds back a parameter until it is whole: a Write's
+ * entire `content`, minutes of a stream with nothing but pings, which the
+ * upstream idle guard has to wait out (live, 2026-10-08: the same Write cut
+ * off at the limit about 43 times). Asked for only where a direct client gets
+ * it, Anthropic's own API; a gateway or another provider is left to the CLI.
+ */
+function streamsToolInputEagerly(childEnv: Readonly<Record<string, string | undefined>>): boolean {
+  return isFirstPartyBaseUrl(childEnv.ANTHROPIC_BASE_URL)
+    && !OTHER_PROVIDER_SWITCHES.some(name => isTruthyFlag(childEnv[name]))
 }
 
 /**
@@ -840,6 +863,11 @@ export function buildQueryOptions(ctx: QueryContext, abortController?: AbortCont
         // Explicit client media is unaffected; inherited env may opt out.
         ...(passthrough && process.env.MERIDIAN_SUPPRESS_IMPLICIT_ATTACHMENTS !== "0"
           ? { CLAUDE_CODE_DISABLE_ATTACHMENTS: "1" }
+          : {}),
+        // A tool call's input streamed as it is written (streamsToolInputEagerly).
+        // Ahead of the inherited environment: an operator's own setting stands.
+        ...(streamsToolInputEagerly({ ...cleanEnv, ...ctx.envOverrides })
+          ? { CLAUDE_CODE_ENABLE_FINE_GRAINED_TOOL_STREAMING: "1" }
           : {}),
         // sharedMemory: the user wants the SDK to use Claude Code's default
         // config dir so memories sync. Counter-intuitively we DON'T set
