@@ -1042,6 +1042,7 @@ curl -s -X PUT -H 'Content-Type: application/json' -d '{"checkForUpdates":false}
 | E90 | [The main thread's recap and suggestion are not turns of it](#e90-the-main-threads-recap-and-suggestion-are-not-turns-of-it) | **Automated**: `bun test src/__tests__/claude-code-adapter.test.ts src/__tests__/passthrough-early-stop-integration.test.ts` (`-t "recap"`, `-t "as a turn of the conversation"`) — Claude Code's `away_summary` and `prompt_suggestion` forks run as side calls answered from a short replay, the conversation's mapping untouched, and the user's next message resumes. No gate drives the interactive client that sends them. **Run before releases touching side calls, lineage, or the client version** | 2026-10-08 |
 | E91 | [A tool call being written is not an upstream stall](#e91-a-tool-call-being-written-is-not-an-upstream-stall) | **Automated**: `bun test src/__tests__/stream-idle-guard.test.ts src/__tests__/proxy-tool-input-idle.test.ts src/__tests__/turn-limits.test.ts`. **No model calls, not in CI**: `bun scripts/e2e-tool-input-idle.mjs [model]` — the real proxy, SDK and CLI; a `Write` call that gets only pings for longer than the turn's limit reaches the client whole, and a quiet text block still stalls at it (`TOOL_INPUT_LIMIT_MS=0` reproduces the cut-off; `QUIET=400 TOOL_INPUT_LIMIT_MS=900000` holds the call for nearly seven minutes). **Run before releases touching the upstream idle limits, the session turn's hold, streaming or passthrough deny holding** | 2026-10-09 |
 | E92 | [A tool call's input reaches the client as it is written](#e92-a-tool-calls-input-reaches-the-client-as-it-is-written) | **Automated**: `bun test src/__tests__/query.test.ts` (`-t "streamed as it is written"`) — on Anthropic's own API the SDK child gets `CLAUDE_CODE_ENABLE_FINE_GRAINED_TOOL_STREAMING=1`, not behind a gateway or another provider, and an operator's value stands. **No model calls, not in CI**: `bun scripts/e2e-eager-tool-input.mjs [model]` — the real proxy, SDK and CLI; the CLI marks the passthrough Write tool `eager_input_streaming` and its input reaches the client in pieces past the tool-input limit (`EAGER=0` reproduces the held-back, cut-off call). **Run before releases touching the SDK child's environment, streaming or passthrough tools** | 2026-10-09 |
+| E93 | [A refusal after a keep-alive ping still fails over](#e93-a-refusal-after-a-keep-alive-ping-still-fails-over) | **Automated**: `bun test src/__tests__/priority-routing-integration.test.ts` (`-t "keep-alive\|looked past pings"`) — a refusal after the stream's `: ping` fails over, a slow account's pings reach the client, and past `MERIDIAN_ACCOUNT_REFUSAL_WAIT_MS` the stream goes to the client as it is. **No model calls, not in CI**: `bun scripts/e2e-refusal-after-ping.mjs` — the real proxy, SDK and CLI with two stand-in accounts; the refusal 20 s in fails over to the other account (`E2E_MERIDIAN_ROOT` at ca854c0 reproduces the `event: error`). **Run before releases touching priority failover or stream heartbeats** | 2026-10-09 |
 
 | P1 | [Profile: List & Auth Status](#p1-profile-list--auth-status) | `/profiles/list` returns profiles with emails, login status, auth timestamps | - |
 | P2 | [Profile: Switch via API](#p2-profile-switch-via-api) | `POST /profiles/active` switches profile; health endpoint reflects new email | - |
@@ -8560,6 +8561,60 @@ no model calls.
 - A tool whose schema has number, boolean, object or array fields: the proxy
   still holds its arguments back until the call ends (`hasRepairableToolInput`),
   so that client sees no progress meanwhile.
+
+## E93: A refusal after a keep-alive ping still fails over
+
+**What it proves:** priority routing moves a streamed request to the next
+account when the account's refusal comes after the stream's own `: ping`, as it
+does after a wait for an SDK slot longer than the heartbeat.
+
+The failover sniffer let a stream's first complete frame decide. A request
+waiting for a slot is sent a `: ping` every 15 s before anything else, so a
+refusal that came later went to the client as `event: error`.
+- Live, Oct 8 09:31 to Oct 9 05:49: 119 refusals reached Claude Code; 81 of
+  them after a slot wait over 15 s, the latest 62 s into its attempt.
+- The client retried each 5 to 58 s later, and 102 of the 119 retries were
+  answered at once. Latency only: a refusal spends no tokens.
+
+The sniffer now looks past keep-alive frames for up to
+`MERIDIAN_ACCOUNT_REFUSAL_WAIT_MS` (120 s), and the client is sent nothing
+meanwhile. Claude Code 2.1.295, against a local stand-in that held its response
+headers 150 s, waited and then answered. The heartbeat interval is now
+`MERIDIAN_STREAM_HEARTBEAT_MS`.
+
+### Run it
+
+```bash
+bun test src/__tests__/priority-routing-integration.test.ts -t "keep-alive|looked past pings"
+bun scripts/e2e-refusal-after-ping.mjs                                         # after
+E2E_MERIDIAN_ROOT=<a checkout at ca854c0> bun scripts/e2e-refusal-after-ping.mjs  # before
+```
+
+The gate runs the real proxy, SDK and CLI with two local stand-in accounts, so
+no model is called:
+- `refused` holds each request 20 s, past the default heartbeat, then refuses
+  it with the CLI's session-limit banner.
+- `working` streams a short answer.
+
+**Pass criteria** (asserted, non-zero exit on any):
+
+- The refusal came more than 15 s in, after the first ping.
+- Status 200, and no `event: error` reaches the client.
+- The working account's answer reaches the client through the same stream.
+- The refusal is recorded 429 against `refused`, the answer 200 against
+  `working`.
+
+**Verified 2026-10-09** (SDK child CLI 2.1.284; the stand-in was asked twice
+per run, 20 s each):
+- Before, at ca854c0: the headers went out at 15.7 s with the first ping. The
+  refusal at 21.6 s reached the client as `event: error` after two pings, and
+  `working` was never asked.
+- After: refused at 20.7 s, the headers went out at 41.2 s, and the client got
+  the working account's answer with no error frame.
+
+**Not covered:** a real account refusing after a real slot wait. On the live
+proxy, 429 finals with `sdk_queue_wait_ms` over 15 s should stop once this is
+deployed.
 
 ## Concurrent transcript publication
 

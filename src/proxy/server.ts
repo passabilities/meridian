@@ -292,6 +292,29 @@ const upstreamAuxiliaryIdleMs = (): number => envInt("UPSTREAM_AUXILIARY_IDLE_MS
 // for it. Side calls keep their own limit.
 const UPSTREAM_TOOL_INPUT_IDLE_MS = envInt("UPSTREAM_TOOL_INPUT_IDLE_MS", DEFAULT_UPSTREAM_TOOL_INPUT_IDLE_MS)
 
+// How often a stream with nothing to send writes a `: ping` comment, which a
+// client reads as a live connection and parses no event from. Read when a
+// stream starts; a value under 1 keeps the default.
+const STREAM_HEARTBEAT_DEFAULT_MS = 15_000
+const streamHeartbeatMs = (): number => {
+  const ms = envInt("STREAM_HEARTBEAT_MS", STREAM_HEARTBEAT_DEFAULT_MS)
+  return ms > 0 ? ms : STREAM_HEARTBEAT_DEFAULT_MS
+}
+
+// How long priority routing looks past a stream's keep-alive pings for an
+// account refusal it can still fail over from, with the client given no
+// response meanwhile. Live, 2026-10-08/09, 81 refusals that came after a ping
+// went to Claude Code instead (each after a slot wait over the heartbeat; the
+// latest 62 s into its attempt), and the client retried each a few seconds to
+// a minute later. Claude Code 2.1.295 waited 150 s for response headers in a
+// probe and then answered. 0 lets the first frame, ping or not, decide.
+const accountRefusalWaitMs = (): number => Math.max(0, envInt("ACCOUNT_REFUSAL_WAIT_MS", 120_000))
+
+/** A frame of nothing but SSE comments, like the heartbeat's `: ping`. */
+function isKeepAliveFrame(frame: string): boolean {
+  return frame.split("\n").every(line => line === "" || line.startsWith(":"))
+}
+
 /** The upstream idle limit one request runs under, and the setting it is. */
 interface UpstreamIdleLimit {
   ms: number
@@ -1547,7 +1570,9 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
   /** Inspect an inner response for an account-level failure without destroying
    *  it. Non-stream: an error body on a non-OK status. Stream: an
    *  `event: error` frame BEFORE any content frame (mid-content errors pass
-   *  through — never yank a stream a client is already consuming).
+   *  through — never yank a stream a client is already consuming). The
+   *  stream's keep-alive pings before it say nothing about the account and are
+   *  looked past, for no longer than accountRefusalWaitMs.
    *
    *  `isAccountFailoverError` decides which classified types are worth another
    *  account; anything else is this account's honest answer and belongs to the
@@ -1575,25 +1600,29 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
     const consumed: Uint8Array[] = []
     let text = ""
     let failure: { payload: unknown; type: string } | null = null
-    while (true) {
+    const lookPastPingsUntil = Date.now() + accountRefusalWaitMs()
+    let decided = false
+    while (!decided) {
       const { done, value } = await reader.read()
       if (done) break
       consumed.push(value)
       text += decoder.decode(value, { stream: true })
-      const frameEnd = text.indexOf("\n\n")
-      if (frameEnd === -1) continue
-      const frame = text.slice(0, frameEnd)
-      if (/^event: error$/m.test(frame)) {
-        const dataLine = frame.split("\n").find(l => l.startsWith("data: "))
-        try {
-          const parsed = dataLine ? JSON.parse(dataLine.slice(6)) as { error?: { type?: string } } : null
-          const parsedType = parsed?.error?.type
-          if (isAccountFailoverError(parsedType)) {
-            failure = { payload: parsed, type: parsedType }
-          }
-        } catch { /* not an account-failure frame — pass through below */ }
+      for (let frameEnd = text.indexOf("\n\n"); frameEnd !== -1 && !decided; frameEnd = text.indexOf("\n\n")) {
+        const frame = text.slice(0, frameEnd)
+        text = text.slice(frameEnd + 2)
+        if (isKeepAliveFrame(frame) && Date.now() < lookPastPingsUntil) continue
+        decided = true // the first frame that is not a ping, or any once the wait is over
+        if (/^event: error$/m.test(frame)) {
+          const dataLine = frame.split("\n").find(l => l.startsWith("data: "))
+          try {
+            const parsed = dataLine ? JSON.parse(dataLine.slice(6)) as { error?: { type?: string } } : null
+            const parsedType = parsed?.error?.type
+            if (isAccountFailoverError(parsedType)) {
+              failure = { payload: parsed, type: parsedType }
+            }
+          } catch { /* not an account-failure frame — pass through below */ }
+        }
       }
-      break // first complete frame decides
     }
     if (failure) {
       await reader.cancel().catch(() => {})
@@ -6100,7 +6129,7 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
                   })
                   clearInterval(heartbeat)
                 }
-              }, 15_000)
+              }, streamHeartbeatMs())
 
               const skipBlockIndices = new Set<number>()
               // Complete JSON is needed to repair typed client arguments. Keep

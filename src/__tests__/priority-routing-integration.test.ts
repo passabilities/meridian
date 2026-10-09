@@ -67,6 +67,11 @@ let failingDirs = new Set<string>()
 // Accounts that fail only AFTER streaming some content — the error frame then
 // lands behind message_start, where the sniffer must not touch it.
 let failAfterContentDirs = new Set<string>()
+// Accounts that answer only after this many milliseconds, refusing (failing)
+// or with their first frame (slow) - long enough for the stream's keep-alive
+// ping to go out first, as it does while a request waits for an SDK slot.
+let failAfterMsDirs = new Map<string, number>()
+let slowFirstFrameMsDirs = new Map<string, number>()
 type ExposureBeforeFailureKind = "tool" | "structured"
 let exposureBeforeFailureDirs = new Map<string, ExposureBeforeFailureKind>()
 let noncanonicalToolFailureDirs = new Set<string>()
@@ -167,6 +172,15 @@ installSdkMock(() => ({
         }
         if ([...failingDirs].some((f) => dir.includes(f))) {
           throw new Error(failureMessage)
+        }
+        const failAfterMs = [...failAfterMsDirs.entries()].find(([f]) => dir.includes(f))?.[1]
+        if (failAfterMs !== undefined) {
+          await new Promise(resolve => setTimeout(resolve, failAfterMs))
+          throw new Error(failureMessage)
+        }
+        const slowFirstFrameMs = [...slowFirstFrameMsDirs.entries()].find(([f]) => dir.includes(f))?.[1]
+        if (slowFirstFrameMs !== undefined) {
+          await new Promise(resolve => setTimeout(resolve, slowFirstFrameMs))
         }
         if ([...failAfterContentDirs].some((f) => dir.includes(f))) {
           if (streaming) {
@@ -408,6 +422,8 @@ let savedPriorityFailbackSetting: PriorityFailbackPolicy | undefined
 beforeEach(() => {
   failureMessage = DEFAULT_FAILURE
   failAfterContentDirs = new Set()
+  failAfterMsDirs = new Map()
+  slowFirstFrameMsDirs = new Map()
   exposureBeforeFailureDirs = new Map()
   noncanonicalToolFailureDirs = new Set()
   promotionConcurrencyGate = null
@@ -456,6 +472,8 @@ describe("priority routing", () => {
     savedEnv.MERIDIAN_MAX_CONCURRENT = process.env.MERIDIAN_MAX_CONCURRENT
     savedEnv.PASSTHROUGH = process.env.PASSTHROUGH
     savedEnv.MERIDIAN_SILENT_TURN_RECOVERY = process.env.MERIDIAN_SILENT_TURN_RECOVERY
+    savedEnv.MERIDIAN_STREAM_HEARTBEAT_MS = process.env.MERIDIAN_STREAM_HEARTBEAT_MS
+    savedEnv.MERIDIAN_ACCOUNT_REFUSAL_WAIT_MS = process.env.MERIDIAN_ACCOUNT_REFUSAL_WAIT_MS
     process.env.MERIDIAN_ROUTING = "priority"
     process.env.MERIDIAN_PROFILE_ORDER = "work,personal"
     delete process.env.MERIDIAN_PRIORITY_FAILBACK
@@ -1632,6 +1650,52 @@ describe("priority routing", () => {
     expect(text).toContain("message_start")
     expect(text).toContain("prof-personal")
     expect(text.split("event: message_start").length - 1).toBe(1)
+  }, 20_000)
+
+  it("keeps a slow account's keep-alive pings and asks no other account", async () => {
+    process.env.MERIDIAN_STREAM_HEARTBEAT_MS = "20"
+    slowFirstFrameMsDirs.set("prof-work", 150)
+    const app = createTestApp()
+    const res = await postStream(app, { content: "slow first frame" })
+    expect(res.status).toBe(200)
+    const text = await res.text()
+    expect(text.startsWith(": ping\n\n")).toBe(true)
+    expect(text).toContain("ok from /tmp/meridian-test-prof-work")
+    expect(capturedEnvs).toHaveLength(1)
+  }, 20_000)
+
+  // Live, 2026-10-08/09: 81 refusals reached Claude Code while another account
+  // could answer, each after a slot wait longer than the heartbeat. The
+  // stream's own `: ping` went first and was taken as the account's answer.
+  it("streams fail over when the refusal comes after a keep-alive ping", async () => {
+    process.env.MERIDIAN_STREAM_HEARTBEAT_MS = "20"
+    failAfterMsDirs.set("prof-work", 150)
+    const app = createTestApp()
+    const res = await postStream(app, { content: "refused after a ping" })
+    expect(res.status).toBe(200)
+    const text = await res.text()
+    expect(text).not.toContain("event: error")
+    expect(text).toContain("ok from /tmp/meridian-test-prof-personal")
+    expect(text.split("event: message_start").length - 1).toBe(1)
+    // The accounts tried, in order (the stream retries a rate limit on the
+    // same account before it gives up there).
+    const tried = capturedEnvs.map(dir => dir.includes("prof-work") ? "work" : "personal")
+    expect(tried.filter((account, index) => account !== tried[index - 1])).toEqual(["work", "personal"])
+    expect((await exhaustedMarks(app)).map(mark => mark.id)).toEqual(["work"])
+  }, 20_000)
+
+  it("gives the client the stream once it has looked past pings for its limit", async () => {
+    process.env.MERIDIAN_STREAM_HEARTBEAT_MS = "20"
+    process.env.MERIDIAN_ACCOUNT_REFUSAL_WAIT_MS = "60"
+    failAfterMsDirs.set("prof-work", 400)
+    const app = createTestApp()
+    const res = await postStream(app, { content: "refused after the wait" })
+    expect(res.status).toBe(200)
+    const text = await res.text()
+    expect(text.startsWith(": ping\n\n")).toBe(true)
+    expect(text).toContain("event: error")
+    expect(text).not.toContain("prof-personal")
+    expect(capturedEnvs.every(dir => dir.includes("prof-work"))).toBe(true)
   }, 20_000)
 
   it("fails over when the preferred account's subscription is refused", async () => {
