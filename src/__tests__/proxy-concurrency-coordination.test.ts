@@ -199,7 +199,13 @@ const CLASSIFIER_INSTRUCTION = "Stage 1 does NOT apply user intent.\nRespond wit
  * breakpoints, the action under review, and the instruction closing it. Every
  * check re-sends the transcript with what happened since appended.
  */
-function claudeCodeTranscriptCheck(sessionId: string, entries: number, instruction = CLASSIFIER_INSTRUCTION): Request {
+function claudeCodeTranscriptCheck(
+  sessionId: string,
+  entries: number,
+  instruction = CLASSIFIER_INSTRUCTION,
+  // CLI 2.1.294 in its fast classifier mode sends none (null).
+  stopSequences: string[] | null = ["</severity>"],
+): Request {
   const mark = { cache_control: { type: "ephemeral", ttl: "1h" } }
   const entry = (index: number) => ({
     type: "text",
@@ -210,9 +216,9 @@ function claudeCodeTranscriptCheck(sessionId: string, entries: number, instructi
     headers: { "Content-Type": "application/json", "user-agent": "claude-cli/2.1.289" },
     body: JSON.stringify({
       model: "claude-sonnet-4-6",
-      max_tokens: 64,
+      max_tokens: stopSequences ? 64 : 256,
       stream: false,
-      stop_sequences: ["</severity>"],
+      ...(stopSequences ? { stop_sequences: stopSequences } : {}),
       messages: [
         { role: "user", content: [{
           type: "text",
@@ -696,6 +702,49 @@ describe("SDK and Session concurrency coordination", () => {
     ;(await waitForControl(2)).release()
     expect((await nextP).status).toBe(200)
     expect(capturedParams[2]?.options?.resume).toBe(capturedParams[0]?.options?.sessionId)
+  })
+
+  // CLI 2.1.294's fast classifier mode sets no stop sequence. Live, 2026-10-09:
+  // read as a turn, such a check replaced an 800-message conversation's mapping
+  // ("prefix overlap 0/822, incoming 2"), and the next turn replayed it all.
+  it("keeps a Claude Code conversation resumable across a permission check sent without a stop sequence", async () => {
+    const app = createProxyServer({ port: 0, host: "127.0.0.1", silent: true }).app
+    const sessionId = `claude-code-fast-check-${crypto.randomUUID()}`
+    const opening = [{ role: "user", content: "Run the tests" }]
+
+    const firstP = app.fetch(claudeCodeRequest(opening, sessionId))
+    ;(await waitForControl(0)).release()
+    expect((await firstP).status).toBe(200)
+    const published = readSessionStoreSnapshot()[sessionId]
+    expect(published?.messageCount).toBe(1)
+
+    const checkP = app.fetch(claudeCodeTranscriptCheck(sessionId, 3, CLASSIFIER_INSTRUCTION, null))
+    ;(await waitForControl(1)).release()
+    expect((await checkP).status).toBe(200)
+    expect(capturedParams[1]?.options?.resume).toBeUndefined()
+    expect(readSessionStoreSnapshot()[sessionId]).toEqual(published)
+
+    const nextP = app.fetch(claudeCodeRequest([
+      ...opening,
+      { role: "assistant", content: "ok" },
+      { role: "user", content: "continue" },
+    ], sessionId))
+    ;(await waitForControl(2)).release()
+    expect((await nextP).status).toBe(200)
+    expect(capturedParams[2]?.options?.resume).toBe(capturedParams[0]?.options?.sessionId)
+  })
+
+  it("lays a permission check sent without a stop sequence out for caching, as it does the others", async () => {
+    const app = createProxyServer({ port: 0, host: "127.0.0.1", silent: true }).app
+    const sessionId = `claude-code-fast-check-layout-${crypto.randomUUID()}`
+
+    const checkP = app.fetch(claudeCodeTranscriptCheck(sessionId, 400, CLASSIFIER_INSTRUCTION, null))
+    ;(await waitForControl(0)).release()
+    expect((await checkP).status).toBe(200)
+    expect(capturedParams[0]?.options?.env?.DISABLE_PROMPT_CACHING).toBe("1")
+    const laidOut = diagnosticLog.getRecent({ category: "session" }).map(entry => entry.message)
+      .filter(message => message.includes("auxiliary prompt laid out for caching"))
+    expect(laidOut).toHaveLength(1)
   })
 
   it("never queues a classifier request behind the conversation's running turn", async () => {

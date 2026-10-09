@@ -33,4 +33,11 @@ describe("claudeCodePromptCacheLifetime", () => {
   it("leaves the permission check alone, whose cache the CLI keeps for an hour itself", () => {
     expect(claudeCodePromptCacheLifetime("a65ce96ceed9428a7", classifier)).toBeUndefined()
   })
+
+  it("leaves a permission check sent without a stop sequence alone too (CLI 2.1.294, fast mode)", () => {
+    const fast = { model: "claude-sonnet-5-5", stream: false, max_tokens: 256, messages: [
+      { role: "user", content: [{ type: "text", text: "<transcript>\n" }, { type: "text", text: "</transcript>\n" }, { type: "text", text: "Respond with <block>yes</block> or <block>no</block>." }] },
+    ] }
+    expect(claudeCodePromptCacheLifetime("a65ce96ceed9428a7", fast)).toBeUndefined()
+  })
 })

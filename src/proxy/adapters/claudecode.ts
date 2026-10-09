@@ -205,12 +205,34 @@ export const CLAUDE_CODE_REQUEST_CLASS_HEADER = "x-claude-code-request-class"
 /** The auto-mode classifier's XML verdicts end at these tags. */
 const CLASSIFIER_STOP_SEQUENCES = new Set(["</block>", "</severity>"])
 
-/** The auto-mode classifier: no tools, not streamed, a stop sequence closing its verdict tag. */
-function hasClassifierShape(request: { tools?: unknown; stream?: unknown; stop_sequences?: unknown }): boolean {
+/** The block, alone, that the classifier opens the conversation's transcript with. */
+const CLASSIFIER_TRANSCRIPT_OPENING = "<transcript>"
+
+/**
+ * The auto-mode classifier: no tools, not streamed, and a stop sequence
+ * closing its verdict tag or the block its transcript opens with.
+ *
+ * NOTE: agent-specific (claude-code). CLI 2.1.294 sets no stop sequence in its
+ * fast mode (`...q!=="fast"&&{stop_sequences:[…]}`), and opens the transcript
+ * with a text block of `<transcript>\n` and nothing else in every mode.
+ */
+function hasClassifierShape(request: { tools?: unknown; stream?: unknown; stop_sequences?: unknown; messages?: unknown }): boolean {
   if (Array.isArray(request.tools) && request.tools.length > 0) return false
   if (request.stream === true) return false
-  if (!Array.isArray(request.stop_sequences)) return false
-  return request.stop_sequences.some(stop => typeof stop === "string" && CLASSIFIER_STOP_SEQUENCES.has(stop))
+  if (Array.isArray(request.stop_sequences)
+    && request.stop_sequences.some(stop => typeof stop === "string" && CLASSIFIER_STOP_SEQUENCES.has(stop))) return true
+  return Array.isArray(request.messages) && request.messages.some(opensTranscript)
+}
+
+/** A user message with the classifier's transcript-opening block among its blocks. */
+function opensTranscript(message: unknown): boolean {
+  if (!message || typeof message !== "object") return false
+  const { role, content } = message as { role?: unknown; content?: unknown }
+  return role === "user" && Array.isArray(content) && content.some(block => {
+    if (!block || typeof block !== "object") return false
+    const { type, text } = block as { type?: unknown; text?: unknown }
+    return type === "text" && typeof text === "string" && text.trim() === CLASSIFIER_TRANSCRIPT_OPENING
+  })
 }
 
 /** How the CLI's background-agent progress prompt (`agent_summary`) opens. */
@@ -289,11 +311,14 @@ function endsWithForkPrompt(request: { messages?: unknown }, opens: (text: strin
  * or under a remote flag — through Meridian it is normally absent. When present
  * it decides outright. Otherwise the side call's shape does. The classifier's:
  * a session key, no tools, not streamed, and a stop sequence closing its
- * verdict tag. A fork's: a session key and the fork's prompt opening a text
- * block of its final user message. The streamed session-start request,
- * compaction and main turns all fall outside both. If a future CLI changes
- * those stop sequences or prompts, detection falls back to today's behavior
- * rather than isolating a real turn.
+ * verdict tag or its transcript's opening block (`hasClassifierShape`; 2.1.294
+ * sends no stop sequence in its fast mode, and live, 2026-10-09, eight such
+ * checks each replaced an 800-message conversation's mapping, which then
+ * replayed in full at the one-hour rate). A fork's: a session key and the
+ * fork's prompt opening a text block of its final user message. The streamed
+ * session-start request, compaction and main turns all fall outside both. If
+ * a future CLI changes that framing, those stop sequences or prompts,
+ * detection falls back to today's behavior rather than isolating a real turn.
  */
 export function isClaudeCodeAuxiliaryRequest(requestClass: string | undefined, body: unknown): boolean {
   if (requestClass !== undefined) return requestClass === "auxiliary"

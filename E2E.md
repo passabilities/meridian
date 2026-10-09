@@ -1020,7 +1020,7 @@ curl -s -X PUT -H 'Content-Type: application/json' -d '{"checkForUpdates":false}
 | E66 | [Interrupted turn after a settled checkpoint](#e66-interrupted-turn-after-a-settled-checkpoint) | **Automated, real proxy + SDK + Claude Max**: `bun scripts/e2e-checkpoint-interrupted-turn.mjs`. An OpenCode-keyed tool round whose complete result is followed by a partial assistant turn (what a dropped stream leaves) must resume the stored session; a result for an unknown call is the negative control and must still take the fresh replay. **Run before releases touching the passthrough early-stop checkpoint or checkpoint replay** | 2026-09-26 |
 | E67 | [OpenCode V2 interrupted tool turn](#e67-opencode-v2-interrupted-tool-turn) | **Actual OpenCode 2.0.16 client and Meridian V2 plugin, real SDK/model**: `E2E_OPENCODE_BIN=/path/to/opencode E2E_PLUGIN_PATH=/path/to/opencode-scrub/dist/index.js bun scripts/e2e-opencode-checkpoint-fault.mjs`. Inject one partial SSE failure after the real client tool call; require the client's exact retry shape and SDK resume, plus a same-session recovery. **Run before releases touching keyed checkpoint recovery** | 2026-09-26 |
 | E68 | [OpenCode V2 user-invoked skill](#e68-opencode-v2-user-invoked-skill) | **Actual OpenCode V2 server, real SDK/model**: `E2E_OPENCODE_BIN=/path/to/opencode E2E_PLUGIN_PATH=/path/to/opencode-scrub/dist/index.js bun scripts/e2e-opencode-skill-content.mjs`. A skill invoked with no typed text must reach the SDK prompt inside `<skill_content>` and drive the reply. **Run before releases touching user-text sanitization** | 2026-09-27 |
-| E71 | [Claude Code auto-mode classifier isolation](#e71-claude-code-auto-mode-classifier-isolation) | **Automated, needs the `claude` CLI** (skips cleanly without it): `bun scripts/e2e-claude-code-auto-mode.mjs` — real proxy + SDK, the REAL Claude Code CLI in `--permission-mode auto`. Asserts the classifier's side requests are isolated as `independent-request:auxiliary-request` on both the shape and request-class header paths, every later main request continues its session, and nothing collides or is refused. **Run before releases touching the independence guards, the turn lease, or Claude Code detection** | 2026-09-30 |
+| E71 | [Claude Code auto-mode classifier isolation](#e71-claude-code-auto-mode-classifier-isolation) | **Automated, needs the `claude` CLI** (skips cleanly without it): `bun scripts/e2e-claude-code-auto-mode.mjs` — real proxy + SDK, the REAL Claude Code CLI in `--permission-mode auto`. Asserts the classifier's side requests are isolated as `independent-request:auxiliary-request` on both the shape and request-class header paths, every later main request continues its session, and nothing collides or is refused. **Automated**: `bun test src/__tests__/claude-code-adapter.test.ts src/__tests__/claude-code-cache-lifetime.test.ts src/__tests__/proxy-concurrency-coordination.test.ts` (`-t "without a stop sequence"`) — a check sent without a stop sequence (2.1.294's fast mode) is known by its transcript's opening block. **Run before releases touching the independence guards, the turn lease, or Claude Code detection** | 2026-10-09 |
 | E72 | [Claude Code Agent-tool subagent session isolation](#e72-claude-code-agent-tool-subagent-session-isolation) | **Automated, needs the `claude` CLI** (skips cleanly without it): `bun scripts/e2e-claude-code-subagent-session.mjs` — real proxy + SDK, the REAL Claude Code CLI spawning two parallel Agent-tool subagents. Asserts each subagent resumes its own session, the parent keeps resuming across subagent activity, nothing collides, and no flow waits on another's session lease. **Run before releases touching session keys, the turn lease, account routing, or Claude Code detection** | 2026-10-01 |
 | E73 | [Unknown thinking display values](#e73-unknown-thinking-display-values) | **Automated**: `bun scripts/e2e-thinking-display-interactive.mjs` — actual Claude Code 2.1.287 TUI in a PTY, real proxy/SDK/bundled subprocess. Requires an answer rendered in the client, live-prompt framing, supported-display controls and joined cleanup. The separate HTTP-shaped gate remains a backend smoke test. **Run before releases touching thinking passthrough or the SDK/CLI version** | 2026-10-01 |
 | E74 | [Claude Code permission-check prompt cache](#e74-claude-code-permission-check-prompt-cache) | **Automated, needs the `claude` CLI** (skips cleanly without it), **no model calls**: `bun scripts/e2e-claude-code-permission-check-cache.mjs` — the REAL Claude Code CLI in `--permission-mode auto`, this checkout's proxy running in a git repository, the real SDK driving this checkout's CLI, and a scripted Messages API that keeps a prompt cache as the API documents it. Asserts each check goes upstream as text blocks carrying only Meridian's cache breakpoints, reads back what the check before it wrote — also after a file in the proxy's directory changes — carries the same prompt as with the layout off, and falls back to the plain prompt when the API refuses the breakpoints. **Run before releases touching auxiliary requests, replay framing or the SDK/CLI version** | 2026-10-05 |
@@ -6010,6 +6010,38 @@ installed 1.79.0 at 20:30:29 local; counts below are from the proxy journal,
 The two branch requests that did not resume: the first after the restart
 (`not-found`, because earlier classifier calls had already overwritten the
 mapping), and one `modified-history` from an interrupted turn.
+
+**2026-10-09: a check sent without a stop sequence.**
+- CLI 2.1.294 sets `stop_sequences` only outside its fast classifier mode
+  (`...q!=="fast"&&{stop_sequences:[…]}`). Such a check failed the shape test
+  and ran as a turn.
+- Live, Oct 9 04:35–05:48: eight checks (sonnet, `stream=false`, no tools, two
+  messages) each replaced the stored session of a 725–834-message Opus thread.
+  The log shows "prefix overlap 0/822, incoming 2", then the next turn with
+  "prefix overlap 0/2, incoming 824". Each replay wrote about 0.5M cache tokens
+  at the one-hour rate.
+- The check's transcript opens with a text block that is `<transcript>\n` and
+  nothing else, in every mode. `hasClassifierShape` now takes that block in
+  place of a stop sequence.
+- The same test decides the check's cache layout and lifetime, so a fast check
+  also reads back what the last check wrote instead of writing about 165K
+  tokens.
+- A turn whose text only mentions a transcript, a streamed request and one with
+  tools are still turns.
+
+```bash
+bun test src/__tests__/claude-code-adapter.test.ts src/__tests__/claude-code-cache-lifetime.test.ts
+bun test src/__tests__/proxy-concurrency-coordination.test.ts -t "without a stop sequence"
+```
+
+All of these failed before the change; the two integration tests failed on the
+conversation's mapping being replaced and on the check not being laid out for
+caching.
+
+**Not covered:** the gate above drives the real client but spends quota. Nothing
+was found that makes the client use its fast mode. The real-traffic check is
+whether "prefix overlap 0/N, incoming 2" lines, followed by "prefix overlap
+0/2" replays, stop.
 
 ## E72: Claude Code Agent-tool subagent session isolation
 

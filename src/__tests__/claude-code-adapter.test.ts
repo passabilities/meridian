@@ -441,10 +441,46 @@ describe("isClaudeCodeAuxiliaryRequest", () => {
     })).toBe(false)
   })
 
-  it("requires one of the classifier's stop sequences", () => {
+  it("requires a verdict stop sequence or the transcript block the classifier opens with", () => {
     const { stop_sequences: _omitted, ...withoutStops } = classifier
     expect(isClaudeCodeAuxiliaryRequest(undefined, withoutStops)).toBe(false)
     expect(isClaudeCodeAuxiliaryRequest(undefined, { ...classifier, stop_sequences: ["\n\nHuman:"] }))
+      .toBe(false)
+  })
+
+  // CLI 2.1.294 in its fast classifier mode sets no stop sequence at all
+  // (`...q!=="fast"&&{stop_sequences:[…]}`); the transcript still opens with a
+  // block of its own. Live, 2026-10-09: read as turns, eight of these replaced
+  // an 800-message conversation's mapping and it replayed in full each time.
+  const fastCheck = {
+    model: "claude-sonnet-5-5",
+    max_tokens: 256,
+    stream: false,
+    messages: [
+      { role: "user", content: [{ type: "text", text: "The following is the user's CLAUDE.md configuration.\n\n<user_claude_md>…</user_claude_md>" }] },
+      { role: "user", content: [
+        { type: "text", text: "<transcript>\n" },
+        { type: "text", text: "{\"user\":\"run the tests\"}\n" },
+        { type: "text", text: "</transcript>\n" },
+        { type: "text", text: "Respond with <block>yes</block> or <block>no</block>." },
+      ] },
+    ],
+    metadata: { user_id: JSON.stringify({ session_id: "conv-1" }) },
+  }
+
+  it("recognises a check sent without a stop sequence by its transcript block", () => {
+    expect(isClaudeCodeAuxiliaryRequest(undefined, fastCheck)).toBe(true)
+    expect(isClaudeCodeAuxiliaryRequest(undefined, { ...fastCheck, messages: [fastCheck.messages[1]!] })).toBe(true)
+  })
+
+  it("does not take a turn that only mentions a transcript for a check", () => {
+    expect(isClaudeCodeAuxiliaryRequest(undefined, { ...fastCheck, messages: [
+      { role: "user", content: [{ type: "text", text: "Summarise this:\n<transcript>\nUser: hi\n</transcript>" }] },
+    ] })).toBe(false)
+    expect(isClaudeCodeAuxiliaryRequest(undefined, { ...fastCheck, messages: [{ role: "user", content: "<transcript>\n" }] }))
+      .toBe(false)
+    expect(isClaudeCodeAuxiliaryRequest(undefined, { ...fastCheck, stream: true })).toBe(false)
+    expect(isClaudeCodeAuxiliaryRequest(undefined, { ...fastCheck, tools: [{ name: "Read", input_schema: { type: "object" } }] }))
       .toBe(false)
   })
 
@@ -917,13 +953,19 @@ describe("claudeCodeAuxiliaryPromptGrows — which side calls only add to their 
     expect(claudeCodeAuxiliaryPromptGrows({ ...classifier, stop_sequences: ["</block>"] })).toBe(true)
   })
 
+  it("says so for the classifier sent without a stop sequence (CLI 2.1.294, fast mode)", () => {
+    const { stop_sequences: _omitted, ...fast } = classifier
+    expect(claudeCodeAuxiliaryPromptGrows({ ...fast, max_tokens: 256 })).toBe(true)
+  })
+
   it("does not for the progress summary, which is answered from a different step each time", () => {
     expect(isClaudeCodeAuxiliaryRequest(undefined, summaryFork)).toBe(true)
     expect(claudeCodeAuxiliaryPromptGrows(summaryFork)).toBe(false)
   })
 
   it("does not for a side call it knows only by the client's request class", () => {
-    const { stop_sequences: _omitted, ...classed } = classifier
+    const { stop_sequences: _omitted, ...rest } = classifier
+    const classed = { ...rest, messages: [{ role: "user", content: [{ type: "text", text: "Name this conversation in five words." }] }] }
     expect(isClaudeCodeAuxiliaryRequest("auxiliary", classed)).toBe(true)
     expect(claudeCodeAuxiliaryPromptGrows(classed)).toBe(false)
   })
@@ -931,7 +973,12 @@ describe("claudeCodeAuxiliaryPromptGrows — which side calls only add to their 
   it("rejects malformed shapes without throwing", () => {
     expect(claudeCodeAuxiliaryPromptGrows(undefined)).toBe(false)
     expect(claudeCodeAuxiliaryPromptGrows("not an object")).toBe(false)
-    expect(claudeCodeAuxiliaryPromptGrows({ ...classifier, stop_sequences: "</severity>" })).toBe(false)
+    const untranscribed = { ...classifier, messages: [classifier.messages[0]!] }
+    expect(claudeCodeAuxiliaryPromptGrows({ ...untranscribed, stop_sequences: "</severity>" })).toBe(false)
+    for (const messages of ["<transcript>\n", [null], [{ role: "user", content: [null] }], [{ role: "user", content: "<transcript>\n" }]]) {
+      const { stop_sequences: _omitted, ...unstopped } = classifier
+      expect(claudeCodeAuxiliaryPromptGrows({ ...unstopped, messages })).toBe(false)
+    }
   })
 
   it("is what the adapter tells the proxy", () => {
