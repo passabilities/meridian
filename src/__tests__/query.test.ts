@@ -157,6 +157,33 @@ describe("buildQueryOptions", () => {
     })
   })
 
+  // The CLI ends a stream that has sent it no event for
+  // max(CLAUDE_STREAM_IDLE_TIMEOUT_MS, 300000) + 300000 ms, ten minutes unless
+  // set, and sends the request again without streaming. Pings are not events,
+  // so under a fifteen-minute tool-input window it cut a Write at 600 s ("2
+  // stream events received, first after 28 ms, none in the final 600032 ms").
+  describe("the SDK child's stream watchdog", () => {
+    const savedHold = process.env.MERIDIAN_SESSION_TURN_MAX_HOLD_MS
+    afterEach(() => {
+      if (savedHold === undefined) delete process.env.MERIDIAN_SESSION_TURN_MAX_HOLD_MS
+      else process.env.MERIDIAN_SESSION_TURN_MAX_HOLD_MS = savedHold
+    })
+
+    it("is given the session turn's hold, which sits above the tool-input window", () => {
+      delete process.env.MERIDIAN_SESSION_TURN_MAX_HOLD_MS
+      expect(buildQueryOptions(makeContext({ passthrough: true })).options.env?.CLAUDE_STREAM_IDLE_TIMEOUT_MS).toBe("1200000")
+    })
+
+    it("follows a configured hold", () => {
+      process.env.MERIDIAN_SESSION_TURN_MAX_HOLD_MS = "1500000"
+      expect(buildQueryOptions(makeContext()).options.env?.CLAUDE_STREAM_IDLE_TIMEOUT_MS).toBe("1500000")
+    })
+
+    it("leaves an operator's own setting standing", () => {
+      expect(buildQueryOptions(makeContext({ cleanEnv: { CLAUDE_STREAM_IDLE_TIMEOUT_MS: "300000" } })).options.env?.CLAUDE_STREAM_IDLE_TIMEOUT_MS).toBe("300000")
+    })
+  })
+
   it("keeps the quiet defaults in passthrough mode", () => {
     const env = buildQueryOptions(makeContext({ passthrough: true })).options.env ?? {}
     expect(env.DISABLE_TELEMETRY).toBe("1")

@@ -277,6 +277,14 @@ provider (Bedrock, Vertex, Foundry and the like), the setting is left to the
 CLI, as it is for a direct client. A value set in Meridian's own environment
 wins.
 
+It also sets `CLAUDE_STREAM_IDLE_TIMEOUT_MS` to the session turn's hold
+(`MERIDIAN_SESSION_TURN_MAX_HOLD_MS`, 20 minutes by default). The subprocess
+ends a stream that has sent it no event for that setting (at least five
+minutes) plus five minutes, ten minutes by default, and sends the request again
+without streaming. Pings are not events, so that cut off a tool call the
+tool-input limit still allowed. A value set in Meridian's own environment wins
+here too.
+
 One thing these do not cover: before WebFetch retrieves a URL, the subprocess
 sends the target hostname to `api.anthropic.com` to check it against a safety
 blocklist. That check is deliberately exempt from

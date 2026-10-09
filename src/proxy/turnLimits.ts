@@ -38,7 +38,7 @@ export function defaultSessionTurnMaxHoldMs(toolInputIdleMs: number): number {
 /**
  * The session turn's hold as configured: its own setting, else derived from
  * the tool-input window's. `setting` reads one by its name after `MERIDIAN_`
- * (`envInt`).
+ * (`envInt`). The SDK child's stream watchdog is given the same.
  */
 export function resolveSessionTurnMaxHoldMs(setting: (name: string, fallback: number) => number): number {
   return setting("SESSION_TURN_MAX_HOLD_MS",

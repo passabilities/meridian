@@ -8426,12 +8426,14 @@ the setting to raise.
   only the `: ping` comments the proxy sends. That held with default settings,
   with `CLAUDE_STREAM_IDLE_TIMEOUT_MS` and with `API_TIMEOUT_MS` raised. The
   300 s cuts were the proxy's.
-- Not covered: the SDK child still ends such a call at about 600 s, then sends
-  the request again. With a 660 s quiet `Write` under a 900 s window
-  (`QUIET=660 TOOL_INPUT_LIMIT_MS=900000`), the call ended at 601 s with
-  0 of 1,288 characters. That happened even with the child's `API_TIMEOUT_MS`
-  at 1,200,000, which it did receive. A tool call written for more than ten
-  minutes is still cut off.
+- The SDK child ended such a call at about 600 s, then sent the request again
+  without streaming. The transcript of a run with `QUIET=660
+  TOOL_INPUT_LIMIT_MS=900000` read "watchdog; 2 stream events received, first
+  after 28 ms, none in the final 600032 ms". The CLI ends a stream after
+  `max(CLAUDE_STREAM_IDLE_TIMEOUT_MS, 300000) + 300000` ms without an event,
+  pings not counting. The child's `API_TIMEOUT_MS` was not the cause: the call
+  still ended at 601 s with that set to 1,200,000. The child now gets
+  `CLAUDE_STREAM_IDLE_TIMEOUT_MS` set to the session turn's hold.
 
 ### Run it
 
@@ -8468,6 +8470,15 @@ while a second conversation's text block goes quiet the same way.
 | 300 s, the old default, at 9e6ca4e | "Upstream stalled: no data for 300004ms", 0 of 1,288 characters | FAIL |
 | 900 s, the new default | answered at 403.0 s, 1,288 of 1,288 characters | PASS |
 
+2026-10-09, the same, with the tool call quiet for 660 s under a 900 s window
+(`QUIET=660 TOOL_INPUT_LIMIT_MS=900000`):
+
+| Build | Quiet tool call | Result |
+|---|---|---|
+| 9e6ca4e (turn hold 10 minutes) | ended at 600.6 s, 0 of 1,288 characters | FAIL |
+| f9fc51d (hold 20 minutes; the child's stream watchdog at its 10 minutes) | ended at 601.4 s with the child's non-streaming retry at 601.3 s, 0 of 1,288 characters | FAIL |
+| the child's stream watchdog at the turn's hold | answered at 662.4 s, 1,288 of 1,288 characters | PASS |
+
 `stream-idle-guard.test.ts` ("tool call's input") failed before the guard
 change; `proxy-tool-input-idle.test.ts` failed with the server's wiring taken
 out (the quiet call cut at the turn's limit) and passes with it.
@@ -8477,8 +8488,8 @@ out (the quiet call cut at the turn's limit) and passes with it.
 - The real model. Whether the API sends only pings while it writes a long
   parameter is read from the live pattern (no input reached the proxy for
   90 s, on every one of 120 stalls), not from the API's own documentation.
-- A real stall inside a tool call now takes up to five minutes to be given up
-  on, not 90 s.
+- A real stall inside a tool call now takes up to fifteen minutes to be given
+  up on, not 90 s.
 - Pylon's turn watchdog aborts at 180 s, so for a Pylon client it decides
   first in that window.
 - A failed turn after which the client sends the same request again (9 of the

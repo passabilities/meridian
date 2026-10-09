@@ -12,6 +12,7 @@ import { createOpencodeMcpServer } from "../mcpTools"
 import { createPassthroughMcpServer, PASSTHROUGH_MCP_NAME } from "./passthroughTools"
 import { TOOL_SEARCH_TOOL_NAME, TOOL_SEARCH_TURN_BUDGET, deferredToolsAnnouncement, deferredToolsNote, isFirstPartyBaseUrl, isTruthyFlag } from "./passthroughToolSearch"
 import { env, envInt } from "../env"
+import { resolveSessionTurnMaxHoldMs } from "./turnLimits"
 import type { Effort } from "./effort"
 
 /**
@@ -864,6 +865,15 @@ export function buildQueryOptions(ctx: QueryContext, abortController?: AbortCont
         ...(passthrough && process.env.MERIDIAN_SUPPRESS_IMPLICIT_ATTACHMENTS !== "0"
           ? { CLAUDE_CODE_DISABLE_ATTACHMENTS: "1" }
           : {}),
+        // The CLI ends a stream that has sent it no event for
+        // max(CLAUDE_STREAM_IDLE_TIMEOUT_MS, 300000) + 300000 ms, ten minutes
+        // unless set, and sends the request again without streaming. Pings are
+        // not events, so it cut a tool call the tool-input window still allowed
+        // (live in the gate: "none in the final 600032 ms"). Like every timer
+        // but the upstream idle guard it has to sit above that guard's limits,
+        // so it gets the session turn's hold. Ahead of the inherited
+        // environment: an operator's own value stands.
+        CLAUDE_STREAM_IDLE_TIMEOUT_MS: String(resolveSessionTurnMaxHoldMs(envInt)),
         // A tool call's input streamed as it is written (streamsToolInputEagerly).
         // Ahead of the inherited environment: an operator's own setting stands.
         ...(streamsToolInputEagerly({ ...cleanEnv, ...ctx.envOverrides })
