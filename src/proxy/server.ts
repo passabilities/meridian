@@ -15,7 +15,12 @@ import { query } from "@anthropic-ai/claude-agent-sdk"
 import { rateLimitStore } from "./rateLimitStore"
 import { guardUpstreamIdle, UpstreamIdleError, upstreamIdleLimitMs, type LateIdleDeadline } from "./streamIdleGuard"
 import { IdleStallCeilingError, IdleStallTracker, idleStallRequestKey } from "./idleStallCeiling"
-import { DEFAULT_UPSTREAM_TOOL_INPUT_IDLE_MS, resolveSessionTurnMaxHoldMs } from "./turnLimits"
+import {
+  DEFAULT_SESSION_GC_MAX_DELETES,
+  DEFAULT_UPSTREAM_TOOL_INPUT_IDLE_MS,
+  defaultSessionGcMaxPending,
+  resolveSessionTurnMaxHoldMs,
+} from "./turnLimits"
 import { linkRequestAbort, type RequestAbortLink } from "./requestAbort"
 import { processSessionTree, truncateSessionKey, type SessionTreeRegistration } from "./sessionTree"
 import { AbortableSemaphore, getProcessSdkSemaphore, type SemaphoreLease } from "./concurrency"
@@ -912,19 +917,24 @@ export function createProxyServer(config: Partial<ProxyConfig> = {}): ProxyServe
       retryDelayMs: Math.max(1, envInt("SESSION_TURN_RETRY_MS", 25)),
     },
   )
+  const sessionGcMaxDeletes = Math.max(1, envInt("SESSION_GC_MAX_DELETES", DEFAULT_SESSION_GC_MAX_DELETES))
+  const sessionGcRetiredGraceMs = Math.max(0, envInt("SESSION_GC_GRACE_MS", SESSION_TURN_MAX_HOLD_MS + 60_000))
   const sessionGcOptions: SessionLifecycleOptions = {
-    maxPending: Math.max(1, envInt("SESSION_GC_MAX_PENDING", 256)),
-    maxDeletesPerRun: Math.max(1, envInt("SESSION_GC_MAX_DELETES", 16)),
+    // The backlog follows the grace, so a longer turn hold cannot throttle
+    // retirement below the deletion rate (turnLimits.ts).
+    maxPending: Math.max(1, envInt("SESSION_GC_MAX_PENDING", defaultSessionGcMaxPending(
+      sessionGcRetiredGraceMs,
+      sessionGcMaxDeletes,
+      Math.max(0, envInt("SESSION_GC_INTERVAL_MS", 60_000)),
+    ))),
+    maxDeletesPerRun: sessionGcMaxDeletes,
     // A prepared fork is an active write lease. Never age it out before the
     // request watchdog plus a drain margin, even if an unsafe lower value is configured.
     preparedGraceMs: Math.max(
       SESSION_TURN_MAX_HOLD_MS + 60_000,
       envInt("SESSION_GC_PREPARED_GRACE_MS", SESSION_TURN_MAX_HOLD_MS + 60_000),
     ),
-    retiredGraceMs: Math.max(
-      0,
-      envInt("SESSION_GC_GRACE_MS", SESSION_TURN_MAX_HOLD_MS + 60_000),
-    ),
+    retiredGraceMs: sessionGcRetiredGraceMs,
     // External acquisition budget at the local FIFO head, not local queue time.
     lockWaitMs: Math.max(100, envInt("SESSION_GC_LOCK_WAIT_MS", 2_000)),
     // No lease a live request holds can outlive the turn watchdog.

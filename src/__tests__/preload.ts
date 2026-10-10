@@ -64,8 +64,9 @@ mkdirSync(process.env.MERIDIAN_SESSION_DIR, { recursive: true })
 // own `bun test` invocations: a fresh process meant a fresh budget.
 //
 // This is the knob server.ts already reads (`envInt("SESSION_GC_MAX_PENDING",
-// 256)` at sessionGcOptions), so no production code changes. Unset in
-// production, where the default of 256 applies unchanged.
+// ...)` at sessionGcOptions), so no production code changes. Unset in
+// production, where the default follows the GC's grace and deletion rate
+// (defaultSessionGcMaxPending in turnLimits.ts).
 //
 // Two earlier attempts were wrong and are recorded so they are not retried.
 // Rotating the session root per test: preload hooks are process-scoped, so

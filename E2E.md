@@ -1044,6 +1044,7 @@ curl -s -X PUT -H 'Content-Type: application/json' -d '{"checkForUpdates":false}
 | E92 | [A tool call's input reaches the client as it is written](#e92-a-tool-calls-input-reaches-the-client-as-it-is-written) | **Automated**: `bun test src/__tests__/query.test.ts` (`-t "streamed as it is written"`) — on Anthropic's own API the SDK child gets `CLAUDE_CODE_ENABLE_FINE_GRAINED_TOOL_STREAMING=1`, not behind a gateway or another provider, and an operator's value stands. **No model calls, not in CI**: `bun scripts/e2e-eager-tool-input.mjs [model]` — the real proxy, SDK and CLI; the CLI marks the passthrough Write tool `eager_input_streaming` and its input reaches the client in pieces past the tool-input limit (`EAGER=0` reproduces the held-back, cut-off call). **Run before releases touching the SDK child's environment, streaming or passthrough tools** | 2026-10-09 |
 | E93 | [A refusal after a keep-alive ping still fails over](#e93-a-refusal-after-a-keep-alive-ping-still-fails-over) | **Automated**: `bun test src/__tests__/priority-routing-integration.test.ts` (`-t "keep-alive\|looked past pings"`) — a refusal after the stream's `: ping` fails over, a slow account's pings reach the client, and past `MERIDIAN_ACCOUNT_REFUSAL_WAIT_MS` the stream goes to the client as it is. **No model calls, not in CI**: `bun scripts/e2e-refusal-after-ping.mjs` — the real proxy, SDK and CLI with two stand-in accounts; the refusal 20 s in fails over to the other account (`E2E_MERIDIAN_ROOT` at ca854c0 reproduces the `event: error`). **Run before releases touching priority failover or stream heartbeats** | 2026-10-09 |
 | E94 | [A capped tool turn the CLI answered without streaming](#e94-a-capped-tool-turn-the-cli-answered-without-streaming) | **Automated**: `bun test src/__tests__/passthrough-early-stop-integration.test.ts` (`-t "without streaming"`) — a capped passthrough turn that came as one assistant message, with one or several calls, reaches the client as those calls and a `tool_use` stop, and the next request resumes at them. **No model calls, not in CI**: `bun scripts/e2e-unstreamed-capped-turn.mjs` — the real proxy, SDK and CLI; a stream refused before `message_start` makes the CLI answer without streaming (`E2E_MERIDIAN_ROOT` at 864fd7b reproduces the 500). **Run before releases touching passthrough streaming, turn caps or checkpoints** | 2026-10-09 |
+| E95 | [The session GC keeps up with what turns leave behind](#e95-the-session-gc-keeps-up-with-what-turns-leave-behind) | **Automated**: `bun test src/__tests__/turn-limits.test.ts src/__tests__/proxy-session-gc-capacity.test.ts` — the deletion backlog follows the grace (4,032 at the defaults), and one sweep retires 300 orphaned transcripts, not 255. **No model calls, not in CI**: `bun scripts/e2e-session-gc-throughput.mjs` — real transcript files deleted through the SDK in gated children, 64 a sweep (`E2E_MERIDIAN_ROOT` at a134177 shows 16). **Run before releases touching the session lifecycle, its GC or the turn hold** | 2026-10-10 |
 
 | P1 | [Profile: List & Auth Status](#p1-profile-list--auth-status) | `/profiles/list` returns profiles with emails, login status, auth timestamps | - |
 | P2 | [Profile: Switch via API](#p2-profile-switch-via-api) | `POST /profiles/active` switches profile; health endpoint reflects new email | - |
@@ -8691,6 +8692,67 @@ retried 33 streams over nine minutes and never sent one without streaming.
 **Not covered:** a live account's burst refusal. Watch for capped errors with
 `envelope=unopened` and `tools=N/0` in `/telemetry/logs?category=error`; they
 should stop.
+
+## E95: The session GC keeps up with what turns leave behind
+
+**What it proves:** at its default settings the session GC retires and
+deletes transcripts faster than parallel runs leave them, so orphaned
+transcripts cannot fill the ownership ceiling.
+
+Every turn runs on a fork of its conversation's SDK session, so every turn
+leaves one transcript for the GC. A transcript no mapping pins is retired, waits
+out the grace (the session turn's hold and a minute) and is then deleted
+through the Agent SDK in a gated child.
+- At most `MERIDIAN_SESSION_GC_MAX_PENDING` (256) may wait. Over the grace that
+  caps retirement. When the turn hold went from 10 to 20 minutes on 2026-10-09
+  (f9fc51d), the grace went from 11 to 21 minutes and the cap from about 23 to
+  about 12 a minute.
+- A sweep deleted at most 16, once a minute.
+
+Live, 2026-10-09: parallel runs left 1,100–1,700 transcripts an hour from
+11:00. 256 deletion tombstones spanned 21 minutes, about 13 a minute.
+- By 21:00, 19,991 transcripts were live against a ceiling of 20,256 owned
+  (twice `MERIDIAN_MAX_STORED_SESSIONS`, plus the backlog).
+- Only 7,928 of them were named anywhere in the session store.
+- From then, every request that needed a new transcript was refused
+  `503 overloaded_error: session transcript ownership capacity is full`. That
+  came to 270–649 an hour, rising.
+
+A sweep now deletes up to 64. The backlog's default follows the grace and the
+deletion rate, three graces' worth (4,032 at the defaults; never under 256),
+and lifts the ceiling with it. The deletion rate decides, whatever the hold
+(`defaultSessionGcMaxPending`, `turnLimits.ts`).
+
+### Run it
+
+```bash
+bun test src/__tests__/turn-limits.test.ts src/__tests__/proxy-session-gc-capacity.test.ts
+bun scripts/e2e-session-gc-throughput.mjs                                          # after
+E2E_MERIDIAN_ROOT=<a checkout at a134177> bun scripts/e2e-session-gc-throughput.mjs   # before
+```
+
+The proxy test registers 300 orphaned transcripts and runs one sweep at the
+default settings. The gate registers 300 real transcript files where the SDK
+keeps sessions, none pinned. One sweep retires them; after a 1-second grace a
+second sweep deletes as many as it may, each through the SDK's `deleteSession`
+in a gated child. The backlog is set to 1,000 for both runs, so only the
+deletion rate differs. No model calls.
+
+**Pass criteria** (asserted, non-zero exit on any):
+
+- The proxy test: one sweep retires all 300, not 255.
+- The gate: one sweep deletes 64 transcript files, within its 30-second budget.
+
+**Verified 2026-10-10** (Agent SDK 0.2.141 `deleteSession`):
+- The proxy test failed before with 255 retired.
+- The gate before, at a134177: 16 deleted in 1.5 s (91 ms each).
+- The gate after: 64 deleted in 5.9 s (93 ms each).
+
+**Not covered:** how fast deletions run against the owner's 10.9 MB lifecycle
+file. Each deletion rewrites it three times under the lifecycle lock, so a
+sweep may stop at its 30-second budget short of 64 until the orphans are gone.
+After a deploy, `session.gc` log lines and tombstones per minute should show
+it.
 
 ## Concurrent transcript publication
 
