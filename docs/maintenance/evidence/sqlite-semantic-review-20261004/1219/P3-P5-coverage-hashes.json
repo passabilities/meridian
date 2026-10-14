@@ -1,0 +1,386 @@
+[
+  {
+    "path": "src/proxy/session/bookkeeping/lifecycleLeasesSql.ts",
+    "packet": "P3 SQL rows and publication",
+    "source_lines": 157,
+    "source_sha256": "0cbb0ef79ef6ed77d8f8e6ffa55eadc6a158a3eb8afa1f635167c5d723cf0d8d",
+    "source_blob": "4e440f085deaa6bd45d7e21924f6a0a3f3783d1b",
+    "patch": "diffs-github-base/121-src__proxy__session__bookkeeping__lifecycleLeasesSql.ts.patch",
+    "patch_sha256": "1144dd64cf468da163069f2cdcc7cbcad653479f91cb894e6ba1258d4b488747",
+    "hunks": [
+      "@@ -0,0 +1,157 @@"
+    ],
+    "status": "Every added/changed/removed hunk inspected; complete source read for new files; mixed lifecycle diff and relevant runtime callers read."
+  },
+  {
+    "path": "src/proxy/session/bookkeeping/lifecyclePrepareSql.ts",
+    "packet": "P3 SQL rows and publication",
+    "source_lines": 56,
+    "source_sha256": "1330eb086438639b447562427e768de5b80eb7883e56c83d809be8389623aae3",
+    "source_blob": "33e06dcf05502120678093503f7fe78d308caffd",
+    "patch": "diffs-github-base/122-src__proxy__session__bookkeeping__lifecyclePrepareSql.ts.patch",
+    "patch_sha256": "ad7645142ecb4b63be0557817dba6b59f7eb02de5041208273e1b382e660b7d3",
+    "hunks": [
+      "@@ -0,0 +1,56 @@"
+    ],
+    "status": "Every added/changed/removed hunk inspected; complete source read for new files; mixed lifecycle diff and relevant runtime callers read."
+  },
+  {
+    "path": "src/proxy/session/bookkeeping/lifecyclePublicationSql.ts",
+    "packet": "P3 SQL rows and publication",
+    "source_lines": 78,
+    "source_sha256": "7edb120d655316d25f16ab7f8fabb77d4c987ed63e959f8f2e27a310254bca69",
+    "source_blob": "19cedfd6e4706afa7fb56ecc0b6d40c512ac5265",
+    "patch": "diffs-github-base/123-src__proxy__session__bookkeeping__lifecyclePublicationSql.ts.patch",
+    "patch_sha256": "df1097304b13f9d58d8aa448137ea00b632f5940564e9bde965a5f6898d5d8c4",
+    "hunks": [
+      "@@ -0,0 +1,78 @@"
+    ],
+    "status": "Every added/changed/removed hunk inspected; complete source read for new files; mixed lifecycle diff and relevant runtime callers read."
+  },
+  {
+    "path": "src/proxy/session/bookkeeping/lifecycleRegisterSql.ts",
+    "packet": "P3 SQL rows and publication",
+    "source_lines": 56,
+    "source_sha256": "509b39b8ff50554d77bb1dc6731cb807a3f68a75221525ffb3f208412bf3b2c5",
+    "source_blob": "0287bdc4daae06dade87a3595e0445189451033d",
+    "patch": "diffs-github-base/125-src__proxy__session__bookkeeping__lifecycleRegisterSql.ts.patch",
+    "patch_sha256": "ebb697f88a76e5c4a81bc9e235b4fbb64468bf14255d5b83101c4bea2446b57f",
+    "hunks": [
+      "@@ -0,0 +1,56 @@"
+    ],
+    "status": "Every added/changed/removed hunk inspected; complete source read for new files; mixed lifecycle diff and relevant runtime callers read."
+  },
+  {
+    "path": "src/proxy/session/bookkeeping/lifecycleRowsSql.ts",
+    "packet": "P3 SQL rows and publication",
+    "source_lines": 74,
+    "source_sha256": "ea1602319fb53c3fafac8fc4d0e3703450d60198ba3b457ccdad429928be344f",
+    "source_blob": "4a3898a178d7176eb9e21df547a88f9acfba57a5",
+    "patch": "diffs-github-base/126-src__proxy__session__bookkeeping__lifecycleRowsSql.ts.patch",
+    "patch_sha256": "b2b50d1ae148e6724893a57591f3d0ba94289020370d507342e88462e9653747",
+    "hunks": [
+      "@@ -0,0 +1,74 @@"
+    ],
+    "status": "Every added/changed/removed hunk inspected; complete source read for new files; mixed lifecycle diff and relevant runtime callers read."
+  },
+  {
+    "path": "src/proxy/session/bookkeeping/lifecycleSql.ts",
+    "packet": "P3 SQL rows and publication",
+    "source_lines": 13,
+    "source_sha256": "9cb0c96bd2bcfc3a794381d842518a71d0337534df4e00cb1832cfcabf430913",
+    "source_blob": "ff3da584065556bf9a048a83639178dff202b6bf",
+    "patch": "diffs-github-base/127-src__proxy__session__bookkeeping__lifecycleSql.ts.patch",
+    "patch_sha256": "7d5a3a8994bc437ecc480edad426be00f4a9f6a2a917af4f817a356fc5728a50",
+    "hunks": [
+      "@@ -0,0 +1,13 @@"
+    ],
+    "status": "Every added/changed/removed hunk inspected; complete source read for new files; mixed lifecycle diff and relevant runtime callers read."
+  },
+  {
+    "path": "src/proxy/session/bookkeeping/lifecycleTransitionsSql.ts",
+    "packet": "P3 SQL rows and publication",
+    "source_lines": 53,
+    "source_sha256": "2df9a74fe5181b46fbc2814830773867ca7ee624e7b8a65eaaa8a57f22546810",
+    "source_blob": "0091d21dd3e542220fe40574ad1f64a238eaaf02",
+    "patch": "diffs-github-base/128-src__proxy__session__bookkeeping__lifecycleTransitionsSql.ts.patch",
+    "patch_sha256": "adfbc7303a6f49c6b0ebe25ff32dda7ebaaf80816560a17ed6a70971fb16308f",
+    "hunks": [
+      "@@ -0,0 +1,53 @@"
+    ],
+    "status": "Every added/changed/removed hunk inspected; complete source read for new files; mixed lifecycle diff and relevant runtime callers read."
+  },
+  {
+    "path": "src/proxy/session/bookkeeping/mappings.ts",
+    "packet": "P3 SQL rows and publication",
+    "source_lines": 335,
+    "source_sha256": "99a2360f76337e136b0b39d0fb4b9505f16427903ae855ccebf9beaf1efaec84",
+    "source_blob": "5006148214b153a3151b33965f7a80b25a40293f",
+    "patch": "diffs-github-base/134-src__proxy__session__bookkeeping__mappings.ts.patch",
+    "patch_sha256": "959064b8160b7ccfe4afa9bfc58befb745deb8dbda08ae0a0f195d6be1c72026",
+    "hunks": [
+      "@@ -0,0 +1,335 @@"
+    ],
+    "status": "Every added/changed/removed hunk inspected; complete source read for new files; mixed lifecycle diff and relevant runtime callers read."
+  },
+  {
+    "path": "src/proxy/session/bookkeeping/publicationLocators.ts",
+    "packet": "P3 SQL rows and publication",
+    "source_lines": 22,
+    "source_sha256": "9d1d1cb5a15cf33c237fca1df932acac0be7d4b7572803888459394a35cab889",
+    "source_blob": "f1251f128ac32c62fc78c951e5eca899f828c4e1",
+    "patch": "diffs-github-base/140-src__proxy__session__bookkeeping__publicationLocators.ts.patch",
+    "patch_sha256": "3e10684bcd79f45f2ebf37052f6a261273b7f8b1abc986d6609ac6d9218f6285",
+    "hunks": [
+      "@@ -0,0 +1,22 @@"
+    ],
+    "status": "Every added/changed/removed hunk inspected; complete source read for new files; mixed lifecycle diff and relevant runtime callers read."
+  },
+  {
+    "path": "src/proxy/session/bookkeeping/resourceImport.ts",
+    "packet": "P3 SQL rows and publication",
+    "source_lines": 26,
+    "source_sha256": "2a27b81775ee564ba5dcb94a605fe8bd39c3e3d484f92c90c4e85a1b404edb5d",
+    "source_blob": "af7a8bc08b2def6e78acfda147421842c1ef51d8",
+    "patch": "diffs-github-base/146-src__proxy__session__bookkeeping__resourceImport.ts.patch",
+    "patch_sha256": "3f2838f2811ad48bbd3e4b514cc67d716dfb301a9ca673e06711df314da84548",
+    "hunks": [
+      "@@ -0,0 +1,26 @@"
+    ],
+    "status": "Every added/changed/removed hunk inspected; complete source read for new files; mixed lifecycle diff and relevant runtime callers read."
+  },
+  {
+    "path": "src/proxy/session/bookkeeping/resourceRow.ts",
+    "packet": "P3 SQL rows and publication",
+    "source_lines": 30,
+    "source_sha256": "4202b3d49b955d8ff314ada00a59dc15381f27ce2bedf03d5d2e241edfe60e0e",
+    "source_blob": "c4bf6ad1b907e077019e0ff6e47813861bc5b8e4",
+    "patch": "diffs-github-base/147-src__proxy__session__bookkeeping__resourceRow.ts.patch",
+    "patch_sha256": "289e860a50f61b81d34ea10d551b76e7d4209c0575f42bff8000bbd5f309b88f",
+    "hunks": [
+      "@@ -0,0 +1,30 @@"
+    ],
+    "status": "Every added/changed/removed hunk inspected; complete source read for new files; mixed lifecycle diff and relevant runtime callers read."
+  },
+  {
+    "path": "src/proxy/session/bookkeeping/resources.ts",
+    "packet": "P3 SQL rows and publication",
+    "source_lines": 184,
+    "source_sha256": "b505dbd3dbfd68ef0b0d77f5be68162a2c40f3b850108822a9c37b3ceb9b0e43",
+    "source_blob": "ce2507ec1c2d2a7fcf79aab090ba4964e26a842a",
+    "patch": "diffs-github-base/148-src__proxy__session__bookkeeping__resources.ts.patch",
+    "patch_sha256": "230b360e344f9a9c39a87685bceb568af8862fc4c467e66b46040ce17b4a06e6",
+    "hunks": [
+      "@@ -0,0 +1,184 @@"
+    ],
+    "status": "Every added/changed/removed hunk inspected; complete source read for new files; mixed lifecycle diff and relevant runtime callers read."
+  },
+  {
+    "path": "src/proxy/session/bookkeeping/sqliteStoreBackend.ts",
+    "packet": "P3 SQL rows and publication",
+    "source_lines": 20,
+    "source_sha256": "32dbf480ae19ccf07217cfcea6877e00d7637d428dc5bdefe1a6b80744332ed4",
+    "source_blob": "eb6965b9ce1de5109542b321fbb925a1440aab22",
+    "patch": "diffs-github-base/152-src__proxy__session__bookkeeping__sqliteStoreBackend.ts.patch",
+    "patch_sha256": "10f2af5d311b3661e8682d55e7a06f03b4a36b51875c554a66414aff00877e03",
+    "hunks": [
+      "@@ -0,0 +1,20 @@"
+    ],
+    "status": "Every added/changed/removed hunk inspected; complete source read for new files; mixed lifecycle diff and relevant runtime callers read."
+  },
+  {
+    "path": "src/proxy/session/bookkeeping/storeAttemptsSql.ts",
+    "packet": "P3 SQL rows and publication",
+    "source_lines": 97,
+    "source_sha256": "25db651cb8c973de42dd7ebeb79b80075a7eeb8a4c73b51caa78a5ff15e5d530",
+    "source_blob": "425ab274fb2ff1e04aca58732412b0d934c7fc9f",
+    "patch": "diffs-github-base/155-src__proxy__session__bookkeeping__storeAttemptsSql.ts.patch",
+    "patch_sha256": "6b955d08e0815e9f1acb4312ecb54d5bdb327caee92278ba4481c5df9eef900a",
+    "hunks": [
+      "@@ -0,0 +1,97 @@"
+    ],
+    "status": "Every added/changed/removed hunk inspected; complete source read for new files; mixed lifecycle diff and relevant runtime callers read."
+  },
+  {
+    "path": "src/proxy/session/bookkeeping/storeMaintenanceSql.ts",
+    "packet": "P3 SQL rows and publication",
+    "source_lines": 62,
+    "source_sha256": "036facc7eedb90487d6a376a79b1296df758e45bc1e11c1488c494a494b42ca9",
+    "source_blob": "6c038c11018de276311f3fd1f7160caf7cfab868",
+    "patch": "diffs-github-base/158-src__proxy__session__bookkeeping__storeMaintenanceSql.ts.patch",
+    "patch_sha256": "7f807c264b352c428598b54963b8ee6576865f0ae9f8b1e5ec59665dd7c697d9",
+    "hunks": [
+      "@@ -0,0 +1,62 @@"
+    ],
+    "status": "Every added/changed/removed hunk inspected; complete source read for new files; mixed lifecycle diff and relevant runtime callers read."
+  },
+  {
+    "path": "src/proxy/session/bookkeeping/storeMaintenanceWriteSql.ts",
+    "packet": "P3 SQL rows and publication",
+    "source_lines": 56,
+    "source_sha256": "44bddb69356ee9d69fe93436df3c08bb3b943c218c5cbfba7a78896e241dd5d3",
+    "source_blob": "729cdb939387ae2e9b4d3b94152b747d8a3af065",
+    "patch": "diffs-github-base/159-src__proxy__session__bookkeeping__storeMaintenanceWriteSql.ts.patch",
+    "patch_sha256": "3138b7ea1f2113e0ecbeb15fd20aeca35cf0e67a9ce85748da1cb08ca3db8205",
+    "hunks": [
+      "@@ -0,0 +1,56 @@"
+    ],
+    "status": "Every added/changed/removed hunk inspected; complete source read for new files; mixed lifecycle diff and relevant runtime callers read."
+  },
+  {
+    "path": "src/proxy/session/bookkeeping/storeMappingsSql.ts",
+    "packet": "P3 SQL rows and publication",
+    "source_lines": 37,
+    "source_sha256": "6f5498e95e3a1deb40d2bb9e5ccc4904a21cd38a6b2b295ba73a35e2198cc84e",
+    "source_blob": "e059714554dec49ca8d0797b7b2396b758da03d4",
+    "patch": "diffs-github-base/160-src__proxy__session__bookkeeping__storeMappingsSql.ts.patch",
+    "patch_sha256": "4e9bda542e3848b9924fa95b981028c43cbac861c65680982fd17e8790dffc0c",
+    "hunks": [
+      "@@ -0,0 +1,37 @@"
+    ],
+    "status": "Every added/changed/removed hunk inspected; complete source read for new files; mixed lifecycle diff and relevant runtime callers read."
+  },
+  {
+    "path": "src/proxy/session/bookkeeping/storeMutationSupport.ts",
+    "packet": "P3 SQL rows and publication",
+    "source_lines": 73,
+    "source_sha256": "7249a000326dd19d27c6e0e5e6faaa8a57b1a22ebca76ff5a60760d1fb1785a0",
+    "source_blob": "a1d9152c7ed482320a6fc9ad57c8738acd9a05b3",
+    "patch": "diffs-github-base/161-src__proxy__session__bookkeeping__storeMutationSupport.ts.patch",
+    "patch_sha256": "458902550407321c30c3f39829ffe121a17cffe0cc0d8bc40e6a5638d215392f",
+    "hunks": [
+      "@@ -0,0 +1,73 @@"
+    ],
+    "status": "Every added/changed/removed hunk inspected; complete source read for new files; mixed lifecycle diff and relevant runtime callers read."
+  },
+  {
+    "path": "src/proxy/session/bookkeeping/storePrioritySql.ts",
+    "packet": "P3 SQL rows and publication",
+    "source_lines": 40,
+    "source_sha256": "2ede74cd533b23e96beb35911d5163801ee179d1385e3298c51bc1f4468a0eed",
+    "source_blob": "644179631771dd16fcb230ccee7e833eca1a1b60",
+    "patch": "diffs-github-base/162-src__proxy__session__bookkeeping__storePrioritySql.ts.patch",
+    "patch_sha256": "f13decf6867d5dc6664448be0b1dd3e7d929edfd5d08a2835a2c735a13a10752",
+    "hunks": [
+      "@@ -0,0 +1,40 @@"
+    ],
+    "status": "Every added/changed/removed hunk inspected; complete source read for new files; mixed lifecycle diff and relevant runtime callers read."
+  },
+  {
+    "path": "src/proxy/session/bookkeeping/storePublicationSql.ts",
+    "packet": "P3 SQL rows and publication",
+    "source_lines": 123,
+    "source_sha256": "bfd82c24782ffaf6f6deeb6cfc2527780bdacd1a9b709478d06fa3165bc12bc1",
+    "source_blob": "2b37492561b34bf4fad034c363f53e57a5e4be96",
+    "patch": "diffs-github-base/163-src__proxy__session__bookkeeping__storePublicationSql.ts.patch",
+    "patch_sha256": "36d9c6cb92ca9541c3437e32f14325491fb7a073da2c9c4db8a96c8353ae259c",
+    "hunks": [
+      "@@ -0,0 +1,123 @@"
+    ],
+    "status": "Every added/changed/removed hunk inspected; complete source read for new files; mixed lifecycle diff and relevant runtime callers read."
+  },
+  {
+    "path": "src/proxy/session/bookkeeping/storeScope.ts",
+    "packet": "P3 SQL rows and publication",
+    "source_lines": 12,
+    "source_sha256": "3156370ca4c7677f12ba11d28beeceb69f2ebb230961e6a62c6c93cd6dda3b89",
+    "source_blob": "aa383cf8342917208648a6fc94210df939dc9b63",
+    "patch": "diffs-github-base/164-src__proxy__session__bookkeeping__storeScope.ts.patch",
+    "patch_sha256": "0b3235d1ee6c5cf987de1d7513257c2cfa20b9ea7451e3651f94fdd776f9b32e",
+    "hunks": [
+      "@@ -0,0 +1,12 @@"
+    ],
+    "status": "Every added/changed/removed hunk inspected; complete source read for new files; mixed lifecycle diff and relevant runtime callers read."
+  },
+  {
+    "path": "src/proxy/session/bookkeeping/storeSettlementSql.ts",
+    "packet": "P3 SQL rows and publication",
+    "source_lines": 81,
+    "source_sha256": "07a6e610a8a9a8190434d60935f4bf91c46581e77c9f00596a164beaa5e00aa5",
+    "source_blob": "b6bf5952f372d9200b14ea8e8e198b0f4ced4e2a",
+    "patch": "diffs-github-base/165-src__proxy__session__bookkeeping__storeSettlementSql.ts.patch",
+    "patch_sha256": "1e4df47801100068b45360362735a9a7ca4189fd5c199c0bae3f48901474557f",
+    "hunks": [
+      "@@ -0,0 +1,81 @@"
+    ],
+    "status": "Every added/changed/removed hunk inspected; complete source read for new files; mixed lifecycle diff and relevant runtime callers read."
+  },
+  {
+    "path": "src/proxy/session/bookkeeping/storeWriteSql.ts",
+    "packet": "P3 SQL rows and publication",
+    "source_lines": 57,
+    "source_sha256": "73f402329ac31b8e4c4868389bddff9321f11951fd262171d4c68c1a0a6ceebf",
+    "source_blob": "82c25c809df8c5f3d6757b44609d5dadb95fd606",
+    "patch": "diffs-github-base/167-src__proxy__session__bookkeeping__storeWriteSql.ts.patch",
+    "patch_sha256": "a6d91f37910478647b36887b839185f0b62203e30afc972942625324d55d911f",
+    "hunks": [
+      "@@ -0,0 +1,57 @@"
+    ],
+    "status": "Every added/changed/removed hunk inspected; complete source read for new files; mixed lifecycle diff and relevant runtime callers read."
+  },
+  {
+    "path": "src/proxy/session/bookkeeping/lifecycleDeletionSql.ts",
+    "packet": "P5 GC and deletion",
+    "source_lines": 159,
+    "source_sha256": "d47588bd90808c60868901b4031e1a2ed0fb72c7b61d8d1239ad5054d0e9f80d",
+    "source_blob": "6881e22fbb641b90ebfc2011a64739f0173ae7bd",
+    "patch": "diffs-github-base/119-src__proxy__session__bookkeeping__lifecycleDeletionSql.ts.patch",
+    "patch_sha256": "7402c96bc04242f8c881eabbcd92a10a69cab0f1679db4b2b7e8cf7221c3f716",
+    "hunks": [
+      "@@ -0,0 +1,159 @@"
+    ],
+    "status": "Every added/changed/removed hunk inspected; complete source read for new files; mixed lifecycle diff and relevant runtime callers read."
+  },
+  {
+    "path": "src/proxy/session/bookkeeping/lifecycleGcSql.ts",
+    "packet": "P5 GC and deletion",
+    "source_lines": 13,
+    "source_sha256": "c3d25e7ef9e4ebec45d3ff94b57ec4ad2a714823695d3b790d50d0c7b8d07d5d",
+    "source_blob": "87092d19c1b65f041d829a4ce96da68eda50f560",
+    "patch": "diffs-github-base/120-src__proxy__session__bookkeeping__lifecycleGcSql.ts.patch",
+    "patch_sha256": "527fe34e0076b8e443b3dc4c3ad5920b30e5c89e8a4288075f6ccbf2708d272a",
+    "hunks": [
+      "@@ -0,0 +1,13 @@"
+    ],
+    "status": "Every added/changed/removed hunk inspected; complete source read for new files; mixed lifecycle diff and relevant runtime callers read."
+  },
+  {
+    "path": "src/proxy/session/bookkeeping/lifecycleReconcileSql.ts",
+    "packet": "P5 GC and deletion",
+    "source_lines": 142,
+    "source_sha256": "e2bdbc2b6bc5869a32f899d513a3864770cd4fcf3fe23cb19bc0ccfd91f6346d",
+    "source_blob": "191f3b3887c92e5c1433df5238d25478226143e7",
+    "patch": "diffs-github-base/124-src__proxy__session__bookkeeping__lifecycleReconcileSql.ts.patch",
+    "patch_sha256": "46f691138c31d0c4c8e7fd83625e8552092a602dd00862869e542e06e430a0cc",
+    "hunks": [
+      "@@ -0,0 +1,142 @@"
+    ],
+    "status": "Every added/changed/removed hunk inspected; complete source read for new files; mixed lifecycle diff and relevant runtime callers read."
+  },
+  {
+    "path": "src/proxy/sessionLifecycle.ts",
+    "packet": "P5 GC and deletion",
+    "source_lines": 1974,
+    "source_sha256": "e111cc7a78f945ad475bd0c4f594d6d78de1e59c3746de7af3399ca598c99b7e",
+    "source_blob": "49a15ed4ad3f19967d396c01167abbebc900fab3",
+    "patch": "diffs-github-base/173-src__proxy__sessionLifecycle.ts.patch",
+    "patch_sha256": "59faed44d6cbfd230c00243b5133687f3fdaf5e474793c2fbcd009d5db9fc6c9",
+    "hunks": [
+      "@@ -1,4 +1,4 @@",
+      "@@ -17,7 +17,17 @@ import {",
+      "@@ -61,8 +71,6 @@ import {",
+      "@@ -84,53 +92,6 @@ const DEFAULT_DELETE_TIMEOUT_MS = 30_000",
+      "@@ -158,9 +119,13 @@ export interface SessionLifecycleOptions {",
+      "@@ -188,12 +153,7 @@ export interface GcResult {",
+      "@@ -216,6 +176,8 @@ export async function acquireActiveTranscriptLease(",
+      "@@ -253,6 +215,8 @@ export async function attachActiveTranscriptExecutor(",
+      "@@ -273,6 +237,8 @@ export async function releaseActiveTranscriptLease(",
+      "@@ -303,6 +269,8 @@ export async function releaseJoinedTranscriptLease(",
+      "@@ -328,6 +296,8 @@ export async function prepareFork(",
+      "@@ -340,6 +310,8 @@ export async function prepareForkForPublication(",
+      "@@ -396,6 +368,8 @@ export async function ensureTranscriptJournaled(",
+      "@@ -437,6 +411,8 @@ export async function registerLiveTranscript(",
+      "@@ -487,6 +463,8 @@ export async function commitFork(",
+      "@@ -521,6 +499,8 @@ export async function publishPinnedTranscript<T extends boolean | string>(",
+      "@@ -534,6 +514,8 @@ export async function attachPinnedTranscript<T extends boolean | string>(",
+      "@@ -614,6 +596,8 @@ export async function abandonFork(",
+      "@@ -645,6 +629,8 @@ export async function reconcile(",
+      "@@ -820,6 +806,8 @@ export async function runGc(",
+      "@@ -841,11 +829,8 @@ export async function runGc(",
+      "@@ -853,11 +838,12 @@ export async function runGc(",
+      "@@ -929,10 +915,15 @@ async function attachDeletionExecutor(",
+      "@@ -997,6 +988,15 @@ class DeletionStillRunningError extends Error {}",
+      "@@ -1090,9 +1090,18 @@ async function deleteWithSdkChild(",
+      "@@ -1146,12 +1155,16 @@ try {",
+      "@@ -1188,7 +1201,42 @@ try {",
+      "@@ -1328,6 +1376,11 @@ export async function createInitializedSidecarLockCandidate(",
+      "@@ -1655,17 +1708,7 @@ async function readSidecar(path: string): Promise<SessionGcSidecar> {",
+      "@@ -1675,7 +1718,7 @@ async function writeSidecar(path: string, sidecar: SessionGcSidecar): Promise<vo",
+      "@@ -1691,115 +1734,6 @@ async function writeSidecar(path: string, sidecar: SessionGcSidecar): Promise<vo",
+      "@@ -1956,68 +1890,8 @@ function pruneTombstones(sidecar: SessionGcSidecar, options: SessionLifecycleOpt",
+      "@@ -2028,11 +1902,6 @@ function assertSameLocator(left: TranscriptLocator, right: TranscriptLocator): v",
+      "@@ -2078,14 +1947,6 @@ function hasCode(error: unknown, code: string): boolean {"
+    ],
+    "status": "Every added/changed/removed hunk inspected; complete source read for new files; mixed lifecycle diff and relevant runtime callers read."
+  }
+]

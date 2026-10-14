@@ -1,0 +1,253 @@
+{
+  "label": "timed-baseline-0d12f6a11",
+  "result": "FAIL",
+  "model": "gemini-3.8-flash-low",
+  "platform": "darwin",
+  "arch": "arm64",
+  "node": "v22.22.3",
+  "nativeHash": "8c01ef82307dc01455418eb2e6e82f2989a3fa8b815c4b192efaaa89a55bef8d",
+  "pluginHash": "0b40c022e3883332b39ad5bc6411033f0d836dc3bd303476d4bfe7226cc77e8e",
+  "toolMs": 1000,
+  "idleMs": 10000,
+  "pauseMs": 1600,
+  "clientPreflight": true,
+  "metrics": [
+    {
+      "model": "gemini-3.8-flash-low",
+      "status": 200,
+      "continuation": "new",
+      "conversationId": "ea76cd88-c810-4e85-b3f2-3e03d41e4aa0",
+      "inputTokens": 14338,
+      "outputTokens": 81,
+      "observedAtMs": 17648.035583
+    },
+    {
+      "model": "gemini-3.8-flash-low",
+      "status": 200,
+      "continuation": "new",
+      "conversationId": "0f8687a1-9b85-40ba-8f82-b01d0e0434f9",
+      "inputTokens": 14401,
+      "outputTokens": 14,
+      "observedAtMs": 25995.994916
+    },
+    {
+      "model": "gemini-3.8-flash-low",
+      "status": 200,
+      "continuation": "new",
+      "conversationId": "ae7195d9-22e5-4496-a676-091a6bb292b0",
+      "inputTokens": 14450,
+      "outputTokens": 7,
+      "observedAtMs": 49214.795458
+    }
+  ],
+  "requests": [
+    {
+      "model": "gemini-3.8-flash-low",
+      "id": "01d6caa2-e83d-41a7-b3e9-40dc42d02cdf",
+      "messageCount": 1
+    },
+    {
+      "model": "gemini-3.8-flash-low",
+      "id": "0c2b1423-3bc3-4f56-a1a5-5cb52702ef83",
+      "messageCount": 3
+    },
+    {
+      "model": "gemini-3.8-flash-low",
+      "id": "ea98a41f-472e-409b-97da-bef38e9a2958",
+      "messageCount": 5
+    }
+  ],
+  "health": [
+    {
+      "processes": 0,
+      "active": 0,
+      "pending": 0,
+      "reused": 0,
+      "completed": 2,
+      "failed": 0
+    },
+    {
+      "processes": 0,
+      "active": 0,
+      "pending": 0,
+      "reused": 0,
+      "completed": 2,
+      "failed": 0
+    },
+    {
+      "processes": 0,
+      "active": 0,
+      "pending": 0,
+      "reused": 0,
+      "completed": 3,
+      "failed": 0
+    }
+  ],
+  "children": [
+    {
+      "pid": 29430,
+      "close": true,
+      "stdoutEof": true,
+      "stderrEof": true,
+      "code": 143,
+      "signal": null
+    },
+    {
+      "pid": 29435,
+      "close": true,
+      "stdoutEof": true,
+      "stderrEof": true,
+      "code": 0,
+      "signal": null
+    },
+    {
+      "pid": 29436,
+      "close": true,
+      "stdoutEof": true,
+      "stderrEof": true,
+      "code": 0,
+      "signal": null
+    },
+    {
+      "pid": 29887,
+      "close": true,
+      "stdoutEof": true,
+      "stderrEof": true,
+      "code": 0,
+      "signal": null
+    },
+    {
+      "pid": 29890,
+      "close": true,
+      "stdoutEof": true,
+      "stderrEof": true,
+      "code": 143,
+      "signal": null
+    },
+    {
+      "pid": 29891,
+      "close": true,
+      "stdoutEof": true,
+      "stderrEof": true,
+      "code": 0,
+      "signal": null
+    },
+    {
+      "pid": 29892,
+      "close": true,
+      "stdoutEof": true,
+      "stderrEof": true,
+      "code": 0,
+      "signal": null
+    },
+    {
+      "pid": 29937,
+      "close": true,
+      "stdoutEof": true,
+      "stderrEof": true,
+      "code": 1,
+      "signal": null
+    },
+    {
+      "pid": 30063,
+      "close": true,
+      "stdoutEof": true,
+      "stderrEof": true,
+      "code": 0,
+      "signal": null
+    },
+    {
+      "pid": 30064,
+      "close": true,
+      "stdoutEof": true,
+      "stderrEof": true,
+      "code": 0,
+      "signal": null
+    },
+    {
+      "pid": 30361,
+      "close": true,
+      "stdoutEof": true,
+      "stderrEof": true,
+      "code": 1,
+      "signal": null
+    },
+    {
+      "pid": 30372,
+      "close": true,
+      "stdoutEof": true,
+      "stderrEof": true,
+      "code": 0,
+      "signal": null
+    },
+    {
+      "pid": 30373,
+      "close": true,
+      "stdoutEof": true,
+      "stderrEof": true,
+      "code": 0,
+      "signal": null
+    },
+    {
+      "pid": 30653,
+      "close": true,
+      "stdoutEof": true,
+      "stderrEof": true,
+      "code": 0,
+      "signal": null
+    },
+    {
+      "pid": 30654,
+      "close": true,
+      "stdoutEof": true,
+      "stderrEof": true,
+      "code": 0,
+      "signal": null
+    },
+    {
+      "pid": 30753,
+      "close": true,
+      "stdoutEof": true,
+      "stderrEof": true,
+      "code": 0,
+      "signal": null
+    },
+    {
+      "pid": 30802,
+      "close": true,
+      "stdoutEof": true,
+      "stderrEof": true,
+      "code": 0,
+      "signal": null
+    },
+    {
+      "pid": 31552,
+      "close": true,
+      "stdoutEof": true,
+      "stderrEof": true,
+      "code": 1,
+      "signal": null
+    },
+    {
+      "pid": 39601,
+      "close": true,
+      "stdoutEof": true,
+      "stderrEof": true,
+      "code": 0,
+      "signal": null
+    },
+    {
+      "pid": 39648,
+      "close": true,
+      "stdoutEof": true,
+      "stderrEof": true,
+      "code": 0,
+      "signal": null
+    }
+  ],
+  "joined": true,
+  "actualPauseMs": 1600,
+  "nextDispatchAfterCompletionMs": 1626.5200000000004,
+  "error": "Second turn did not reuse the live native conversation\n\n0 !== 1\n",
+  "finalNativeHash": "8c01ef82307dc01455418eb2e6e82f2989a3fa8b815c4b192efaaa89a55bef8d"
+}

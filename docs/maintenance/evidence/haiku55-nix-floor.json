@@ -1,0 +1,228 @@
+{
+  "status": "static-review-cleared-evaluation-only",
+  "sourceHead": "cb42827e55f1fba0694b74835b323b8398563f31",
+  "oldPin": {
+    "lastModified": 1788316716,
+    "narHash": "sha256-bc7rSpXIdn9QWGNqfWcPZWOhEVF8NoeAZkWq0XWnf/k=",
+    "owner": "NixOS",
+    "repo": "nixpkgs",
+    "rev": "3ed67ec0a4d3c7ab4ae1f04f8ee8df07bfa506a2",
+    "type": "github"
+  },
+  "newPin": {
+    "lastModified": 1791594108,
+    "narHash": "sha256-XK4KceonkwD8LuMAt/vNrz982mXJM5jeHAxMwsUXXAQ=",
+    "owner": "NixOS",
+    "repo": "nixpkgs",
+    "rev": "6510408d147d8c5e6d76043e899e9251756f6a75",
+    "type": "github"
+  },
+  "onlyLockFieldsChanged": [
+    "nodes.nixpkgs.locked.lastModified",
+    "nodes.nixpkgs.locked.narHash",
+    "nodes.nixpkgs.locked.rev"
+  ],
+  "nixVersion": "2.35.2",
+  "platform": "aarch64-linux Docker on Darwin arm64",
+  "containerImage": "nixos/nix@sha256:7a007c766426c1877758ddc5cb87a965ac131fc78c582ce0083d922d51ae945c",
+  "containerExitCode": 0,
+  "beforeEvaluation": {
+    "target": "packages.x86_64-linux.meridian.drvPath",
+    "expectedFailure": true,
+    "log": "unpacking 'github:hercules-ci/flake-parts/f7c1a2d347e4c52d5fb8d10cb4d94b5884e546fb?narHash=sha256-m1Yf0wZ8j1OHjTc2UwHwyQRSnNeSgLJOd7q5Y45hzi4%3D' into the Git cache...\ncopying path '/nix/store/c4ymw711a6r51sgvazgk9kvy1r6cxqhy-source' from 'https://cache.nixos.org'...\nunpacking 'github:nix-community/home-manager/df4e0465717a2d34f05b8ccd967275aaf3ceaa01?narHash=sha256-mAR7KTS9rjreTcXCNqfCbN96mnhJO8lDQq1vl7GviBQ%3D' into the Git cache...\nunpacking 'github:nix-systems/default/da67096a3b9bf56a91d16901293e51ba5b49a27e?narHash=sha256-Vy1rq5AaRuLzOxct8nz4T6wlgyUR7zLU309k9mBC768%3D' into the Git cache...\nunpacking 'github:nix-community/bun2nix/c843f477b15f51151f8c6bcc886954699440a6e1?narHash=sha256-v3QaK9ugy9bN9RXDnjw0i2OifKmz2NnKM82agtqm/UY%3D' into the Git cache...\nunpacking 'github:vic/import-tree/3c23749d8013ec6daa1d7255057590e9ca726646?narHash=sha256-ZvYKbFib3AEwiNMLsejb/CWs/OL/srFQ8AogkebEPF0%3D' into the Git cache...\nunpacking 'github:numtide/treefmt-nix/337a4fe074be1042a35086f15481d763b8ddc0e7?narHash=sha256-wQ6NJSuFqAEmIg2VMnLdCnUc0b7vslUohqqGGD%2BFyxk%3D' into the Git cache...\nerror:\n       \u2026 in the condition of the assert statement\n         at \u00abgithub:NixOS/nixpkgs/3ed67ec0a4d3c7ab4ae1f04f8ee8df07bfa506a2?narHash=sha256-bc7rSpXIdn9QWGNqfWcPZWOhEVF8NoeAZkWq0XWnf/k%3D\u00bb/lib/customisation.nix:417:13:\n          416|           drvPath =\n          417|             assert condition;\n             |             ^\n          418|             drv.drvPath;\n\n       \u2026 while evaluating the attribute 'handled'\n         at \u00abgithub:NixOS/nixpkgs/3ed67ec0a4d3c7ab4ae1f04f8ee8df07bfa506a2?narHash=sha256-bc7rSpXIdn9QWGNqfWcPZWOhEVF8NoeAZkWq0XWnf/k%3D\u00bb/pkgs/stdenv/generic/check-meta.nix:661:11:\n          660|           valid = if problems.error == null then \"warn\" else \"no\";\n          661|           handled = handle {\n             |           ^\n          662|             inherit attrs meta;\n\n       (stack trace truncated; use '--show-trace' to show the full, detailed trace)\n\n       error: Refusing to evaluate package 'meridian-1.80.0' in /nix/store/yf2vrwfzwmcgcfrswf5lca28hzhp7gr9-source/nix/package.nix:96 because it has problems:\n       - broken: This package is broken.\n\n       See also https://nixos.org/manual/nixpkgs/unstable#sec-problems\n       To allow evaluation regardless, use:\n       - Nixpkgs import: import nixpkgs { config = <below code>; }\n       - NixOS: nixpkgs.config = <below code>;\n       - nix-* commands: Put below code in ~/.config/nixpkgs/config.nix\n\n         {\n           problems.handlers = {\n             meridian.broken = \"warn\"; # or \"ignore\"\n           };\n         }\n"
+  },
+  "afterEvaluatedTargets": [
+    "packages.x86_64-linux.meridian.drvPath",
+    "packages.aarch64-linux.meridian.drvPath",
+    "packages.aarch64-darwin.meridian.drvPath",
+    "checks.x86_64-linux.home-module.drvPath"
+  ],
+  "qualificationLog": "nix (Nix) 2.35.2\nunpacking 'github:NixOS/nixpkgs/6510408d147d8c5e6d76043e899e9251756f6a75' into the Git cache...\nwarning: updating lock file \"/work/flake.lock\":\n\u2022 Updated input 'nixpkgs':\n    'github:NixOS/nixpkgs/3ed67ec0a4d3c7ab4ae1f04f8ee8df07bfa506a2?narHash=sha256-bc7rSpXIdn9QWGNqfWcPZWOhEVF8NoeAZkWq0XWnf/k%3D' (2026-09-02)\n  \u2192 'github:NixOS/nixpkgs/6510408d147d8c5e6d76043e899e9251756f6a75?narHash=sha256-XK4KceonkwD8LuMAt/vNrz982mXJM5jeHAxMwsUXXAQ%3D' (2026-10-10)\n=== x86_64-linux ===\ncopying path '/nix/store/rhsxvv1380jmchb5p3a43d24mhlmp2ry-source' from 'https://cache.nixos.org'...\n/nix/store/d89bqwn8kg1yswjm0qs2a2rsaxgc28wk-meridian-1.80.0.drv\n=== aarch64-linux ===\n/nix/store/bymlwki53ia9dpyx46a1kxxs4mjhk8w6-meridian-1.80.0.drv\n=== aarch64-darwin ===\n/nix/store/7k2h22y38l0vg1i725kmqc29v0rn37pd-meridian-1.80.0.drv\nevaluation warning: stdenv.isLinux is deprecated, use stdenv.hostPlatform.isLinux instead\nevaluation warning: stdenv.isDarwin is deprecated, use stdenv.hostPlatform.isDarwin instead\nevaluation warning: stdenv.isLinux is deprecated, use stdenv.hostPlatform.isLinux instead\nevaluation warning: stdenv.isDarwin is deprecated, use stdenv.hostPlatform.isDarwin instead\nevaluation warning: stdenv.isLinux is deprecated, use stdenv.hostPlatform.isLinux instead\nevaluation warning: stdenv.isDarwin is deprecated, use stdenv.hostPlatform.isDarwin instead\nevaluation warning: stdenv.isLinux is deprecated, use stdenv.hostPlatform.isLinux instead\nevaluation warning: stdenv.isDarwin is deprecated, use stdenv.hostPlatform.isDarwin instead\nevaluation warning: stdenv.isLinux is deprecated, use stdenv.hostPlatform.isLinux instead\nevaluation warning: stdenv.isDarwin is deprecated, use stdenv.hostPlatform.isDarwin instead\nevaluation warning: getExe: Package empty-directory does not have the meta.mainProgram attribute. We'll assume that the main program has the same name for now, but this behavior is deprecated, because it leads to surprising errors when the assumption does not hold. If the package has a main program, please set `meta.mainProgram` in its definition to make this warning go away. Otherwise, if the package does not have a main program, or if you don't control its definition, use getExe' to specify the name to the program, such as lib.getExe' foo \"bar\".\nevaluation warning: getExe: Package empty-directory does not have the meta.mainProgram attribute. We'll assume that the main program has the same name for now, but this behavior is deprecated, because it leads to surprising errors when the assumption does not hold. If the package has a main program, please set `meta.mainProgram` in its definition to make this warning go away. Otherwise, if the package does not have a main program, or if you don't control its definition, use getExe' to specify the name to the program, such as lib.getExe' foo \"bar\".\n/nix/store/2hns389gxzynsgkbppwn9bi7nvq63qz5-meridian-home-module.drv\n",
+  "derivationIdentityLimit": "Scratch also contains before-eval.log; diagnostic derivation paths do not identify exact committed final source",
+  "independentReview": {
+    "round": 4,
+    "model": "Pi / GPT-6.1-Sol",
+    "reasoning": "high",
+    "finding": "No material lock correction defect; effective package set changes require actual builds/installed executable and SDK checks"
+  },
+  "localTypecheck": "pass",
+  "localBuild": "pass",
+  "npmProductSourceGateUnchanged": {
+    "pass": 5615,
+    "fail": 0,
+    "skip": 35,
+    "invocations": 21,
+    "note": "Earlier full gate; lock correction does not alter npm dependency tree or TS product source. New-head CI still required."
+  },
+  "modelCalls": 0,
+  "modelAcceptance": false,
+  "nixBuildAcceptance": false,
+  "releaseStarted": false,
+  "ciBeforeCorrection": {
+    "baseRefOid": "e68b9bcadd7597d16724a3655b7322cd02a965ad",
+    "headRefOid": "cb42827e55f1fba0694b74835b323b8398563f31",
+    "isDraft": true,
+    "mergeStateStatus": "UNSTABLE",
+    "state": "OPEN",
+    "statusCheckRollup": [
+      {
+        "__typename": "CheckRun",
+        "completedAt": "2026-10-11T12:26:54Z",
+        "conclusion": "FAILURE",
+        "detailsUrl": "https://github.com/rynfar/meridian/actions/runs/38139246977/job/114469489704",
+        "name": "check",
+        "startedAt": "2026-10-11T12:26:15Z",
+        "status": "COMPLETED",
+        "workflowName": "Check claude-code availability"
+      },
+      {
+        "__typename": "CheckRun",
+        "completedAt": "2026-10-11T12:26:15Z",
+        "conclusion": "CANCELLED",
+        "detailsUrl": "https://github.com/rynfar/meridian/actions/runs/38139244055/job/114469480918",
+        "name": "build (.#checks.x86_64-linux.home-module)",
+        "startedAt": "2026-10-11T12:26:12Z",
+        "status": "COMPLETED",
+        "workflowName": "Nix installable builds"
+      },
+      {
+        "__typename": "CheckRun",
+        "completedAt": "2026-10-11T12:33:21Z",
+        "conclusion": "SUCCESS",
+        "detailsUrl": "https://github.com/rynfar/meridian/actions/runs/38139246984/job/114469489653",
+        "name": "test",
+        "startedAt": "2026-10-11T12:26:15Z",
+        "status": "COMPLETED",
+        "workflowName": "CI"
+      },
+      {
+        "__typename": "CheckRun",
+        "completedAt": "2026-10-11T12:29:50Z",
+        "conclusion": "SUCCESS",
+        "detailsUrl": "https://github.com/rynfar/meridian/actions/runs/38139246989/job/114469489723",
+        "name": "smoke",
+        "startedAt": "2026-10-11T12:26:15Z",
+        "status": "COMPLETED",
+        "workflowName": "Docker"
+      },
+      {
+        "__typename": "CheckRun",
+        "completedAt": "2026-10-11T12:26:39Z",
+        "conclusion": "SUCCESS",
+        "detailsUrl": "https://github.com/rynfar/meridian/actions/runs/38139246976/job/114469497779",
+        "name": "build (.#checks.x86_64-linux.home-module)",
+        "startedAt": "2026-10-11T12:26:18Z",
+        "status": "COMPLETED",
+        "workflowName": "Nix installable builds"
+      },
+      {
+        "__typename": "CheckRun",
+        "completedAt": "2026-10-11T12:26:30Z",
+        "conclusion": "SUCCESS",
+        "detailsUrl": "https://github.com/rynfar/meridian/actions/runs/38139246994/job/114469489983",
+        "name": "verify",
+        "startedAt": "2026-10-11T12:26:16Z",
+        "status": "COMPLETED",
+        "workflowName": "Sync bun.nix"
+      },
+      {
+        "__typename": "CheckRun",
+        "completedAt": "2026-10-11T12:27:03Z",
+        "conclusion": "SUCCESS",
+        "detailsUrl": "https://github.com/rynfar/meridian/actions/runs/38139246986/job/114469489690",
+        "name": "desktop-build (ubuntu-latest)",
+        "startedAt": "2026-10-11T12:26:15Z",
+        "status": "COMPLETED",
+        "workflowName": "desktop"
+      },
+      {
+        "__typename": "CheckRun",
+        "completedAt": "2026-10-11T12:27:33Z",
+        "conclusion": "SUCCESS",
+        "detailsUrl": "https://github.com/rynfar/meridian/actions/runs/38139246986/job/114469490021",
+        "name": "desktop-build (macos-latest)",
+        "startedAt": "2026-10-11T12:26:21Z",
+        "status": "COMPLETED",
+        "workflowName": "desktop"
+      },
+      {
+        "__typename": "CheckRun",
+        "completedAt": "2026-10-11T12:26:13Z",
+        "conclusion": "SKIPPED",
+        "detailsUrl": "https://github.com/rynfar/meridian/actions/runs/38139246994/job/114469490508",
+        "name": "sync",
+        "startedAt": "2026-10-11T12:26:13Z",
+        "status": "COMPLETED",
+        "workflowName": "Sync bun.nix"
+      },
+      {
+        "__typename": "CheckRun",
+        "completedAt": "2026-10-11T12:28:01Z",
+        "conclusion": "SUCCESS",
+        "detailsUrl": "https://github.com/rynfar/meridian/actions/runs/38139246984/job/114469489802",
+        "name": "windows-smoke",
+        "startedAt": "2026-10-11T12:26:18Z",
+        "status": "COMPLETED",
+        "workflowName": "CI"
+      },
+      {
+        "__typename": "CheckRun",
+        "completedAt": "2026-10-11T12:33:04Z",
+        "conclusion": "SUCCESS",
+        "detailsUrl": "https://github.com/rynfar/meridian/actions/runs/38139246989/job/114470166529",
+        "name": "build-push",
+        "startedAt": "2026-10-11T12:29:53Z",
+        "status": "COMPLETED",
+        "workflowName": "Docker"
+      },
+      {
+        "__typename": "CheckRun",
+        "completedAt": "2026-10-11T12:27:01Z",
+        "conclusion": "FAILURE",
+        "detailsUrl": "https://github.com/rynfar/meridian/actions/runs/38139246994/job/114469489896",
+        "name": "build (ubuntu-latest)",
+        "startedAt": "2026-10-11T12:26:16Z",
+        "status": "COMPLETED",
+        "workflowName": "Sync bun.nix"
+      },
+      {
+        "__typename": "CheckRun",
+        "completedAt": "2026-10-11T12:26:13Z",
+        "conclusion": "SKIPPED",
+        "detailsUrl": "https://github.com/rynfar/meridian/actions/runs/38139246984/job/114469490689",
+        "name": "changelog-duplication",
+        "startedAt": "2026-10-11T12:26:13Z",
+        "status": "COMPLETED",
+        "workflowName": "CI"
+      },
+      {
+        "__typename": "CheckRun",
+        "completedAt": "2026-10-11T12:28:19Z",
+        "conclusion": "FAILURE",
+        "detailsUrl": "https://github.com/rynfar/meridian/actions/runs/38139246994/job/114469489990",
+        "name": "build (macos-latest)",
+        "startedAt": "2026-10-11T12:26:20Z",
+        "status": "COMPLETED",
+        "workflowName": "Sync bun.nix"
+      }
+    ]
+  },
+  "sourceHashes": [
+    {
+      "path": "flake.lock",
+      "sha256": "c944ec50334c4da93e0b6af786f7b829684ceea4d89bb42d9a246d6fa5bbac88"
+    },
+    {
+      "path": "nix/package.nix",
+      "sha256": "db66cb799f0b8a8468005c001a928d0c7c5d3a1c2fe89b985da4e7d7fcafb8c6"
+    },
+    {
+      "path": "nix/claude-code-manifest.json",
+      "sha256": "be06b4c4749fb9dc1898504e2d321a319bbe7ac1f5ff1df6e3c782e8430f52a9"
+    },
+    {
+      "path": "package.json",
+      "sha256": "52d46f7561d74d3377042c9e279b97e705b0ada273a8c7f807567dde83186621"
+    }
+  ]
+}

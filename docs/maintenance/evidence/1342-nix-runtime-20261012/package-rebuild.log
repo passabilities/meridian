@@ -1,0 +1,86 @@
+checking outputs of '/nix/store/bpfi295i38n7fy5lmwbakl62darrw489-meridian-1.81.0.drv'...
+meridian> Using versionCheckHook
+meridian> Running phase: unpackPhase
+meridian> unpacking source archive /nix/store/b4pfz6pxkk95ln0i2q4syj9pf3vbgbf9-source
+meridian> source root is source
+meridian> Running phase: patchPhase
+meridian> Running phase: updateAutotoolsGnuConfigScriptsPhase
+meridian> Running phase: configurePhase
+meridian> Running phase: buildPhase
+meridian> $ bun scripts/build.ts
+meridian> Local Git provenance unavailable; building uncertified archive
+meridian> Bundled 564 modules in 73ms
+meridian> 
+meridian>   cli.js                          15.79 KB   (entry point)
+meridian>   cli-wdt5hbdd.js                 1.94 MB    (chunk)
+meridian>   cli-enyjk93n.js                 4.52 KB    (chunk)
+meridian>   cli-vzdkjbnm.js                 1.1 KB     (chunk)
+meridian>   cli-0vwpq0yy.js                 76.65 KB   (chunk)
+meridian>   cli-27790j8g.js                 33.1 KB    (chunk)
+meridian>   cli-t7vr758j.js                 19.52 KB   (chunk)
+meridian>   cli-6r2fed86.js                 14.50 KB   (chunk)
+meridian>   cli-fvqa7vky.js                 22.32 KB   (chunk)
+meridian>   cli-8q2cwag9.js                 0.82 KB    (chunk)
+meridian>   cli-2ad5444p.js                 2.13 KB    (chunk)
+meridian>   cli-hzkt89c4.js                 16.49 KB   (chunk)
+meridian>   cli-swgxqwqp.js                 7.84 KB    (chunk)
+meridian>   cli-wrft5xn2.js                 1.58 KB    (chunk)
+meridian>   cli-43sz83fv.js                 1.42 KB    (chunk)
+meridian>   cli-t370amde.js                 32.19 KB   (chunk)
+meridian>   cli-022dn9b7.js                 1.58 KB    (chunk)
+meridian>   organizationName-7fqqypcj.js    406 bytes  (chunk)
+meridian>   socketActivation-6cm09egs.js    257 bytes  (chunk)
+meridian>   profileCli-9zrdymgk.js          1.54 KB    (chunk)
+meridian>   antigravitySetup-a8qkehs2.js    10.74 KB   (chunk)
+meridian>   setup-v47jdhmg.js               1.0 KB     (chunk)
+meridian>   tokenRefresh-c6d3p7fq.js        0.86 KB    (chunk)
+meridian>   index-kw6ryqa5.js               148 bytes  (chunk)
+meridian>   statusProbe-djgz4ntt.js         5.26 KB    (chunk)
+meridian>   cliDashboard-g9v75xsz.js        11.56 KB   (chunk)
+meridian>   profiles-kjryc3z0.js            0.80 KB    (chunk)
+meridian>   server.js                       1.15 KB    (entry point)
+meridian>   meridian-v2.js                  212.31 KB  (entry point)
+meridian>   profilePage-wbzfc26n.js         68.1 KB    (chunk)
+meridian>   profileRename-dz9smvs7.js       349 bytes  (chunk)
+meridian>   loginCallbackPage-6q7w2qpk.js   2.0 KB     (chunk)
+meridian>   stats-aff0b1cc.js               413 bytes  (chunk)
+meridian>   pluginPage-9eaerws6.js          17.28 KB   (chunk)
+meridian> 
+meridian> Bundled 87 modules in 39ms
+meridian> 
+meridian>   buildObservationWorker.js  151.82 KB  (entry point)
+meridian> 
+meridian> Bundled 3 modules in 2ms
+meridian> 
+meridian>   index.js  9.25 KB  (entry point)
+meridian> 
+meridian> Bundled 116 modules in 12ms
+meridian> 
+meridian>   index.js  211.64 KB  (entry point)
+meridian> 
+meridian>   fixed: cli-wdt5hbdd.js
+meridian> fix-bun-exports: patched 1 file(s)
+meridian> Built source archive without local Git provenance
+meridian> Running phase: installPhase
+meridian> pruned /nix/store/h9qgwh3knsc0xz86n1hdshxz26x1lx13-meridian-1.81.0/lib/meridian/node_modules/@libsql/darwin-arm64
+meridian> pruned /nix/store/h9qgwh3knsc0xz86n1hdshxz26x1lx13-meridian-1.81.0/lib/meridian/node_modules/@libsql/darwin-x64
+meridian> pruned /nix/store/h9qgwh3knsc0xz86n1hdshxz26x1lx13-meridian-1.81.0/lib/meridian/node_modules/@libsql/linux-arm-gnueabihf
+meridian> pruned /nix/store/h9qgwh3knsc0xz86n1hdshxz26x1lx13-meridian-1.81.0/lib/meridian/node_modules/@libsql/linux-arm-musleabihf
+meridian> pruned /nix/store/h9qgwh3knsc0xz86n1hdshxz26x1lx13-meridian-1.81.0/lib/meridian/node_modules/@libsql/linux-x64-gnu
+meridian> pruned /nix/store/h9qgwh3knsc0xz86n1hdshxz26x1lx13-meridian-1.81.0/lib/meridian/node_modules/@libsql/linux-x64-musl
+meridian> pruned /nix/store/h9qgwh3knsc0xz86n1hdshxz26x1lx13-meridian-1.81.0/lib/meridian/node_modules/@libsql/win32-x64-msvc
+meridian> Running phase: fixupPhase
+meridian> shrinking RPATHs of ELF executables and libraries in /nix/store/h9qgwh3knsc0xz86n1hdshxz26x1lx13-meridian-1.81.0
+meridian> shrinking /nix/store/h9qgwh3knsc0xz86n1hdshxz26x1lx13-meridian-1.81.0/lib/meridian/node_modules/@libsql/linux-arm64-gnu/index.node
+meridian> shrinking /nix/store/h9qgwh3knsc0xz86n1hdshxz26x1lx13-meridian-1.81.0/lib/meridian/node_modules/@libsql/linux-arm64-musl/index.node
+meridian> checking for references to /build/ in /nix/store/h9qgwh3knsc0xz86n1hdshxz26x1lx13-meridian-1.81.0...
+meridian> patching script interpreter paths in /nix/store/h9qgwh3knsc0xz86n1hdshxz26x1lx13-meridian-1.81.0
+meridian> /nix/store/h9qgwh3knsc0xz86n1hdshxz26x1lx13-meridian-1.81.0/lib/meridian/dist/cli.js: interpreter directive changed from "#!/usr/bin/env node" to "/nix/store/1nzpiv2idya913acb1wd1ydxvd2dw0pz-nodejs-22.23.3/bin/node"
+meridian> /nix/store/h9qgwh3knsc0xz86n1hdshxz26x1lx13-meridian-1.81.0/lib/meridian/node_modules/@anthropic-ai/sdk/bin/cli: interpreter directive changed from "#!/usr/bin/env node" to "/nix/store/1nzpiv2idya913acb1wd1ydxvd2dw0pz-nodejs-22.23.3/bin/node"
+meridian> /nix/store/h9qgwh3knsc0xz86n1hdshxz26x1lx13-meridian-1.81.0/lib/meridian/node_modules/which/bin/node-which: interpreter directive changed from "#!/usr/bin/env node" to "/nix/store/1nzpiv2idya913acb1wd1ydxvd2dw0pz-nodejs-22.23.3/bin/node"
+meridian> Running phase: installCheckPhase
+meridian> Executing versionCheckPhase
+meridian> Successfully managed to find version 1.81.0 in the output of the command /nix/store/h9qgwh3knsc0xz86n1hdshxz26x1lx13-meridian-1.81.0/bin/meridian --version
+meridian> 1.81.0
+meridian> Finished versionCheckPhase
+meridian> no Makefile or custom installCheckPhase, doing nothing

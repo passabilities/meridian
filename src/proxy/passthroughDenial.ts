@@ -39,3 +39,34 @@ export function isForwardedDenial(block: ToolResultLike | undefined): boolean {
     block.is_error === true &&
     blockText(block).includes(PASSTHROUGH_DENY_REASON)
 }
+
+/** Reported in the CLI's result when a forwarded batch ends the query. */
+export const FORWARDED_BATCH_STOP_REASON = "Passthrough tool calls were forwarded to the client."
+
+interface ToolBatchLike {
+  tool_calls?: unknown
+}
+
+/**
+ * PostToolBatch hook for a passthrough query whose turn budget allows more
+ * than one model turn.
+ *
+ * Once a batch holds a client tool call that was captured for the client, the
+ * client-visible turn is complete: any further model request can only digest
+ * the denial, and the proxy discards that output. Returning `continue: false`
+ * here ends the query before that request is made, while the CLI still ends
+ * the turn normally and commits its transcript at the tool boundary. Batches
+ * without a forwarded call — SDK-internal calls (ToolSearch discovery,
+ * StructuredOutput), a bare name the CLI refused, a dropped repeat — are left
+ * to continue.
+ */
+export function stopAfterForwardedBatch(isForwarded: (toolUseId: string) => boolean) {
+  return async (input: ToolBatchLike) => {
+    const calls: unknown[] = Array.isArray(input?.tool_calls) ? input.tool_calls : []
+    const forwarded = calls.some((call) => {
+      const id = call && typeof call === "object" ? (call as { tool_use_id?: unknown }).tool_use_id : undefined
+      return typeof id === "string" && isForwarded(id)
+    })
+    return forwarded ? { continue: false, stopReason: FORWARDED_BATCH_STOP_REASON } : {}
+  }
+}

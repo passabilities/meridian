@@ -1,0 +1,505 @@
+{
+  "purpose": "Sanitized existing first-run count/assertion receipt; no probes or private paths were read to prepare it",
+  "preparedDate": "2026-10-06",
+  "testedTuple": {
+    "pi": "1.0.2",
+    "platform": "darwin/arm64",
+    "bun": "1.3.11",
+    "sdk": "0.2.141",
+    "claude": "2.1.285",
+    "opus": "5.5",
+    "scrub": "0.2.2"
+  },
+  "tupleQualification": "Bun 1.3.11, independent installation, supported-client approval and snapshot preparation are supplied by run owner; remaining versions/platform are also in the logs. Reporter Pi version/OS are unknown.",
+  "defaultSnapshotClassification": {
+    "basis": "Root separately observed sanitized error in its owned Pi CLIENT session.jsonl; not reread for this receipt",
+    "errorType": "authentication_error",
+    "message": "Claude authentication expired or invalid. Run 'claude login' in your terminal to re-authenticate, then restart the proxy.",
+    "underlyingHttpStatusExposed": false,
+    "sourceCredentialsWrittenRefreshedOrLoginAttempted": false
+  },
+  "workSnapshotQualification": "Distinct supported work profile; read-only access-token-only snapshot, as prepared and reported by run owner; no private profile data inspected for this receipt",
+  "openCodeEvidenceClaimed": false,
+  "runs": [
+    {
+      "log": "pi-controlled-baseline-first.log",
+      "mode": "controlled-local-API-not-live-Opus",
+      "result": "FAIL",
+      "versions": {
+        "pi": "1.0.2",
+        "claude": "2.1.285 (Claude Code)",
+        "node": "v22.22.3",
+        "sdk": "0.2.141",
+        "scrub": "0.2.2"
+      },
+      "platform": "darwin/arm64",
+      "before": {
+        "count": 1,
+        "adapters": [
+          "pi"
+        ],
+        "profiles": [
+          "fixture"
+        ],
+        "allStreaming": true,
+        "allIdentity": true,
+        "allDocs": true,
+        "allAdditionalDocs": true,
+        "allGeneric": false,
+        "allProject": true,
+        "allTools": true,
+        "allLeftoverDocsWrapper": true,
+        "receiptIds": []
+      },
+      "after": {
+        "count": 1,
+        "adapters": [
+          "pi"
+        ],
+        "profiles": [
+          "fixture"
+        ],
+        "allStreaming": true,
+        "allIdentity": false,
+        "allDocs": false,
+        "allAdditionalDocs": false,
+        "allGeneric": true,
+        "allProject": true,
+        "allTools": true,
+        "allLeftoverDocsWrapper": true,
+        "receiptIds": []
+      },
+      "queries": {
+        "count": 1,
+        "maxTurns": [
+          1
+        ],
+        "modelAliases": [
+          "opus[1m]"
+        ],
+        "opusModelPins": [
+          "claude-opus-5-5"
+        ],
+        "allConfigIsolated": true,
+        "exactCliBasename": "claude-2.1.285/package/claude",
+        "resumes": 0,
+        "checkpointResumes": 0,
+        "forks": 0,
+        "receiptForkResumesInitialSource": false,
+        "receiptForkHasCheckpoint": false,
+        "receiptForkUsesNewTarget": false,
+        "savedFollowupResumesReceiptFork": false
+      },
+      "turns": [
+        {
+          "exit": 0,
+          "bytes": 13143,
+          "outputBoundHit": false,
+          "timedOut": false,
+          "events": 12,
+          "errors": 2,
+          "readEnds": [],
+          "readEndCount": 0,
+          "assistantMessageEndCount": 1
+        }
+      ],
+      "observedAssistantModels": [],
+      "loggedSummaryAssertions": {
+        "checkpointFork": null,
+        "savedFollowup": null,
+        "exactClientReceipt": null
+      },
+      "supportedHistoryProof": {
+        "basis": "Failure occurred before supported-history assertions",
+        "observedCountSeparatelyLogged": false
+      },
+      "localFixtureCounters": {
+        "streamCalls": 1,
+        "nonstreamCalls": 1,
+        "upstreamReceipt": false,
+        "fixtureErrors": [],
+        "qualification": "Actual controlled local API observations"
+      },
+      "failure": {
+        "stage": "product-tool-receipt",
+        "name": "AssertionError",
+        "message": "product: actual Pi received an error or aborted assistant message\n\n2 !== 0\n"
+      },
+      "qualification": "Controlled API response model is an SDK alias, not proof of an actual provider model. Scrub content witness only; leftover <docs> wrappers remain separately qualified. Reporter Pi version/OS are unspecified."
+    },
+    {
+      "log": "pi-controlled-fixed-first.log",
+      "mode": "controlled-local-API-not-live-Opus",
+      "result": "PASS",
+      "versions": {
+        "pi": "1.0.2",
+        "claude": "2.1.285 (Claude Code)",
+        "node": "v22.22.3",
+        "sdk": "0.2.141",
+        "scrub": "0.2.2"
+      },
+      "platform": "darwin/arm64",
+      "before": {
+        "count": 3,
+        "adapters": [
+          "pi"
+        ],
+        "profiles": [
+          "fixture"
+        ],
+        "allStreaming": true,
+        "allIdentity": true,
+        "allDocs": true,
+        "allAdditionalDocs": true,
+        "allGeneric": false,
+        "allProject": true,
+        "allTools": true,
+        "allLeftoverDocsWrapper": true,
+        "receiptIds": [
+          "toolu_pi_fallback_read"
+        ]
+      },
+      "after": {
+        "count": 3,
+        "adapters": [
+          "pi"
+        ],
+        "profiles": [
+          "fixture"
+        ],
+        "allStreaming": true,
+        "allIdentity": false,
+        "allDocs": false,
+        "allAdditionalDocs": false,
+        "allGeneric": true,
+        "allProject": true,
+        "allTools": true,
+        "allLeftoverDocsWrapper": true,
+        "receiptIds": [
+          "toolu_pi_fallback_read"
+        ]
+      },
+      "queries": {
+        "count": 3,
+        "maxTurns": [
+          1,
+          1,
+          1
+        ],
+        "modelAliases": [
+          "opus[1m]"
+        ],
+        "opusModelPins": [
+          "claude-opus-5-5"
+        ],
+        "allConfigIsolated": true,
+        "exactCliBasename": "claude-2.1.285/package/claude",
+        "resumes": 2,
+        "checkpointResumes": 1,
+        "forks": 2,
+        "receiptForkResumesInitialSource": true,
+        "receiptForkHasCheckpoint": true,
+        "receiptForkUsesNewTarget": true,
+        "savedFollowupResumesReceiptFork": true
+      },
+      "turns": [
+        {
+          "exit": 0,
+          "bytes": 18620,
+          "outputBoundHit": false,
+          "timedOut": false,
+          "events": 26,
+          "errors": 0,
+          "readEnds": [
+            {
+              "id": "toolu_pi_fallback_read",
+              "isError": false,
+              "exactReceipt": true
+            }
+          ],
+          "readEndCount": 1,
+          "assistantMessageEndCount": 2
+        },
+        {
+          "exit": 0,
+          "bytes": 3441,
+          "outputBoundHit": false,
+          "timedOut": false,
+          "events": 13,
+          "errors": 0,
+          "readEnds": [],
+          "readEndCount": 0,
+          "assistantMessageEndCount": 1
+        }
+      ],
+      "observedAssistantModels": [
+        "claude-opus-5-5"
+      ],
+      "loggedSummaryAssertions": {
+        "checkpointFork": true,
+        "savedFollowup": true,
+        "exactClientReceipt": true
+      },
+      "supportedHistoryProof": {
+        "basis": "PASS plus explicit assertions in committed scripts/e2e-pi-capped-unstreamed.mjs; history counts are not separately logged",
+        "exactlyOneCorrelatedToolResult": true,
+        "exactReceipt": true,
+        "notForwardedDenial": true,
+        "notErrorResult": true,
+        "observedCountSeparatelyLogged": false
+      },
+      "localFixtureCounters": {
+        "streamCalls": 3,
+        "nonstreamCalls": 3,
+        "upstreamReceipt": true,
+        "fixtureErrors": [],
+        "qualification": "Actual controlled local API observations"
+      },
+      "failure": null,
+      "qualification": "Controlled API response model is an SDK alias, not proof of an actual provider model. Scrub content witness only; leftover <docs> wrappers remain separately qualified. Reporter Pi version/OS are unspecified."
+    },
+    {
+      "log": "pi-live-fixed-first.log",
+      "mode": "live-Opus",
+      "result": "FAIL",
+      "versions": {
+        "pi": "1.0.2",
+        "claude": "2.1.285 (Claude Code)",
+        "node": "v22.22.3",
+        "sdk": "0.2.141",
+        "scrub": "0.2.2"
+      },
+      "platform": "darwin/arm64",
+      "before": {
+        "count": 1,
+        "adapters": [
+          "pi"
+        ],
+        "profiles": [
+          "owner-snapshot"
+        ],
+        "allStreaming": true,
+        "allIdentity": true,
+        "allDocs": true,
+        "allAdditionalDocs": true,
+        "allGeneric": false,
+        "allProject": true,
+        "allTools": true,
+        "allLeftoverDocsWrapper": true,
+        "receiptIds": []
+      },
+      "after": {
+        "count": 1,
+        "adapters": [
+          "pi"
+        ],
+        "profiles": [
+          "owner-snapshot"
+        ],
+        "allStreaming": true,
+        "allIdentity": false,
+        "allDocs": false,
+        "allAdditionalDocs": false,
+        "allGeneric": true,
+        "allProject": true,
+        "allTools": true,
+        "allLeftoverDocsWrapper": true,
+        "receiptIds": []
+      },
+      "queries": {
+        "count": 1,
+        "maxTurns": [
+          1
+        ],
+        "modelAliases": [
+          "opus[1m]"
+        ],
+        "opusModelPins": [
+          "claude-opus-5-5"
+        ],
+        "allConfigIsolated": true,
+        "exactCliBasename": "claude-2.1.285/package/claude",
+        "resumes": 0,
+        "checkpointResumes": 0,
+        "forks": 0,
+        "receiptForkResumesInitialSource": false,
+        "receiptForkHasCheckpoint": false,
+        "receiptForkUsesNewTarget": false,
+        "savedFollowupResumesReceiptFork": false
+      },
+      "turns": [
+        {
+          "exit": 0,
+          "bytes": 13320,
+          "outputBoundHit": false,
+          "timedOut": false,
+          "events": 12,
+          "errors": 2,
+          "readEnds": [],
+          "readEndCount": 0,
+          "assistantMessageEndCount": 1
+        }
+      ],
+      "observedAssistantModels": [],
+      "loggedSummaryAssertions": {
+        "checkpointFork": null,
+        "savedFollowup": null,
+        "exactClientReceipt": null
+      },
+      "supportedHistoryProof": {
+        "basis": "Failure occurred before supported-history assertions",
+        "observedCountSeparatelyLogged": false
+      },
+      "localFixtureCounters": {
+        "streamCalls": 0,
+        "nonstreamCalls": 0,
+        "upstreamReceipt": false,
+        "fixtureErrors": [],
+        "qualification": "Unused local-fixture counters; these zeros are not provider request counts"
+      },
+      "failure": {
+        "stage": "product-tool-receipt",
+        "name": "AssertionError",
+        "message": "product: actual Pi received an error or aborted assistant message\n\n2 !== 0\n"
+      },
+      "qualification": "Scrub content witness only; leftover <docs> wrappers remain separately qualified. Reporter Pi version/OS are unspecified."
+    },
+    {
+      "log": "pi-live-work-snapshot-first.log",
+      "mode": "live-Opus",
+      "result": "PASS",
+      "versions": {
+        "pi": "1.0.2",
+        "claude": "2.1.285 (Claude Code)",
+        "node": "v22.22.3",
+        "sdk": "0.2.141",
+        "scrub": "0.2.2"
+      },
+      "platform": "darwin/arm64",
+      "before": {
+        "count": 3,
+        "adapters": [
+          "pi"
+        ],
+        "profiles": [
+          "owner-work-snapshot"
+        ],
+        "allStreaming": true,
+        "allIdentity": true,
+        "allDocs": true,
+        "allAdditionalDocs": true,
+        "allGeneric": false,
+        "allProject": true,
+        "allTools": true,
+        "allLeftoverDocsWrapper": true,
+        "receiptIds": [
+          "toolu_01V5evSEW8ny4gNbdfBWGHdU"
+        ]
+      },
+      "after": {
+        "count": 3,
+        "adapters": [
+          "pi"
+        ],
+        "profiles": [
+          "owner-work-snapshot"
+        ],
+        "allStreaming": true,
+        "allIdentity": false,
+        "allDocs": false,
+        "allAdditionalDocs": false,
+        "allGeneric": true,
+        "allProject": true,
+        "allTools": true,
+        "allLeftoverDocsWrapper": true,
+        "receiptIds": [
+          "toolu_01V5evSEW8ny4gNbdfBWGHdU"
+        ]
+      },
+      "queries": {
+        "count": 3,
+        "maxTurns": [
+          1,
+          1,
+          1
+        ],
+        "modelAliases": [
+          "opus[1m]"
+        ],
+        "opusModelPins": [
+          "claude-opus-5-5"
+        ],
+        "allConfigIsolated": true,
+        "exactCliBasename": "claude-2.1.285/package/claude",
+        "resumes": 2,
+        "checkpointResumes": 1,
+        "forks": 2,
+        "receiptForkResumesInitialSource": true,
+        "receiptForkHasCheckpoint": true,
+        "receiptForkUsesNewTarget": true,
+        "savedFollowupResumesReceiptFork": true
+      },
+      "turns": [
+        {
+          "exit": 0,
+          "bytes": 20898,
+          "outputBoundHit": false,
+          "timedOut": false,
+          "events": 32,
+          "errors": 0,
+          "readEnds": [
+            {
+              "id": "toolu_01V5evSEW8ny4gNbdfBWGHdU",
+              "isError": false,
+              "exactReceipt": true
+            }
+          ],
+          "readEndCount": 1,
+          "assistantMessageEndCount": 2
+        },
+        {
+          "exit": 0,
+          "bytes": 6427,
+          "outputBoundHit": false,
+          "timedOut": false,
+          "events": 22,
+          "errors": 0,
+          "readEnds": [],
+          "readEndCount": 0,
+          "assistantMessageEndCount": 1
+        }
+      ],
+      "observedAssistantModels": [
+        "claude-opus-5-5"
+      ],
+      "loggedSummaryAssertions": {
+        "checkpointFork": true,
+        "savedFollowup": true,
+        "exactClientReceipt": true
+      },
+      "supportedHistoryProof": {
+        "basis": "PASS plus explicit assertions in committed scripts/e2e-pi-capped-unstreamed.mjs; history counts are not separately logged",
+        "exactlyOneCorrelatedToolResult": true,
+        "exactReceipt": true,
+        "notForwardedDenial": true,
+        "notErrorResult": true,
+        "observedCountSeparatelyLogged": false
+      },
+      "localFixtureCounters": {
+        "streamCalls": 0,
+        "nonstreamCalls": 0,
+        "upstreamReceipt": false,
+        "fixtureErrors": [],
+        "qualification": "Unused local-fixture counters; these zeros are not provider request counts"
+      },
+      "failure": null,
+      "qualification": "Scrub content witness only; leftover <docs> wrappers remain separately qualified. Reporter Pi version/OS are unspecified."
+    }
+  ],
+  "separateProtocolGate": "E41 all four modes passed; see 1290-e41-receipt.json",
+  "runOwnerRevisionRecords": {
+    "baseline": "ca6a5c0a4eddb87da52d83993f8f9e105712f0f6",
+    "candidate": "5e608a7f813efb709b41fa4ee7134c501edbc4d6",
+    "sameHarnessSha256": "62cdba85c2f21e9b635dcb705373c2e900e23c79576c2222568dff55debf8950"
+  }
+}

@@ -1,0 +1,14 @@
+(pass) cached requests stay responsive and share one pending observation [1.72ms]
+(pass) demand refresh respects minimum start cadence without idle scans [0.37ms]
+(pass) Bun source worker reports failure without blocking timers [63.81ms]
+error: EISDIR reading file: "/Users/rynfar/repos/meridian-sse-failover-1214-20261012/node_modules/zod/index.js"
+    at /Users/rynfar/repos/meridian-sse-failover-1214-20261012/node_modules/zod/index.js
+(fail) Node bundled worker resolves alongside the bundled observer [10.36ms]
+
+
+
+ 5239 pass
+ 35 skip
+ 1 fail
+ 26658 expect() calls
+Ran 5275 tests across 326 files. [375.36s]

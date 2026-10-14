@@ -1,0 +1,22 @@
+{
+  "sdk": "0.2.141",
+  "native": "2.1.296",
+  "build": {
+    "source": "local",
+    "kind": "artifact",
+    "version": "1.81.0",
+    "releaseVersion": "1.81.0",
+    "sha": "51c37b71af046ee187d8be250187527679eb4337",
+    "branch": "codex/mcp-tools-1283-20261012",
+    "dirty": false,
+    "sourceHash": "74e2ec59c24b86795f27998bb0717fd0bc64989774eed4a23675e950e4691eb3",
+    "branchUrl": "https://github.com/rynfar/meridian/tree/codex%2Fmcp-tools-1283-20261012",
+    "commitUrl": "https://github.com/rynfar/meridian/commit/51c37b71af046ee187d8be250187527679eb4337",
+    "counter": 2,
+    "counterScope": "9a45b921-65c1-49db-a13d-8fa101c4c3ae",
+    "attemptId": "c7ca4ee9-1c1a-4354-a5f7-14eb311b9945",
+    "builtAt": "2026-10-12T18:24:27.461Z",
+    "displayVersion": "v1.81.0-2-codex/mcp-tools-1283-20261012-51c37b71",
+    "certification": "verified"
+  }
+}

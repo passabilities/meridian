@@ -1,0 +1,44 @@
+{
+  "mode": "synthetic-read-only-review",
+  "variant": "async-json",
+  "sourceHead": "c159bf9befc49c823a94f48c8d554236115e827e",
+  "sourceStoreSha256": "3698fc426bdc61f9e3913b0a7f1af912197fc6c13a9f0be895f2480077f056b3",
+  "runtime": {
+    "platform": "darwin",
+    "arch": "arm64",
+    "nodeCompat": "v24.3.0",
+    "bun": "1.3.14"
+  },
+  "libsqlVersion": "0.5.29",
+  "sqlite": {
+    "version": "3.45.1",
+    "sourceId": "2024-01-30 16:01:20 e876e51a0ed5c5b3126f52e532044363a014bc594cfefa87ffb5b82257ccalt1",
+    "_metadata": {
+      "duration": 8.75e-7
+    }
+  },
+  "modelCalls": 0,
+  "credentialReads": 0,
+  "findings": [
+    {
+      "case": "immutable-priority-authority",
+      "variant": "async-json",
+      "assignmentFrozen": true,
+      "assignmentMutationAccepted": false,
+      "cachedProfileAfterMutation": "work",
+      "persistedProfile": "work",
+      "attemptFrozen": true,
+      "attemptMutationAccepted": false,
+      "persistedBlockedIssueTimeBeforeSecondClaim": 200,
+      "olderTrustedTurnAcceptedAfterCacheMutation": false,
+      "safetyAssertion": "PASS"
+    },
+    {
+      "case": "retained-arrival-eviction-hold",
+      "variant": "async-json",
+      "gateEntries": 1,
+      "evictionSettledBeforeRelease": false,
+      "safetyAssertion": "PASS"
+    }
+  ]
+}

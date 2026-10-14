@@ -1,0 +1,70 @@
+{
+  "pass": true,
+  "cli": "/Users/rynfar/repos/meridian-plugin-config-1360-20261012/bin/cli.ts",
+  "runtime": "/Users/rynfar/.bun/bin/bun",
+  "platform": "darwin",
+  "arch": "arm64",
+  "entrySha256": "d910315a58ffdaf03e6eb68dda8f182bdc70f0c4b8d8f0f59c00d4cd4aefa82a",
+  "cases": [
+    {
+      "case": "config-a",
+      "pass": true,
+      "plugins": [
+        {
+          "name": "manifest-a",
+          "status": "active"
+        },
+        {
+          "name": "discovery-a",
+          "status": "active"
+        }
+      ]
+    },
+    {
+      "case": "config-b",
+      "pass": true,
+      "plugins": [
+        {
+          "name": "manifest-b",
+          "status": "active"
+        },
+        {
+          "name": "discovery-b",
+          "status": "active"
+        }
+      ]
+    },
+    {
+      "case": "explicit-path-precedence",
+      "pass": true,
+      "plugins": [
+        {
+          "name": "marker.js",
+          "status": "disabled"
+        }
+      ]
+    },
+    {
+      "case": "first-instance-retained",
+      "pass": true
+    }
+  ],
+  "processes": [
+    {
+      "joined": true,
+      "code": 0,
+      "signal": null
+    },
+    {
+      "joined": true,
+      "code": 0,
+      "signal": null
+    },
+    {
+      "joined": true,
+      "code": 0,
+      "signal": null
+    }
+  ],
+  "scope": "Real foreground CLI, discovery/manifest config isolation and explicit overrides; loopback-only network fence, denied host credential directories, dummy API profile and auth-status-only fixture. GET readiness/plugins only; no SDK inference or actual client/model/plugin acceptance claim."
+}

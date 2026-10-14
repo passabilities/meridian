@@ -1,0 +1,232 @@
+{
+  "status": "reproduced",
+  "sourceHead": "0bf16b0d83f2fcc8c9b55df06bf20f97d763a23f",
+  "actualImplementation": "/tmp/meridian-backlog-20261004/meridian/1219/semantic-round1/probe-source/src/proxy/server.ts",
+  "serverSha256": "8dce4d5fe344799222ad0d19f3eaaad3a2c23018a7fa87a2b3d7e74c3c3d0be4",
+  "environment": {
+    "platform": "darwin",
+    "arch": "arm64",
+    "bun": "1.3.14",
+    "nodeCompatibility": "24.3.0"
+  },
+  "initialOwnership": {
+    "label": "admitted request, before close",
+    "guardReleased": false,
+    "guardError": {
+      "name": "Error",
+      "message": "maintenance guard is held; stop all proxies before maintenance"
+    },
+    "runtimeIdentityRetained": true,
+    "sqliteBackendInstalled": true,
+    "connection": {
+      "refs": 1,
+      "pending": 0,
+      "phase": "READY",
+      "databaseOpen": true
+    }
+  },
+  "activeOwnership": {
+    "label": "actual finalizer active",
+    "guardReleased": false,
+    "guardError": {
+      "name": "Error",
+      "message": "maintenance guard is held; stop all proxies before maintenance"
+    },
+    "runtimeIdentityRetained": true,
+    "sqliteBackendInstalled": true,
+    "connection": {
+      "refs": 1,
+      "pending": 0,
+      "phase": "READY",
+      "databaseOpen": true
+    }
+  },
+  "afterCloseBeforeSettlement": {
+    "label": "close fulfilled, actual finalizer still paused",
+    "guardReleased": false,
+    "guardError": {
+      "name": "Error",
+      "message": "maintenance guard is held; stop all proxies before maintenance"
+    },
+    "runtimeIdentityRetained": true,
+    "sqliteBackendInstalled": true,
+    "connection": {
+      "refs": 1,
+      "pending": 0,
+      "phase": "READY",
+      "databaseOpen": true
+    }
+  },
+  "afterSettlement": {
+    "label": "real finalizer finished plus 250ms",
+    "guardReleased": false,
+    "guardError": {
+      "name": "Error",
+      "message": "maintenance guard is held; stop all proxies before maintenance"
+    },
+    "runtimeIdentityRetained": true,
+    "sqliteBackendInstalled": true,
+    "connection": {
+      "refs": 1,
+      "pending": 0,
+      "phase": "READY",
+      "databaseOpen": true
+    }
+  },
+  "eventualOwnership": {
+    "label": "real finalizer finished plus 1000ms and cached close rejoin",
+    "guardReleased": false,
+    "guardError": {
+      "name": "Error",
+      "message": "maintenance guard is held; stop all proxies before maintenance"
+    },
+    "runtimeIdentityRetained": true,
+    "sqliteBackendInstalled": true,
+    "connection": {
+      "refs": 1,
+      "pending": 0,
+      "phase": "READY",
+      "databaseOpen": true
+    }
+  },
+  "listenerClosed": true,
+  "cachedPromiseIdentical": true,
+  "actualFinalizerJoined": true,
+  "unresolvedBackendOwnershipAfterActualCleanup": true,
+  "counters": {
+    "sdkQueries": 1,
+    "syntheticAuthChecks": 1,
+    "syntheticExecutableResolutions": 1,
+    "syntheticCredentialReads": 0,
+    "outboundFetchRefusals": 0,
+    "realCredentialReads": 0,
+    "spawnedSdkChildren": 0
+  },
+  "events": [
+    {
+      "name": "actualProxyListening",
+      "elapsedMs": 403.437,
+      "port": 52107
+    },
+    {
+      "name": "mockSdkStarted",
+      "elapsedMs": 448.966
+    },
+    {
+      "name": "ownershipSnapshot",
+      "elapsedMs": 452.105,
+      "label": "admitted request, before close",
+      "guardReleased": false,
+      "guardError": {
+        "name": "Error",
+        "message": "maintenance guard is held; stop all proxies before maintenance"
+      },
+      "runtimeIdentityRetained": true,
+      "sqliteBackendInstalled": true,
+      "connection": {
+        "refs": 1,
+        "pending": 0,
+        "phase": "READY",
+        "databaseOpen": true
+      }
+    },
+    {
+      "name": "mockSdkObservedAbort",
+      "elapsedMs": 505.509
+    },
+    {
+      "name": "actualRequestFinalizerPaused",
+      "elapsedMs": 505.947
+    },
+    {
+      "name": "ownershipSnapshot",
+      "elapsedMs": 506.212,
+      "label": "actual finalizer active",
+      "guardReleased": false,
+      "guardError": {
+        "name": "Error",
+        "message": "maintenance guard is held; stop all proxies before maintenance"
+      },
+      "runtimeIdentityRetained": true,
+      "sqliteBackendInstalled": true,
+      "connection": {
+        "refs": 1,
+        "pending": 0,
+        "phase": "READY",
+        "databaseOpen": true
+      }
+    },
+    {
+      "name": "actualClosePromiseFulfilled",
+      "elapsedMs": 2518.698
+    },
+    {
+      "name": "ownershipSnapshot",
+      "elapsedMs": 2519.37,
+      "label": "close fulfilled, actual finalizer still paused",
+      "guardReleased": false,
+      "guardError": {
+        "name": "Error",
+        "message": "maintenance guard is held; stop all proxies before maintenance"
+      },
+      "runtimeIdentityRetained": true,
+      "sqliteBackendInstalled": true,
+      "connection": {
+        "refs": 1,
+        "pending": 0,
+        "phase": "READY",
+        "databaseOpen": true
+      }
+    },
+    {
+      "name": "actualRequestFinalizerReleased",
+      "elapsedMs": 2519.433
+    },
+    {
+      "name": "actualSqlTranscriptLeaseReleased",
+      "elapsedMs": 2520.87
+    },
+    {
+      "name": "ownershipSnapshot",
+      "elapsedMs": 2778.735,
+      "label": "real finalizer finished plus 250ms",
+      "guardReleased": false,
+      "guardError": {
+        "name": "Error",
+        "message": "maintenance guard is held; stop all proxies before maintenance"
+      },
+      "runtimeIdentityRetained": true,
+      "sqliteBackendInstalled": true,
+      "connection": {
+        "refs": 1,
+        "pending": 0,
+        "phase": "READY",
+        "databaseOpen": true
+      }
+    },
+    {
+      "name": "ownershipSnapshot",
+      "elapsedMs": 3530.674,
+      "label": "real finalizer finished plus 1000ms and cached close rejoin",
+      "guardReleased": false,
+      "guardError": {
+        "name": "Error",
+        "message": "maintenance guard is held; stop all proxies before maintenance"
+      },
+      "runtimeIdentityRetained": true,
+      "sqliteBackendInstalled": true,
+      "connection": {
+        "refs": 1,
+        "pending": 0,
+        "phase": "READY",
+        "databaseOpen": true
+      }
+    }
+  ],
+  "limitations": [
+    "Credential/CLI boundaries and SDK are mocked; no inference or real SDK child.",
+    "The production request finalizer is deliberately paused at releaseJoinedTranscriptLease, then invokes the unchanged real SQL lease release.",
+    "The two-second ownership leak observation is same-process. Process exit is used only after observations to dispose the intentionally unreleased runtime; controller checks that the OS guard becomes available after exit.",
+    "This is a source-implementation probe on macOS arm64/Bun, not affected-client/model/Linux E2E."
+  ]
+}

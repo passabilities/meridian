@@ -1,0 +1,578 @@
+{
+  "source": "0bf16b0d83f2fcc8c9b55df06bf20f97d763a23f",
+  "base": "f443faee0b135c5d4bfe1e6fe771c6a262ae5f33",
+  "fresh_main": "8e1c8bf738d7372ded01f28e99d6ec167acaf76f",
+  "reviewed_at_utc": "2026-10-05T00:27:43.376402+00:00",
+  "packets": {
+    "P1": 12,
+    "P2": 9
+  },
+  "files": [
+    {
+      "packet": "P1",
+      "path": "src/proxy/session/bookkeeping/legacyCodec.ts",
+      "source_blob": "ad9095ed720f7064955f2335cbdbb7eaf6119187",
+      "source_sha256": "1df8d90fd6dcf3558128351f7426ea2c27662f04a9f24630fbbc54f0078d49fd",
+      "source_lines": 696,
+      "patch": "diffs-github-base/116-src__proxy__session__bookkeeping__legacyCodec.ts.patch",
+      "patch_sha256": "0f27c838568fd5e1f5fe74485a08e0de7a00340543c8940740f4be0124cfa119",
+      "changed_hunks": 1,
+      "all_changed_hunks_semantically_reviewed": true,
+      "source_matches_git_and_probe_fixture": true,
+      "current_main_has_path": false,
+      "finding_ids": [
+        "F1"
+      ],
+      "coverage_detail": "all 696 lines; malformed/unknown fields, own-key maintenance refusal, v1 upgrade, priority/rollback, wire order and generations",
+      "disposition": "correction required; no acceptance"
+    },
+    {
+      "packet": "P1",
+      "path": "src/proxy/session/bookkeeping/lifecycleBackend.ts",
+      "source_blob": "52f073ba4e331c6d816e4f3eeb4134f7ba63dc83",
+      "source_sha256": "b2f7dba6dc1338107729b5e5f6fe04153d3063a4e20b734a2cb4d91d0649811e",
+      "source_lines": 71,
+      "patch": "diffs-github-base/118-src__proxy__session__bookkeeping__lifecycleBackend.ts.patch",
+      "patch_sha256": "8494d5d98ed467627ee868fde86d221d6135b8e7f757404a8614ee46734ac536",
+      "changed_hunks": 1,
+      "all_changed_hunks_semantically_reviewed": true,
+      "source_matches_git_and_probe_fixture": true,
+      "current_main_has_path": false,
+      "finding_ids": [
+        "F2"
+      ],
+      "coverage_detail": "complete/partial port installation, fail-closed missing methods, no runtime facade import cycle",
+      "disposition": "correction required; no acceptance"
+    },
+    {
+      "packet": "P1",
+      "path": "src/proxy/session/bookkeeping/locator.ts",
+      "source_blob": "5940479f44b0a2f18ca9f93d751ee071c77acb6e",
+      "source_sha256": "41772fbff4b16ccfe2441d4756eec70ffafb8ff30d9ada68881a7a960951f037",
+      "source_lines": 85,
+      "patch": "diffs-github-base/129-src__proxy__session__bookkeeping__locator.ts.patch",
+      "patch_sha256": "28675997c7c63237e236ce49636cdd420ba6aef6a2bf86d4696537e33252dde8",
+      "changed_hunks": 1,
+      "all_changed_hunks_semantically_reviewed": true,
+      "source_matches_git_and_probe_fixture": true,
+      "current_main_has_path": false,
+      "finding_ids": [],
+      "coverage_detail": "all 85 lines; key bytes, realpath/ENOENT fallback, immutable canonical/persisted locator and outside-scope caller paths",
+      "disposition": "no additional material semantic finding in assigned scope; no acceptance/SQL activation"
+    },
+    {
+      "packet": "P1",
+      "path": "src/proxy/session/bookkeeping/mappingMetadata.ts",
+      "source_blob": "6b3f6f3c487e53e11ebb332a835f7f82ca6d6678",
+      "source_sha256": "4babe8df5a9ce2aaa9eae7a598dec32b9b668428b2865f8625ceb9f0c7ae9ea5",
+      "source_lines": 23,
+      "patch": "diffs-github-base/133-src__proxy__session__bookkeeping__mappingMetadata.ts.patch",
+      "patch_sha256": "4e7fbe1d4e310c0eef926014a95acd598fde0464948e408503207ab7f42ac204",
+      "changed_hunks": 1,
+      "all_changed_hunks_semantically_reviewed": true,
+      "source_matches_git_and_probe_fixture": true,
+      "current_main_has_path": false,
+      "finding_ids": [],
+      "coverage_detail": "key-bound generation, legacy denial and ECMAScript array-index/tie order",
+      "disposition": "no additional material semantic finding in assigned scope; no acceptance/SQL activation"
+    },
+    {
+      "packet": "P1",
+      "path": "src/proxy/session/bookkeeping/runtimeIdentity.ts",
+      "source_blob": "f66d8ff63ad69fe90c39cc0dc7ccf09a52f04a32",
+      "source_sha256": "f74d62d4b3b373c644eb6a96031afc723f6735398c71ca9010545719b772ca2a",
+      "source_lines": 26,
+      "patch": "diffs-github-base/150-src__proxy__session__bookkeeping__runtimeIdentity.ts.patch",
+      "patch_sha256": "6531360082d2463689c9b0ccc4a2c9f5394d94c5cc63dae7732ab06ffae83135",
+      "changed_hunks": 1,
+      "all_changed_hunks_semantically_reviewed": true,
+      "source_matches_git_and_probe_fixture": true,
+      "current_main_has_path": false,
+      "finding_ids": [],
+      "coverage_detail": "same-directory holder accounting and idempotent release",
+      "disposition": "no additional material semantic finding in assigned scope; no acceptance/SQL activation"
+    },
+    {
+      "packet": "P1",
+      "path": "src/proxy/session/bookkeeping/storeBackend.ts",
+      "source_blob": "7560d240ae44e8ee12654e61326b142ee8b2332e",
+      "source_sha256": "4c13861d392296391aa19ef3a5a6e4022e8747d79ffe43ee9ecbe874ce93c77a",
+      "source_lines": 55,
+      "patch": "diffs-github-base/156-src__proxy__session__bookkeeping__storeBackend.ts.patch",
+      "patch_sha256": "e141de082cb6047794850759d45af8e56a21c8cecb4a7ce4d8abaa7b75eff7f5",
+      "changed_hunks": 1,
+      "all_changed_hunks_semantically_reviewed": true,
+      "source_matches_git_and_probe_fixture": true,
+      "current_main_has_path": false,
+      "finding_ids": [
+        "F2"
+      ],
+      "coverage_detail": "full port/install/identity restrictions and missing prune methods",
+      "disposition": "correction required; no acceptance"
+    },
+    {
+      "packet": "P1",
+      "path": "src/proxy/session/bookkeeping/storeIdentity.ts",
+      "source_blob": "bda5dd913158d291049a6fa79ea8da694466dcc9",
+      "source_sha256": "447d55ae8b067612d64012b9d9cbf7eb6f30127e7f3cf6ef511cff529f7029db",
+      "source_lines": 23,
+      "patch": "diffs-github-base/157-src__proxy__session__bookkeeping__storeIdentity.ts.patch",
+      "patch_sha256": "495010b7df8d9b7518828acd405b9a8e246c578df41bd905c79e681d11dc8db5",
+      "changed_hunks": 1,
+      "all_changed_hunks_semantically_reviewed": true,
+      "source_matches_git_and_probe_fixture": true,
+      "current_main_has_path": false,
+      "finding_ids": [],
+      "coverage_detail": "synchronous identity scope accounting and legacy access prohibition",
+      "disposition": "no additional material semantic finding in assigned scope; no acceptance/SQL activation"
+    },
+    {
+      "packet": "P1",
+      "path": "src/proxy/session/bookkeeping/storeTypes.ts",
+      "source_blob": "2bbab329fed7018f6c747ce82a05f9d13f0255b8",
+      "source_sha256": "a982c8c9c9bc828c7cbdb2b7e7dd91b15dbb8db7c2cee17d4a4cf831efd3e40e",
+      "source_lines": 90,
+      "patch": "diffs-github-base/166-src__proxy__session__bookkeeping__storeTypes.ts.patch",
+      "patch_sha256": "6dc167184159515adc62939fe46615e871b67a8cec06bdd9d7de7e938ea2da42",
+      "changed_hunks": 1,
+      "all_changed_hunks_semantically_reviewed": true,
+      "source_matches_git_and_probe_fixture": true,
+      "current_main_has_path": false,
+      "finding_ids": [],
+      "coverage_detail": "result statuses, attempt/publication/rollback optional sentinels and forwarded argument order",
+      "disposition": "no additional material semantic finding in assigned scope; no acceptance/SQL activation"
+    },
+    {
+      "packet": "P1",
+      "path": "src/proxy/session/bookkeeping/types.ts",
+      "source_blob": "6295bf684d27f897119a826e750c99cd3105ee23",
+      "source_sha256": "18059467b2f43e2262b368351e00f4fc57e6845832236732edc498240a4dfd4a",
+      "source_lines": 101,
+      "patch": "diffs-github-base/169-src__proxy__session__bookkeeping__types.ts.patch",
+      "patch_sha256": "8f1625fb56f3b4b0fdd1762969420751372edb90a9a6d3506b41ceda69ec9e46",
+      "changed_hunks": 1,
+      "all_changed_hunks_semantically_reviewed": true,
+      "source_matches_git_and_probe_fixture": true,
+      "current_main_has_path": false,
+      "finding_ids": [],
+      "coverage_detail": "resource/lease/mapping ownership types, SQL scalar rows, expired capability contract and canonical brand",
+      "disposition": "no additional material semantic finding in assigned scope; no acceptance/SQL activation"
+    },
+    {
+      "packet": "P1",
+      "path": "src/proxy/session/bookkeeping/uuid.ts",
+      "source_blob": "5fda6f133972092152d43d5f4efdc100e6462c22",
+      "source_sha256": "2862f980f19f5e2d9d8104b9edba2ca8f88d4eee987d645bef3c364cd795fda6",
+      "source_lines": 9,
+      "patch": "diffs-github-base/170-src__proxy__session__bookkeeping__uuid.ts.patch",
+      "patch_sha256": "1fbf23404c5ab19356a3be1c51624fa26d2aa6b2f6888a5b35c5ce46b92d488a",
+      "changed_hunks": 1,
+      "all_changed_hunks_semantically_reviewed": true,
+      "source_matches_git_and_probe_fixture": true,
+      "current_main_has_path": false,
+      "finding_ids": [],
+      "coverage_detail": "exact lowercase UUIDv4/variant test",
+      "disposition": "no additional material semantic finding in assigned scope; no acceptance/SQL activation"
+    },
+    {
+      "packet": "P1",
+      "path": "src/proxy/session/storeErrors.ts",
+      "source_blob": "51f44bed10156fa9c867773864b20c37a5736fde",
+      "source_sha256": "186d3a85558d5f1e5efa02d6d26188d1f3f364b25f1e563470c4f7fd68ac03bf",
+      "source_lines": 2,
+      "patch": "diffs-github-base/172-src__proxy__session__storeErrors.ts.patch",
+      "patch_sha256": "b111f9ff5c8eddcf7556acff4cfaeec2ffbb22e34758c1811dfc1021371d9d01",
+      "changed_hunks": 1,
+      "all_changed_hunks_semantically_reviewed": true,
+      "source_matches_git_and_probe_fixture": true,
+      "current_main_has_path": false,
+      "finding_ids": [],
+      "coverage_detail": "typed lock timeout remains Error, no admitted mutation",
+      "disposition": "no additional material semantic finding in assigned scope; no acceptance/SQL activation"
+    },
+    {
+      "packet": "P1",
+      "path": "src/proxy/sessionStore.ts",
+      "source_blob": "835704149620ed3814aef48e89f3b5c56b96720b",
+      "source_sha256": "b888e92ae87cedb7aa8c2415d223cab765c084e5aec9218e211fb8c925521d5b",
+      "source_lines": 1837,
+      "patch": "diffs-github-base/174-src__proxy__sessionStore.ts.patch",
+      "patch_sha256": "2cc4258d4ffc0f2f14fdaf3a2ea88ff0c9fece7940b1e3135d7949bc6a8b4fc9",
+      "changed_hunks": 31,
+      "all_changed_hunks_semantically_reviewed": true,
+      "source_matches_git_and_probe_fixture": true,
+      "current_main_has_path": true,
+      "finding_ids": [
+        "F2"
+      ],
+      "coverage_detail": "all 31 hunks and relevant locking/cache/serialization/dispatch/priority/prune neighbors; unchanged legacy writer supports F1",
+      "disposition": "correction required; no acceptance"
+    },
+    {
+      "packet": "P2",
+      "path": "src/proxy/session/bookkeeping/bootstrapOwner.ts",
+      "source_blob": "ab28f5e5712b85807b024e1ecc016f3d5a15bed9",
+      "source_sha256": "aa1609cbc9eb23c2e4b08cb5f840aca6431dff53b67f56e637fec3a6f1601e57",
+      "source_lines": 149,
+      "patch": "diffs-github-base/100-src__proxy__session__bookkeeping__bootstrapOwner.ts.patch",
+      "patch_sha256": "378a69fa9f47583bfde3920b979b89b413d6c9645c663064889bc2800594fc51",
+      "changed_hunks": 1,
+      "all_changed_hunks_semantically_reviewed": true,
+      "source_matches_git_and_probe_fixture": true,
+      "current_main_has_path": false,
+      "finding_ids": [],
+      "coverage_detail": "owner-before-temp-inode, exact process incarnation, nlink/provenance/no-SQLite-fd retirement boundaries",
+      "disposition": "no additional material semantic finding in assigned scope; no acceptance/SQL activation"
+    },
+    {
+      "packet": "P2",
+      "path": "src/proxy/session/bookkeeping/connection.ts",
+      "source_blob": "64845193fc8636b11f182c6c906cd03d21f1aec6",
+      "source_sha256": "48bf6243a159ce517a951198a5fe395484fbd19b20c982c06624b3f3021275be",
+      "source_lines": 497,
+      "patch": "diffs-github-base/103-src__proxy__session__bookkeeping__connection.ts.patch",
+      "patch_sha256": "51b406e01f2a8a870476d1f9946e88fd1dd91c2e7a344cca25bcac8cd4ac1ff6",
+      "changed_hunks": 1,
+      "all_changed_hunks_semantically_reviewed": true,
+      "source_matches_git_and_probe_fixture": true,
+      "current_main_has_path": false,
+      "finding_ids": [
+        "F3"
+      ],
+      "coverage_detail": "all 497 lines; native pragmas/open/provenance/registry refs/pending/terminal poison/recovery/close/raw readers",
+      "disposition": "correction required; no acceptance"
+    },
+    {
+      "packet": "P2",
+      "path": "src/proxy/session/bookkeeping/database.ts",
+      "source_blob": "016489f949eec1f7727f5846f315f7d2a2e6cee9",
+      "source_sha256": "22b2a6da2e9dec909a45c7184250336d50c7476318764e7103f3eefb01e93769",
+      "source_lines": 19,
+      "patch": "diffs-github-base/105-src__proxy__session__bookkeeping__database.ts.patch",
+      "patch_sha256": "c80ec7e81eba3e611397466f2ab5442a6106f87bb80771415e8769b610e6e9ea",
+      "changed_hunks": 1,
+      "all_changed_hunks_semantically_reviewed": true,
+      "source_matches_git_and_probe_fixture": true,
+      "current_main_has_path": false,
+      "finding_ids": [
+        "F4"
+      ],
+      "coverage_detail": "all runtime facade exports and maintenance entrypoint boundary",
+      "disposition": "correction required; no acceptance"
+    },
+    {
+      "packet": "P2",
+      "path": "src/proxy/session/bookkeeping/freshBootstrap.ts",
+      "source_blob": "699abe14d6e11cd811da4cad5f76dbafe6b4652d",
+      "source_sha256": "3bfa048dd6aced1af963968d2c875de17e798c4e2972335058700e7050072f6c",
+      "source_lines": 42,
+      "patch": "diffs-github-base/109-src__proxy__session__bookkeeping__freshBootstrap.ts.patch",
+      "patch_sha256": "e84826eb72bc0a5f0e187b50a7b6c9162d4478c34e9a8a64c236cf690b40f73b",
+      "changed_hunks": 1,
+      "all_changed_hunks_semantically_reviewed": true,
+      "source_matches_git_and_probe_fixture": true,
+      "current_main_has_path": false,
+      "finding_ids": [],
+      "coverage_detail": "empty-input durable phase protocol, old-writer no-replace barrier race and post-barrier source check",
+      "disposition": "no additional material semantic finding in assigned scope; no acceptance/SQL activation"
+    },
+    {
+      "packet": "P2",
+      "path": "src/proxy/session/bookkeeping/guard.ts",
+      "source_blob": "44ca42fd82e5767e2fdfb56fb25582ccbe55c418",
+      "source_sha256": "882146de343612a055ddb431d79d51e6b8ba852d6bc2864aca3901a48fbe488f",
+      "source_lines": 388,
+      "patch": "diffs-github-base/110-src__proxy__session__bookkeeping__guard.ts.patch",
+      "patch_sha256": "f99ae822ea53251a9f802d67c88c76b4cf86d83c99270725234090837ee886ed",
+      "changed_hunks": 1,
+      "all_changed_hunks_semantically_reviewed": true,
+      "source_matches_git_and_probe_fixture": true,
+      "current_main_has_path": false,
+      "finding_ids": [],
+      "coverage_detail": "all 388 lines; shared/exclusive native locks, refs/borrowers, epoch handoff, terminal close failure, bootstrap/inspection boundaries",
+      "disposition": "no additional material semantic finding in assigned scope; no acceptance/SQL activation"
+    },
+    {
+      "packet": "P2",
+      "path": "src/proxy/session/bookkeeping/guardIdentity.ts",
+      "source_blob": "825d83b62d2e1179b01176959cbd38f43a888075",
+      "source_sha256": "ca11f597b90ea7cf2388d62fe8084f106bd71c7e3c1dee46e45ffc4eeacf6e07",
+      "source_lines": 21,
+      "patch": "diffs-github-base/111-src__proxy__session__bookkeeping__guardIdentity.ts.patch",
+      "patch_sha256": "b694728fa6e0ae274d72eaf08dfab00ca645482991d995f6029dc38e81c21db5",
+      "changed_hunks": 1,
+      "all_changed_hunks_semantically_reviewed": true,
+      "source_matches_git_and_probe_fixture": true,
+      "current_main_has_path": false,
+      "finding_ids": [],
+      "coverage_detail": "permanent guard inode and refusal under legacy retirement intent",
+      "disposition": "no additional material semantic finding in assigned scope; no acceptance/SQL activation"
+    },
+    {
+      "packet": "P2",
+      "path": "src/proxy/session/bookkeeping/schema.ts",
+      "source_blob": "8dbb17e8a533de843ac8fc8e3c00b5b331bf2432",
+      "source_sha256": "23f9cca316451219df43121e9712bbc3ac93e2a8360b1fcccc6f9d1dec3445ad",
+      "source_lines": 219,
+      "patch": "diffs-github-base/151-src__proxy__session__bookkeeping__schema.ts.patch",
+      "patch_sha256": "8971824c079e476ed34faf4043d9bc9ddabce6d2e64a66cdaa04b1b2be447d8d",
+      "changed_hunks": 1,
+      "all_changed_hunks_semantically_reviewed": true,
+      "source_matches_git_and_probe_fixture": true,
+      "current_main_has_path": false,
+      "finding_ids": [],
+      "coverage_detail": "all DDL/strict constraints, exact schema fingerprint, counts/lease-version triggers, indexes and phase/integrity validation",
+      "disposition": "no additional material semantic finding in assigned scope; no acceptance/SQL activation"
+    },
+    {
+      "packet": "P2",
+      "path": "src/proxy/session/bookkeeping/storagePaths.ts",
+      "source_blob": "99e5443cc7b991d40ee2cd76a57966fdc606605f",
+      "source_sha256": "fdc58c9c1b2c511db5fd53e6bf28ec35a0d19873dffec9490422927c7d7cce1b",
+      "source_lines": 73,
+      "patch": "diffs-github-base/154-src__proxy__session__bookkeeping__storagePaths.ts.patch",
+      "patch_sha256": "e00cd9fdfd0a0d23dccc1bce272c3df2db5c048c569a502cf42a16bb476933b5",
+      "changed_hunks": 1,
+      "all_changed_hunks_semantically_reviewed": true,
+      "source_matches_git_and_probe_fixture": true,
+      "current_main_has_path": false,
+      "finding_ids": [],
+      "coverage_detail": "owned/private/no-follow/nonblock/inode/link/permissions/filesystem boundary",
+      "disposition": "no additional material semantic finding in assigned scope; no acceptance/SQL activation"
+    },
+    {
+      "packet": "P2",
+      "path": "src/proxy/session/bookkeeping/transaction.ts",
+      "source_blob": "b9cc4e2652adcf896161dacad54834c968b022bd",
+      "source_sha256": "f0bd87d91d308c83626ba222b29da1bec1dca0cb9dfa86253fa1aa9f7120b24f",
+      "source_lines": 385,
+      "patch": "diffs-github-base/168-src__proxy__session__bookkeeping__transaction.ts.patch",
+      "patch_sha256": "30e700ebb5b61098fca9d94f113e79b6153b1185af3532ada0c6c35a6a26e84e",
+      "changed_hunks": 1,
+      "all_changed_hunks_semantically_reviewed": true,
+      "source_matches_git_and_probe_fixture": true,
+      "current_main_has_path": false,
+      "finding_ids": [
+        "F4"
+      ],
+      "coverage_detail": "all 385 lines; begin/admission/deadlines/cancellation, capability expiry, read SQL, permitted nested poison, ambiguity/no replay, hooks and checkpoint owner",
+      "disposition": "correction required; no acceptance"
+    }
+  ],
+  "test_suite_executed": false,
+  "focused_synthetic_probes_executed": true,
+  "public_sql_contract": "UNAPPROVED; no owner decision requested by this pass",
+  "approved_cleanup_issue": "#1244 approval remains valid; no repeat approval required",
+  "scope_limit": "all P1/P2 hunks plus relevant callers/tests; not all 176 files or whole-stack acceptance",
+  "runtime": {
+    "node": "v22.22.3",
+    "bun": "1.3.14 (harness transpiler only)",
+    "libsql": "0.5.29",
+    "platform": "darwin",
+    "arch": "arm64"
+  },
+  "artifact_sha256": {
+    "P1-P2-probes.ts": "4b680a874d2cf24d6c1e404a78c2bc59483cd71fab4c0c4cdb08c6f78dbb21df",
+    "probe-source/.review-p1-p2/probes.mjs": "a86cd4fafe6e59dec8745824ee57b22f34447fa5572cea7bd47bbcec11c4a052",
+    "probe-source/package-lock.json": "61adcb16f01bcb4985e23d6f71b9d9ae699f03c92c1ef5f57b0872e32ec5163d",
+    "probe-source/node_modules/libsql/package.json": "2c5b92e04a5c0f41139bfd678e67fc1569d7ba5fd9d35ac285901d122fa3522f"
+  },
+  "source_current_main_legacy_neighbors_unchanged": true,
+  "disposition": "needs corrections; defer P1/P2 incorporation as submitted; no whole-stack acceptance",
+  "findings": [
+    {
+      "id": "F1",
+      "severity": "medium",
+      "title": "numeric mapping keys violate metadata-first legacy wire order",
+      "locations": [
+        {
+          "path": "src/proxy/session/bookkeeping/legacyCodec.ts",
+          "start": 35,
+          "end": 38
+        },
+        {
+          "path": "src/proxy/sessionStore.ts",
+          "start": 775,
+          "end": 788
+        }
+      ],
+      "status": "reproduced by isolated source-code probe",
+      "probe": "P1-P2-codec-order.stdout.json",
+      "observed": {
+        "writer_starts_with_metadata": true,
+        "codec_starts_with_numeric_mapping": true,
+        "bytes_equal": false,
+        "semantic_key_order_equal": true
+      },
+      "correction": "historical ordered serializer plus current-main writer oracle with integer and ordinary keys; no SQL activation"
+    },
+    {
+      "id": "F2",
+      "severity": "high",
+      "title": "SQL profile-copy prune omits backend dispatch and reads permanently fenced JSON",
+      "locations": [
+        {
+          "path": "src/proxy/sessionStore.ts",
+          "start": 1731,
+          "end": 1757
+        },
+        {
+          "path": "src/proxy/session/bookkeeping/storeBackend.ts",
+          "start": 12,
+          "end": 38
+        },
+        {
+          "path": "src/proxy/session/bookkeeping/lifecycleBackend.ts",
+          "start": 5,
+          "end": 27
+        },
+        {
+          "path": "src/proxy/sessionLifecycle.ts",
+          "start": 761,
+          "end": 798
+        },
+        {
+          "path": "src/proxy/server.ts",
+          "start": 817,
+          "end": 843
+        }
+      ],
+      "status": "reproduced after real synthetic migration and production SQL port installation",
+      "probe": "P1-P2-profile-prune.stdout.json",
+      "observed": {
+        "json_candidates": [
+          "conversation"
+        ],
+        "sql_candidates": [],
+        "sql_pruned": 0,
+        "lifecycle_error": "SessionLifecycleLockError on permanent session-gc.json.lock barrier",
+        "sql_mappings_unchanged": true,
+        "sql_pins_retained": 2
+      },
+      "correction": "complete SQL pruning port with turn/activity/priority/rollback/generation/retirement-budget controls; never remove barriers"
+    },
+    {
+      "id": "F3",
+      "severity": "high",
+      "title": "post-open provenance read error releases owner guard without closing native database",
+      "locations": [
+        {
+          "path": "src/proxy/session/bookkeeping/connection.ts",
+          "start": 375,
+          "end": 413
+        }
+      ],
+      "status": "reproduced with synthetic prepare I/O injection, not natural filesystem failure",
+      "probe": "P1-P2-failed-open.stdout.json",
+      "observed": {
+        "open_rejected": true,
+        "native_handle_usable_after_error": true,
+        "exclusive_guard_acquired_while_handle_open": true,
+        "natural_corruption_demonstrated": false
+      },
+      "correction": "unwind-owned native db variable until registry transfer; close before guard release and retain terminal ownership if native close fails"
+    },
+    {
+      "id": "F4",
+      "severity": "medium",
+      "title": "offline TRUNCATE accepts ordinary shared runtime owner",
+      "locations": [
+        {
+          "path": "src/proxy/session/bookkeeping/transaction.ts",
+          "start": 319,
+          "end": 324
+        },
+        {
+          "path": "src/proxy/session/bookkeeping/transaction.ts",
+          "start": 382,
+          "end": 384
+        },
+        {
+          "path": "src/proxy/session/bookkeeping/database.ts",
+          "start": 12,
+          "end": 19
+        }
+      ],
+      "status": "reproduced with shared runtime guard; SQLite native safety not disproven",
+      "probe": "P1-P2-runtime-truncate-corrected.stdout.json",
+      "observed": {
+        "guard_mode": "shared",
+        "exclusive_maintenance_blocked": true,
+        "truncate": {
+          "busy": 0,
+          "log": 0,
+          "checkpointed": 0
+        },
+        "corruption_demonstrated": false
+      },
+      "correction": "require exclusive maintenance capability at primitive/remove runtime export, or obtain explicit changed operator contract; add cross-process negative control"
+    }
+  ],
+  "tests_inspected_not_executed": [
+    "bookkeeping-codec.test.ts",
+    "bookkeeping-codec-differential.test.ts",
+    "bookkeeping-store-seam.test.ts",
+    "bookkeeping-store-contract.test.ts",
+    "bookkeeping-runtime.test.ts",
+    "bookkeeping-schema.test.ts",
+    "bookkeeping-transactions.test.ts",
+    "bookkeeping-review.test.ts",
+    "bookkeeping-maintenance.test.ts",
+    "bookkeeping-bootstrap-recovery.test.ts",
+    "bookkeeping-checkpoint-queue.test.ts",
+    "bookkeeping-gc-checkpoint.test.ts",
+    "fixtures/bookkeeping-safety.ts"
+  ],
+  "probe_results": [
+    {
+      "mode": "codec-order",
+      "exit": 0,
+      "stdout": "P1-P2-codec-order.stdout.json",
+      "stderr": "P1-P2-codec-order.stderr.log"
+    },
+    {
+      "mode": "profile-prune",
+      "exit": 0,
+      "stdout": "P1-P2-profile-prune.stdout.json",
+      "stderr": "P1-P2-profile-prune.stderr.log"
+    },
+    {
+      "mode": "runtime-truncate",
+      "exit": 1,
+      "stdout": "P1-P2-runtime-truncate.stdout.json",
+      "stderr": "P1-P2-runtime-truncate.stderr.log"
+    },
+    {
+      "mode": "failed-open",
+      "exit": 0,
+      "stdout": "P1-P2-failed-open.stdout.json",
+      "stderr": "P1-P2-failed-open.stderr.log"
+    },
+    {
+      "mode": "runtime-truncate-corrected",
+      "exit": 0,
+      "stdout": "P1-P2-runtime-truncate-corrected.stdout.json",
+      "stderr": "P1-P2-runtime-truncate-corrected.stderr.log",
+      "harnessCorrection": "close borrowed main handle before extra guard lease; product unchanged"
+    }
+  ],
+  "probe_reproduction": {
+    "harness": "P1-P2-probes.ts",
+    "build_command": "bun build P1-P2-probes.ts --target=node --external libsql --outfile probe-source/.review-p1-p2/probes.mjs",
+    "run_command": "node probe-source/.review-p1-p2/probes.mjs <mode> <fresh-private-state-directory>",
+    "environment": "fresh allowlist dictionary: PATH from runtime, TMPDIR=<private>/tmp, MERIDIAN_CONFIG_DIR=<private>/config, MERIDIAN_SESSION_DIR=<private>/state, CLAUDE_CONFIG_DIR=<private>/claude, XDG_CONFIG_HOME=<private>/xdg-config, XDG_DATA_HOME=<private>/xdg-data, XDG_CACHE_HOME=<private>/xdg-cache; every directory 0700; separate process for each mode",
+    "cleanup_correction": "Initial runtime-truncate cleanup closed extra guard before main and failed; only harness order reversed. Fresh state rerun exit0; original failure stderr preserved. No source correction or unexplained green rerun."
+  },
+  "probe_auth_model_calls": 0,
+  "limitations": [
+    "No full npm test/typecheck/application build run in this pass; focused probe bundling only.",
+    "No real native client/model/session contents, SDK generation/deletion, credentials or private SDK files accessed.",
+    "Probes are darwin/arm64 only; Linux/Windows and filesystem durability/crash/client evidence remain open.",
+    "Injected provenance I/O fault is synthetic; subsequent data corruption not demonstrated.",
+    "SQLite TRUNCATE still respects native locks; privilege/authority defect proven, corruption not demonstrated.",
+    "Callable thenable handoff and swallowed forbidden-nesting/cross-database preflight failures remain narrow static test gaps; no production-dependent caller found.",
+    "P3 row semantics/atomic publication, P4 lifecycle/startup/shutdown, P5 GC, P6 maintenance, P7 package contracts and P8 other tests require separate coverage.",
+    "No owner request/API issue/community message, source edit, PR creation/acceptance/merge/release performed."
+  ],
+  "independent_work": "P1 pure codec/type/error extraction after F1/regression controls, preserving JSON bytes/generations/current-main behavior and contributor authorship, without SQL activation or public startup/cleanup changes."
+}

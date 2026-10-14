@@ -1,0 +1,25 @@
+(pass) stream transport (actual relay, not a duplicate scan loop) > releases response readers after EOF and transport failure [0.65ms]
+(pass) stream transport (actual relay, not a duplicate scan loop) > does not invent a zero wait when a JSON error has no Retry-After header [3.63ms]
+422 |     const output: Uint8Array[] = []
+423 |     const verdict = await relayStreamAttempt(inner, sink(output))
+424 |     // Oversized undecided bodies cannot authorize account replay or be read
+425 |     // without a bound. Release the original reader before returning the error.
+426 |     if (verdict.kind === "suppressed") await verdict.discard()
+427 |     expect(verdict.kind).toBe("relayed")
+                               ^
+error: expect(received).toBe(expected)
+
+Expected: "relayed"
+Received: "suppressed"
+
+      at <anonymous> (/Users/rynfar/repos/meridian-sse-failover-1214-20261012/src/__tests__/sse-failure-sniff.test.ts:427:26)
+(fail) stream transport (actual relay, not a duplicate scan loop) > bounds non-SSE fallback bodies and joins cancellation before reporting an error [3.04ms]
+(pass) stream transport (actual relay, not a duplicate scan loop) > retains JSON account failures' valid header hint through suppression [0.47ms]
+
+1 tests failed:
+(fail) stream transport (actual relay, not a duplicate scan loop) > bounds non-SSE fallback bodies and joins cancellation before reporting an error [3.04ms]
+
+ 36 pass
+ 1 fail
+ 169 expect() calls
+Ran 37 tests across 1 file. [288.00ms]

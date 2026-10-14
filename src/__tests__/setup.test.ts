@@ -81,6 +81,7 @@ describe("OpenCode generation detection", () => {
       "0.0.0-beta-18866",
       "0.0.0-beta-19271",
       "2.0.16",
+      "2.0.21",
     ]))
   })
 

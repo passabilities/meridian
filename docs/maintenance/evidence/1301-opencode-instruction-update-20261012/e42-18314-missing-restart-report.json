@@ -1,0 +1,75 @@
+{
+  "root": "/var/folders/ks/xnz659y11jl44j80b_lfws6r0000gn/T/meridian-qualified-e42-CdVxDF",
+  "result": "FAIL",
+  "actors": [
+    {
+      "pid": 17886,
+      "command": "bun",
+      "close": true,
+      "stdoutClose": true,
+      "stderrClose": true,
+      "code": 1,
+      "signal": null
+    },
+    {
+      "pid": 17899,
+      "command": "/bin/sh",
+      "close": true,
+      "stdoutClose": true,
+      "stderrClose": true,
+      "code": 143,
+      "signal": null
+    },
+    {
+      "pid": 17903,
+      "command": "/bin/sh",
+      "close": true,
+      "stdoutClose": true,
+      "stderrClose": true,
+      "code": 1,
+      "signal": null
+    },
+    {
+      "pid": 17958,
+      "command": "/bin/sh",
+      "close": true,
+      "stdoutClose": true,
+      "stderrClose": true,
+      "code": 0,
+      "signal": null
+    },
+    {
+      "pid": 18000,
+      "command": "/bin/sh",
+      "close": true,
+      "stdoutClose": true,
+      "stderrClose": true,
+      "code": 0,
+      "signal": null
+    }
+  ],
+  "client": "18314",
+  "model": "claude-haiku-4-5-20251001",
+  "scope": "Installed stable E42 with external access-only proxy and verified server scrub",
+  "scrubPreflight": {
+    "path": "/private/tmp/meridian-scrub-preflight-package-20261012/node_modules/@rynfar/meridian-plugin-opencode-scrub/dist/index.js",
+    "packageName": "@rynfar/meridian-plugin-opencode-scrub",
+    "packageVersion": "0.2.3",
+    "sha256": "4ab89412e6a59fad812a3f6e5500c84f3bdfc41863320bc794f5274a251da656",
+    "runtimeVersion": "0.2.3",
+    "invocations": 0,
+    "errors": 0
+  },
+  "exit": 1,
+  "scrubFinal": {
+    "path": "/private/tmp/meridian-scrub-preflight-package-20261012/node_modules/@rynfar/meridian-plugin-opencode-scrub/dist/index.js",
+    "packageName": "@rynfar/meridian-plugin-opencode-scrub",
+    "packageVersion": "0.2.3",
+    "sha256": "4ab89412e6a59fad812a3f6e5500c84f3bdfc41863320bc794f5274a251da656",
+    "runtimeVersion": "0.2.3",
+    "invocations": 4,
+    "errors": 0
+  },
+  "failure": "AssertionError [ERR_ASSERTION]: Actual stable E42 harness failed; retain original stdout/stderr\n\n1 !== 0\n",
+  "joined": true
+}

@@ -1,0 +1,55 @@
+{
+  "sourceHead": "322d3af68691eb41552b53c010d1996e9474c130",
+  "baselineCherryPick": "9939c6d585fbaf22e7b50f8a7e0a612571fe88c3",
+  "date": "2026-10-04",
+  "platform": "darwin/arm64",
+  "bun": "1.3.14",
+  "command": "bun test --timeout 30000 src/__tests__/header-settings-routes.test.ts",
+  "testRevision": "maintainer expanded controls copied into unchanged contributor tree",
+  "exit": 1,
+  "pass": 7,
+  "fail": 17,
+  "assertions": 101,
+  "failedControls": [
+    "claude header consent > defaults off, exposes the OS name only to settings, and prevents cached consent",
+    "claude header consent > fails closed for missing, malformed, null and incorrectly typed persisted consent",
+    "claude header consent > rejects foreign, opaque, malformed and different-port Origin writes, even with a key",
+    "claude header consent > permits preserved public Host behind HTTPS termination without trusting forwarding headers",
+    "claude header consent > rechecks consent after a delayed auth/account probe",
+    "antigravity header consent > defaults off, exposes the OS name only to settings, and prevents cached consent",
+    "antigravity header consent > persists on/off across fresh server instances and preserves unrelated settings",
+    "antigravity header consent > treats a missing field as a no-op and null as removal, immediately",
+    "antigravity header consent > rejects invalid bodies without changing existing consent",
+    "antigravity header consent > fails closed for missing, malformed, null and incorrectly typed persisted consent",
+    "antigravity header consent > protects reads and writes with either API-key form while keeping health public",
+    "antigravity header consent > rejects foreign, opaque, malformed and different-port Origin writes, even with a key",
+    "antigravity header consent > permits preserved public Host behind HTTPS termination without trusting forwarding headers",
+    "antigravity header consent > adds only the optional hostname to healthy health responses",
+    "antigravity header consent > rechecks consent after a delayed auth/account probe",
+    "antigravity header consent > keeps draining health status and liveness/readiness shapes, with hostname only on health",
+    "antigravity header consent > keeps auth/account error responses while applying current consent only to health"
+  ],
+  "observations": {
+    "foreignOriginPut": {
+      "expected": 403,
+      "actual": 200
+    },
+    "delayedClaudeHealthAfterDisable": {
+      "expectedHostname": "absent",
+      "actualHostname": "OS hostname present"
+    },
+    "nullPersistedDocument": {
+      "expectedSettingsStatus": 200,
+      "actualSettingsStatus": 500
+    },
+    "standaloneHeaderSettings": {
+      "expectedStatus": 200,
+      "actualStatus": 404
+    },
+    "uncachedConsent": {
+      "expectedCacheControl": "no-store",
+      "actualCacheControl": null
+    }
+  },
+  "modelCalls": false
+}

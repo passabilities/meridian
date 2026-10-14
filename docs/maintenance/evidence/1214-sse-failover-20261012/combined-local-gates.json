@@ -1,0 +1,15 @@
+{
+  "source": "a41e19981d3cfac9223d40355401b5a0ad16d186",
+  "main": "8edccd790f56fdee72a20b71337eef8ab6dec1ed",
+  "session": 8226,
+  "exit": 0,
+  "pass": 5722,
+  "skip": 35,
+  "fail": 0,
+  "commands": [
+    "npm test",
+    "npm run typecheck",
+    "npm run build"
+  ],
+  "buildDirty": false
+}

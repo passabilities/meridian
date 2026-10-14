@@ -1,0 +1,54 @@
+[
+  {
+    "label": "source",
+    "sessions": [
+      {
+        "id": "28efb3d1-c0dd-49de-8a2f-54049ee2dd62",
+        "messageCount": 4,
+        "assistantCount": 2,
+        "models": [
+          "claude-haiku-5-5"
+        ],
+        "toolUseCount": 1,
+        "receiptPresent": true
+      },
+      {
+        "id": "d7d80260-d5de-41e0-87e0-adc7c54bcd40",
+        "messageCount": 3,
+        "assistantCount": 1,
+        "models": [
+          "claude-haiku-5-5"
+        ],
+        "toolUseCount": 1,
+        "receiptPresent": false
+      }
+    ],
+    "scope": "public SDK history read only; no query/provider/native actor"
+  },
+  {
+    "label": "installedPack",
+    "sessions": [
+      {
+        "id": "d97d80a7-6148-4aad-8c11-a354ead9bb97",
+        "messageCount": 4,
+        "assistantCount": 2,
+        "models": [
+          "claude-haiku-5-5"
+        ],
+        "toolUseCount": 1,
+        "receiptPresent": true
+      },
+      {
+        "id": "6197b3f1-8f7f-49e3-9284-807a62b7d0ff",
+        "messageCount": 3,
+        "assistantCount": 1,
+        "models": [
+          "claude-haiku-5-5"
+        ],
+        "toolUseCount": 1,
+        "receiptPresent": false
+      }
+    ],
+    "scope": "public SDK history read only; no query/provider/native actor"
+  }
+]

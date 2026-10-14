@@ -11,9 +11,47 @@ import { fingerprintBudget, hashFileInto, readProvenanceText } from "./buildFing
 export { BuildProvenanceError } from "./buildProvenanceError"
 
 export function gitOutput(root: string, args: readonly string[], timeout = 2000): string {
-  const result = spawnSync("git", ["-C", root, ...args], { encoding: "utf8", timeout, maxBuffer: 2 * 1024 * 1024, stdio: ["ignore", "pipe", "pipe"] })
-  if (result.status !== 0) throw new BuildProvenanceError("git")
+  if (!Number.isFinite(timeout) || timeout <= 0) throw new BuildProvenanceError("git")
+  // spawnSync joins the direct child and captured pipes before returning. Use
+  // KILL rather than its default TERM: a TERM-resistant Git must not extend the
+  // deadline and its eventual clean exit must not turn ETIMEDOUT into success.
+  // This is not a process-tree or real-time scheduling guarantee.
+  const result = spawnSync("git", ["-C", root, ...args], { encoding: "utf8", timeout, killSignal: "SIGKILL", maxBuffer: 2 * 1024 * 1024, stdio: ["ignore", "pipe", "pipe"] })
+  if (result.error || result.status !== 0) throw new BuildProvenanceError("git")
   return result.stdout.trimEnd()
+}
+
+/** The commit a source tree runs, without its content fingerprint: what a
+ *  runtime still reports when the fingerprint does not fit its two-second
+ *  budget, as on a heavily loaded host. Not comparable, since a sha alone
+ *  cannot tell an edited tree from the one that started. */
+export function sourceIdentity(root: string) {
+  // One fresh recovery budget, not five independent two-second timeouts.
+  // Establish the canonical root and SHA first; optional facts get at most
+  // 250ms each so a repeated expensive status cannot monopolize recovery.
+  const deadline = performance.now() + 2000
+  const git = (args: readonly string[], maximum = 2000) => {
+    const remaining = Math.floor(deadline - performance.now())
+    if (remaining <= 0) throw new BuildProvenanceError("git")
+    return gitOutput(root, args, Math.min(maximum, remaining))
+  }
+  if (realpathSync(git(["rev-parse", "--show-toplevel"])) !== realpathSync(root)) throw new BuildProvenanceError("invalid")
+  const sha = git(["rev-parse", "HEAD"])
+  const optional = (args: readonly string[]) => {
+    try { return git(args, 250) }
+    catch (error) {
+      if (!(error instanceof BuildProvenanceError)) throw error
+      return undefined
+    }
+  }
+  const branch = optional(["rev-parse", "--abbrev-ref", "HEAD"])
+  const status = optional(["status", "--porcelain=v1", "--untracked-files=all"])
+  const dirty = status === undefined ? undefined : status.length > 0
+  const remote = optional(["config", "--get", "remote.origin.url"]) ?? ""
+  return {
+    sha, ...(branch && branch !== "HEAD" ? { branch } : {}), ...(dirty !== undefined ? { dirty } : {}),
+    ...repositoryLinks(remote, branch !== "HEAD" ? branch : undefined, sha),
+  }
 }
 
 export function snapshotSource(root: string) {

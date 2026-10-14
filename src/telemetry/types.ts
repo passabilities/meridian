@@ -67,6 +67,12 @@ export interface RequestMetric {
   /** Original model string from the client request (e.g. "claude-sonnet-4-6-20250312") */
   requestModel?: string
 
+  /** Effective SDK Haiku tier pin recorded for this request, when known.
+   *  This is configuration used for the SDK query, not an observed served
+   *  model or evidence of native authentication/model access. Absent on
+   *  legacy records or paths that do not record an effective Haiku pin. */
+  resolvedModel?: string
+
   /** Profile that served the request (multi-account). On records written
    *  before profile resolution ran this falls back to the pinned profile
    *  header, and is absent only when there was no pin either. */

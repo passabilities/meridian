@@ -1,0 +1,10 @@
+{
+  "startedAtUTC": "2026-10-05T00:28:08.157688+00:00",
+  "ownedRuntimeDirectory": "/tmp/meridian-backlog-20261004/meridian/1219/semantic-round1/P4-shutdown-probe/runtime-5a2_mie2",
+  "probeTimeoutSeconds": 20,
+  "probeExitCode": 1,
+  "probeStatus": "setup-or-probe-failure",
+  "ownedRuntimeRemoved": true,
+  "finishedAtUTC": "2026-10-05T00:28:08.617261+00:00",
+  "controllerProcessesJoined": true
+}

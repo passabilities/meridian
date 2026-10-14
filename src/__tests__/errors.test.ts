@@ -168,6 +168,63 @@ describe("classifyError", () => {
       expect(r.type).toBe("billing_error")
     })
 
+    // The generic "subscription issue" text sent operators looking at an
+    // account that was fine: the refusal is about which pool the request was
+    // charged to, and only Anthropic's own sentence says which.
+    it("keeps Anthropic's own sentence for an extra-usage refusal instead of blaming the subscription", () => {
+      const r = classifyError("Claude Code returned an error result: API Error: 400 Third-party apps now draw from extra usage, not plan limits. Ask your workspace admin to add more and keep going.")
+      expect(r.status).toBe(402)
+      expect(r.type).toBe("billing_error")
+      expect(r.message).toContain("Third-party apps now draw from extra usage, not plan limits. Ask your workspace admin to add more and keep going.")
+      expect(r.message).not.toContain("API Error")
+      expect(r.message).not.toContain("subscription issue")
+    })
+
+    it("keeps the subscription advice for a lapsed subscription", () => {
+      const r = classifyError("Your subscription has expired")
+      expect(r.type).toBe("billing_error")
+      expect(r.message).toContain("subscription")
+    })
+
+    it.each([
+      "Your subscription has expired\nTool output: historical request draws from extra usage; private-context=fixture-canary",
+      "Tool output: historical request draws from extra usage; private-context=fixture-canary\nYour subscription has expired",
+    ])("does not use unrelated context as the provider's billing refusal (%s)", (message) => {
+      const r = classifyError(message)
+      expect(r.status).toBe(402)
+      expect(r.type).toBe("billing_error")
+      expect(r.message).toContain("Check your subscription status")
+      expect(r.message).not.toContain("fixture-canary")
+      expect(r.message).not.toContain("not a lapsed subscription")
+    })
+
+    it("quotes the primary provider refusal without following tool context", () => {
+      const r = classifyError("Claude Code returned an error result: API Error: 400 You're out of extra usage.\nTool output: request draws from extra usage; private-context=fixture-canary")
+      expect(r.message).toContain("You're out of extra usage.")
+      expect(r.message).not.toContain("fixture-canary")
+      expect(r.message).not.toContain("plan's own limits did not cover")
+      expect(r.message).not.toContain("not a lapsed subscription")
+    })
+
+    it.each([
+      "Error: API Error: 400 You are out of extra usage.",
+      "Claude Code returned an error result:\r\nAPI Error:\r\n400 You're out of extra usage.",
+    ])("recognizes a primary extra-usage refusal through wrappers (%s)", (message) => {
+      const r = classifyError(message)
+      expect(r.status).toBe(402)
+      expect(r.type).toBe("billing_error")
+      expect(r.message).toContain("out of extra usage.")
+      expect(r.message).not.toContain("API Error")
+    })
+
+    it("bounds the recognized primary provider refusal", () => {
+      const r = classifyError("API Error: 400 You're out of extra usage. " + "x".repeat(400) + "tail-canary")
+      expect(r.type).toBe("billing_error")
+      expect(r.message).toContain("You're out of extra usage.")
+      expect(r.message).toContain("…")
+      expect(r.message).not.toContain("tail-canary")
+    })
+
     // These used to classify as billing because the branch matched bare
     // substrings anywhere in the text, and it runs before the crash/max-turns
     // branches so it won. Harmless as a wrong status code; not harmless once

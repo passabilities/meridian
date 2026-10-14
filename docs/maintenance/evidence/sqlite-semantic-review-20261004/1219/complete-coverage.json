@@ -1,0 +1,1419 @@
+{
+  "sourceHead": "0bf16b0d83f2fcc8c9b55df06bf20f97d763a23f",
+  "githubBase": "f443faee0b135c5d4bfe1e6fe771c6a262ae5f33",
+  "mainComparison": "8e1c8bf738d7372ded01f28e99d6ec167acaf76f",
+  "fileCount": 176,
+  "uniquePaths": 176,
+  "allSourceHashesVerifiedAgainstGit": true,
+  "completeDiffSha256": "e886e1210b902d41ab119f49aebd0725efe9bf3d0c4fd90e8039f4566791c78c",
+  "files": [
+    {
+      "path": ".gitignore",
+      "sourceSha256": "d086a872a8bae21dd361d0164f80d9d969340b13b980e8a99d5de7494bc4b1c8",
+      "patchSha256": "38ab369fc6e8f07657b14dd584cf1cfb4ba2c21d16f9ad56831f8a00796aeb3c",
+      "hunkCount": 1,
+      "review": "P0-P4-P7-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "ARCHITECTURE.md",
+      "sourceSha256": "030f46b1b98c15eca45640aef33e6c84dad8612e74b8a2efa5719da336ed8300",
+      "patchSha256": "cf895836cda169d27f95e74ad33ae9a9b41bec02fc7d88f5545eb2243c2915ac",
+      "hunkCount": 4,
+      "review": "P0-P4-P7-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "E2E.md",
+      "sourceSha256": "e043e54a22ee072613ed8051ac497b5e959baa8c2cd3aa9196aaa00eb0ad9b4c",
+      "patchSha256": "1dd39cb628f83fe1e4e75c7c36fe9d52985622d81d6607080bea65a92fe147de",
+      "hunkCount": 2,
+      "review": "P0-P4-P7-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "bin/session-bookkeeping.ts",
+      "sourceSha256": "87958a53904677210016c987fd34f01a86047127923527805f43eaea1013a481",
+      "patchSha256": "74f3eb4881e9da338ee283613296e75f071245fe24a0d3e2477436ecd6049b2d",
+      "hunkCount": 1,
+      "review": "P0-P4-P7-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "docs/configuration.md",
+      "sourceSha256": "f52980071040b34a356368909551297aec037abe81bfc9171c65ab5ff9b30ccf",
+      "patchSha256": "e46f7510cc2b777c898e32cbf14d4fb2351b3be88d6695728cfca0d44154f0c8",
+      "hunkCount": 2,
+      "review": "P0-P4-P7-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "package-lock.json",
+      "sourceSha256": "61adcb16f01bcb4985e23d6f71b9d9ae699f03c92c1ef5f57b0872e32ec5163d",
+      "patchSha256": "3c665d27536ba3e197697ad9eca4e9d593a569abb174f1d26d4bc1cb149a1f30",
+      "hunkCount": 1,
+      "review": "P0-P4-P7-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "package.json",
+      "sourceSha256": "da7bacb38d57cbbb2ea5e19d7eb35273a61b704ca44a6db874c980b5d7606120",
+      "patchSha256": "f34eae6ffe6fc21b963897ca1e04597f4b06ace4e4410efd9fad923a74da34f0",
+      "hunkCount": 3,
+      "review": "P0-P4-P7-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "scripts/build.ts",
+      "sourceSha256": "8d2d7e25950d0a227ecdb82aa929d3256de60591b5a35318a4b9d9002563484b",
+      "patchSha256": "fac6399ce9e3762006aa01d2c199ebe88cdd6f625e8a75031cff1c54922b1fd8",
+      "hunkCount": 1,
+      "review": "P0-P4-P7-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "scripts/e2e-libsql-package.mjs",
+      "sourceSha256": "d190ac2e1fbf18600c544f08a8248c7246c84632ecb02a48a856d5543c78c537",
+      "patchSha256": "def4dc570bfd5d15acac3950e9d021d02a1725632d44ef9de9883803f9f8c93b",
+      "hunkCount": 1,
+      "review": "P0-P4-P7-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "scripts/e2e-session-bookkeeping-packaged.mjs",
+      "sourceSha256": "ba37b72051f6e67b2ff0a0ad1bf9ce8d91ffe6299cdd32f9448b64d22fe7d2eb",
+      "patchSha256": "eb8d6ddb0acf8166facbbbc325adb8fab51eec3965398367c0b71173b287e485",
+      "hunkCount": 1,
+      "review": "P0-P4-P7-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "scripts/e2e-session-gc-packaged.mjs",
+      "sourceSha256": "6141f0fa39cf65f54ca0ac5378c48220c1afc61e1ceef3031e0741361606ea7d",
+      "patchSha256": "fe999e279c62e07ef13a1666f322281aeffae4336d961297a1ae99d5a7f7528e",
+      "hunkCount": 1,
+      "review": "P0-P4-P7-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "scripts/e2e-sse-quota-failover-heartbeat.mjs",
+      "sourceSha256": "7600b6c7fa3c26dd0e69318a84847ee9031478c2bf05eadf14066db504b75ecf",
+      "patchSha256": "d7c0ff4fc6166f7a413a3cd4ab69c740be48cf3949786869ea8b91c42ded2bc4",
+      "hunkCount": 1,
+      "review": "P0-P4-P7-review.json",
+      "scope": "prior complete parent review plus exact source delta"
+    },
+    {
+      "path": "scripts/fixtures/bookkeeping-package-legacy-writer.mjs",
+      "sourceSha256": "cd6edcae3f2e7142053d872be383dc70b7e520807218b695974fe351e85acb43",
+      "patchSha256": "dc8eea66866a12ccedb6911e02e2c10facb8a1fbbc72e23d4436e2c51dd446d9",
+      "hunkCount": 1,
+      "review": "P0-P4-P7-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "scripts/fixtures/bookkeeping-package-server.mjs",
+      "sourceSha256": "46bb1da742ae9d2cbe9d22a79072666f870df71ca699e2bbc3380f692ed76e36",
+      "patchSha256": "6da03b75f6209c06daa43b6ff3d5206fa62eb47c9b4920edd3022ba1189696d2",
+      "hunkCount": 1,
+      "review": "P0-P4-P7-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/__tests__/bookkeeping-admission-seam.test.ts",
+      "sourceSha256": "c0992822e2063b8028f8e38aaaff09b6b351f663003ef7fe757c035009f718a9",
+      "patchSha256": "800c469f74f2117c90d5ced85bf290b748294d5ffc04777d026162f72a2774b7",
+      "hunkCount": 1,
+      "review": "P8-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/__tests__/bookkeeping-barrier.test.ts",
+      "sourceSha256": "fc2e97ddbe30c1614b45e366d46298c3c6da64711a2ef570d428e38b34976b9d",
+      "patchSha256": "dc45444788d4abfbaec9ebd9a95c8a6efba94c97c290bc2afafc5f1341332c0a",
+      "hunkCount": 1,
+      "review": "P8-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/__tests__/bookkeeping-bootstrap-recovery.test.ts",
+      "sourceSha256": "620418ff5e117d234a7220f63c079df23991aa2197ffa1881dbca6b03d783b02",
+      "patchSha256": "b4bb2e4a451b18f01f6c822903bc1e26a6145116a3d21c794b488dace6b4e6e6",
+      "hunkCount": 1,
+      "review": "P8-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/__tests__/bookkeeping-cache-publication.test.ts",
+      "sourceSha256": "edc98c54b5bebeebd129f1a736b574261e9181d287a5ea5aeceb560a320f2a0c",
+      "patchSha256": "79c9157df49567326306a9669c321c344368485314ea7be6ba7bbf54724e59cc",
+      "hunkCount": 1,
+      "review": "P8-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/__tests__/bookkeeping-checkpoint-queue.test.ts",
+      "sourceSha256": "b6a769bebc4a76579edc5dce6e210d2ebddf6efc84c3ee9cb18f555da022e6f8",
+      "patchSha256": "81465baf99fac01bb5966d79beace38337edbd54ad88c41fc3b28fc59c418f4a",
+      "hunkCount": 1,
+      "review": "P8-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/__tests__/bookkeeping-cli.test.ts",
+      "sourceSha256": "96ad175d49f5b621acc6b4a80adebf847dec54a978560d43553836205123756b",
+      "patchSha256": "f5482fbf6e44ae051c90ca857bc001f724143444fd4585529462fdd96e792a95",
+      "hunkCount": 1,
+      "review": "P8-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/__tests__/bookkeeping-codec-differential.test.ts",
+      "sourceSha256": "4721b5ebc955e570f2020a9a2cf700cd5946f637c4c5cceebcb2877fbb04f26a",
+      "patchSha256": "c8de2855a7866b5de045e797b896d2982cc72ab597626c7d8313f3ca6cfb4ae5",
+      "hunkCount": 1,
+      "review": "P8-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/__tests__/bookkeeping-codec.test.ts",
+      "sourceSha256": "616a46e68af1e2ca023c64153ff99b2afbb0b6ae8da7850e73a83a9014726407",
+      "patchSha256": "cf594c933645eb1a3268758df4d01112f4623bf89f2f2fa6f8484fd3ba4ef6fd",
+      "hunkCount": 1,
+      "review": "P8-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/__tests__/bookkeeping-cold-maintenance.test.ts",
+      "sourceSha256": "9414bd8cfa1d52e744eeff33411b02badc9eec400b0dbfb818582895eb8566ff",
+      "patchSha256": "cb6888e8e6d3980073fcfae5dc99ede41fa1c0674e4b1f2fc5063aee0409c41e",
+      "hunkCount": 1,
+      "review": "P8-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/__tests__/bookkeeping-crash-process.test.ts",
+      "sourceSha256": "f00c80758dbe58800264a1ad285d22236b99fc4c881e6b80ac714d7d96883330",
+      "patchSha256": "c1ac5db081e2b29f103e88351ad1944ca0fdad650b912301630091f7e0cadd19",
+      "hunkCount": 1,
+      "review": "P8-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/__tests__/bookkeeping-deletion-invariant.test.ts",
+      "sourceSha256": "ee9d038be45918d4ed52d982c366e4f4a1ce864753bb520ffa18842510730b7a",
+      "patchSha256": "ef004ed02b61675d6403a1419801b39fcc6169cf9003e7827ca1928056a06a34",
+      "hunkCount": 1,
+      "review": "P8-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/__tests__/bookkeeping-export.test.ts",
+      "sourceSha256": "2f8713aac5ffc0399fbeda45a20b0255b7ee25af78cfe43cd435603fb5122411",
+      "patchSha256": "68a81a7a7799f7693c6bb28df18a6deaeadbde345a555305509472585a345c31",
+      "hunkCount": 1,
+      "review": "P8-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/__tests__/bookkeeping-gc-checkpoint.test.ts",
+      "sourceSha256": "b3e6c6004aded8a263055b940287c2d5d83c4920415bc050838ed8a6cb8ff38f",
+      "patchSha256": "463c4fb44cb69da2c6d324eba0dc9dd2743507b8e77dce0099f0bb5d335a03e4",
+      "hunkCount": 1,
+      "review": "P8-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/__tests__/bookkeeping-handshake-cancellation.test.ts",
+      "sourceSha256": "7435c407c6df3dfbed6692a4c12d284b320fcba5de51b3d4275abe05f6519eab",
+      "patchSha256": "e435b288990bcbb2134555e75012055e963cf0d56e8fa005469eb4eb339ad268",
+      "hunkCount": 1,
+      "review": "P8-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/__tests__/bookkeeping-lifecycle-deletion.test.ts",
+      "sourceSha256": "d3980359ae482a8851c263ab5134d8679101f36f84abd822e08920e331b6cb4b",
+      "patchSha256": "585a6985729d0a0f52dc98aa0ff3209e8a76040a04561bb37c9fb1900bede0ca",
+      "hunkCount": 1,
+      "review": "P8-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/__tests__/bookkeeping-lifecycle-differential.test.ts",
+      "sourceSha256": "9ef335a2dc3cdbeb6149a9dc749faf5aef417f61f0a2af6749f01e3cb4398a4a",
+      "patchSha256": "e235f8ecce7defef35d3d3e90f97e7e647da1f99cbeb996a841b9a16fa29e8bb",
+      "hunkCount": 1,
+      "review": "P8-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/__tests__/bookkeeping-lifecycle-fixture.test.ts",
+      "sourceSha256": "77fb518f0cdaa024e4b3ab32ee1aa0958223e430b0910a1ae1bf1dac985ddcd9",
+      "patchSha256": "a9bb0b7008dafe5b69aadbe710f7b13b3e76d80ab5dc5d424fd748a21df460a1",
+      "hunkCount": 1,
+      "review": "P8-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/__tests__/bookkeeping-lifecycle-injection.test.ts",
+      "sourceSha256": "a095e84d9b21edee2201f37eb8f69d81a415d5a7f157f8a5b229f1d6ff77c461",
+      "patchSha256": "d25f5908a293a278ef0d82840489b3dd52dad82485d9948c1ef5e96c95bc73cf",
+      "hunkCount": 1,
+      "review": "P8-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/__tests__/bookkeeping-lifecycle-observer.test.ts",
+      "sourceSha256": "08f26a1d282de816c98de380e90c24091a40211766ce5929f6a7bb97d99ff37f",
+      "patchSha256": "a3acf9d19bdcba31ce9347f3d07f8734ec9463378fa48dfbd920f471fb28c595",
+      "hunkCount": 1,
+      "review": "P8-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/__tests__/bookkeeping-lifecycle-prepare.test.ts",
+      "sourceSha256": "bbcae5670d2935019b96d1a7d90f1d1acdc79cfbeb015a3d0e0b32ff1da21f54",
+      "patchSha256": "9379ac2d05e1d9b62cdfd3f0a77b9d444d4824e10d3f0c07cbdb63aa954ad663",
+      "hunkCount": 1,
+      "review": "P8-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/__tests__/bookkeeping-lifecycle-publication.test.ts",
+      "sourceSha256": "48f3d1fc1b2f6ccf5e694432632b81aab0c18bee98d688c78b005b95c7259fac",
+      "patchSha256": "a98260b09b9b9cf56da07bc045a6e14f437bb1d9ea77a52282ab7530e7172f9e",
+      "hunkCount": 1,
+      "review": "P8-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/__tests__/bookkeeping-lifecycle-transitions.test.ts",
+      "sourceSha256": "7d6ab27378ee2b0bce7429e7f88e14568dc2532b9aae26f4c1843ea7dacd7619",
+      "patchSha256": "c322ea67f1c5e428ca2ce90b4cdf346d178a6e6fad606adef916cb31a34ef9d2",
+      "hunkCount": 1,
+      "review": "P8-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/__tests__/bookkeeping-maintenance.test.ts",
+      "sourceSha256": "efb86bfd8b8345dba9cb4e80d5534ffd0cc66dfa718ee4582145a406cb8cbbe8",
+      "patchSha256": "87667da42dad50c79e0072037086eb070ba92909175d8a86d2ffd426fa6b47dc",
+      "hunkCount": 1,
+      "review": "P8-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/__tests__/bookkeeping-migration.test.ts",
+      "sourceSha256": "81fe6fa18d8f91bd14679bd13469a7eac5000cda1c2bd3080aa91165b692fc13",
+      "patchSha256": "587a57e832d400ccf033338b6db4bd181343f8a0ed0381ce28431e30b4c1f40d",
+      "hunkCount": 1,
+      "review": "P8-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/__tests__/bookkeeping-old-artifacts.test.ts",
+      "sourceSha256": "addacdbaad375e74956b0d7145ad91216392b0587c9a38736e84953bec39cd2c",
+      "patchSha256": "545859d2a605326705e68324d441e5ed72725ca0ab65fe83f93bf146360b6382",
+      "hunkCount": 1,
+      "review": "P8-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/__tests__/bookkeeping-private-retirement.test.ts",
+      "sourceSha256": "8e12a52668caa1912b127be4aa9ff171134f7c7a7d39385b27cf10dfc60eb991",
+      "patchSha256": "7ce01dff7ae2473e371e09868ef63f932484e0d10b6a1543f8dd33e04df011d7",
+      "hunkCount": 1,
+      "review": "P8-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/__tests__/bookkeeping-recanonicalize.test.ts",
+      "sourceSha256": "7ebe3789934378fc8f836c25e328d7461d24faa4b88181103b7c55c46f75be9f",
+      "patchSha256": "b0cc24689ad525d47698632d7b28faf2aef24512f30e8aa11e8ea1a29f0c7e7d",
+      "hunkCount": 1,
+      "review": "P8-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/__tests__/bookkeeping-reconcile.test.ts",
+      "sourceSha256": "98fa32334fbb035725ae91d43ebe16db07ded72f9fd2ac514986ba5394189f1f",
+      "patchSha256": "efa6d3cafd74f1672ec486bae7e9e49538dfe251d086742671516c501e9478c3",
+      "hunkCount": 1,
+      "review": "P8-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/__tests__/bookkeeping-review.test.ts",
+      "sourceSha256": "5c6babba42c18f740f55cc528e20d023000b7e9315a6ff8e3b229b6b676db9d3",
+      "patchSha256": "11026f5954f3fa2b4af983f1dc802f9d716de8b326b2a9dd339bd697eb94ef38",
+      "hunkCount": 1,
+      "review": "P8-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/__tests__/bookkeeping-runtime.test.ts",
+      "sourceSha256": "dc62888b9ed2e5e18042262030f7a66b4a88b590845dbce9570fbaef629c3e7a",
+      "patchSha256": "56de24052fbecf4b571e584942adef600d5e99560ed1092f0e4b5fea82d931ea",
+      "hunkCount": 1,
+      "review": "P8-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/__tests__/bookkeeping-schema.test.ts",
+      "sourceSha256": "853b9bfaf8150ba48c84c9a62d00fbf7728dcdef822812c168977a7ade9d85b0",
+      "patchSha256": "c6c54d057ed6066828e972c2cc571b4f11a7895ba8e4746923085a8f8f88b351",
+      "hunkCount": 1,
+      "review": "P8-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/__tests__/bookkeeping-server-admission.test.ts",
+      "sourceSha256": "ad7f7aa16e201786b59f05ca5af0b51b9feaefe84379330a1aa69075f029b0f9",
+      "patchSha256": "c9fd656072a2322ca848dea3cc9d44f456104be900fe5374de651dfc610d0f65",
+      "hunkCount": 1,
+      "review": "P8-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/__tests__/bookkeeping-server.test.ts",
+      "sourceSha256": "e38afdfcf0f3d1823cf066212380f7b2df1c3ee485b65d3be5e192581fc458bb",
+      "patchSha256": "bd709d008646c310c45c85b7eee7e01409822e5edc0a0094b2f9d1f36761a12c",
+      "hunkCount": 1,
+      "review": "P8-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/__tests__/bookkeeping-store-contract.test.ts",
+      "sourceSha256": "f42caabf9a12468ffde39457ef5bfe59d8b47638a49459b518ea007dc1c6a729",
+      "patchSha256": "73bad05fccb4ee354a4316acab269b7ec7bdc85734556ecd659222bad61eba1f",
+      "hunkCount": 1,
+      "review": "P8-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/__tests__/bookkeeping-store-differential.test.ts",
+      "sourceSha256": "52a91bd7bfb2d479d27cb2b0a63cf6a4da5003fd7649e535aafbb9c74b7697ee",
+      "patchSha256": "7afda874a0c4ff35bc97a2a3f7c13bdf91493ddcf9a7cbc9b2b228f0fa528336",
+      "hunkCount": 1,
+      "review": "P8-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/__tests__/bookkeeping-store-multiprocess.test.ts",
+      "sourceSha256": "76ef87200e3867d48aa2008559554b799ba2c90b0ebbc997bd0b5b7b57d8255f",
+      "patchSha256": "5269a74692b3d40c3c84c353563ad17e708b358832418d9cf3801338c1807590",
+      "hunkCount": 1,
+      "review": "P8-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/__tests__/bookkeeping-store-mutations.test.ts",
+      "sourceSha256": "dd6398237e337e56080163105292cf4daabf437a927c569e651da1982a38b4aa",
+      "patchSha256": "8ed78022b1ede7fa8aa736a460acb9b5b6ba3cddd323d8d12a4fb2e67636d43c",
+      "hunkCount": 1,
+      "review": "P8-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/__tests__/bookkeeping-store-reads.test.ts",
+      "sourceSha256": "9fbc8c3335964ac00bbae4d2be1ef573261801db1db5f7469c6ddb667f10a289",
+      "patchSha256": "02a6b2e79b578ecfc1d3b88ee2e5e8ee8ba8a0f74fba99c9298235e20d6cea5b",
+      "hunkCount": 1,
+      "review": "P8-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/__tests__/bookkeeping-store-seam.test.ts",
+      "sourceSha256": "13ea4b5b46376f83ad58c8c521838b222948ff1c6004cb4ccda9163fbc8b4ade",
+      "patchSha256": "83d2b32ffc41aacf06f5c80fc843c35bd371b2f970758f2a4471168f1d839654",
+      "hunkCount": 1,
+      "review": "P8-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/__tests__/bookkeeping-transactions.test.ts",
+      "sourceSha256": "40de1afd1084c80089a4b30d765c8de012f84022791591a2bd556ec3d8c53295",
+      "patchSha256": "e28a6d0ad02ece45eb2d9d1527aad6e5b1b5dcf5303b3c1e8f91e676c21b174a",
+      "hunkCount": 1,
+      "review": "P8-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/__tests__/bookkeeping-uuid.test.ts",
+      "sourceSha256": "58b7d0da2151fa85d90c2491356371a320b20d9830dc048010c6e3d01078d771",
+      "patchSha256": "7dc4739293d334ef5d381dfce7f51eec51763df7a5a51a8016df4585aa168c34",
+      "hunkCount": 1,
+      "review": "P8-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/__tests__/fixtures/bookkeeping-admission-deadline.ts",
+      "sourceSha256": "881237ab2bef64e4c29cf8a0a5e37ade58aad13ba45e86c7e72198f837586d10",
+      "patchSha256": "2776e94645c48e7b5578d5c11c7593df4b0e3e8300532f0f8b21baca2826f935",
+      "hunkCount": 1,
+      "review": "P8-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/__tests__/fixtures/bookkeeping-bootstrap-window.ts",
+      "sourceSha256": "bf5974ea074400ce8038e98885f90de53cc334f3d32d2ce4e9afde88836e3fc8",
+      "patchSha256": "14baf6000f33609556eeaa232ae2d2817d426718d811fc0320da849a74039396",
+      "hunkCount": 1,
+      "review": "P8-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/__tests__/fixtures/bookkeeping-bootstrap.ts",
+      "sourceSha256": "759885a0c6a207f87fe7b1f8d728b2ba11f9912965d537de7fa9d9aa5b76b4fa",
+      "patchSha256": "2882858f801f2f27115c0eb48d83a1a8b783c83a1b2bb2e23e2e16b8d5e2f1b9",
+      "hunkCount": 1,
+      "review": "P8-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/__tests__/fixtures/bookkeeping-cli-cycles.ts",
+      "sourceSha256": "a2ca0a7730e758e363ded9bdc3ba1cb4093959024a21496346a3d61c32b35a4d",
+      "patchSha256": "90866ca603a3f3d8452c93e886b4afdcfc3c8e6d773dca3a7c0fcf3c64bf9943",
+      "hunkCount": 1,
+      "review": "P8-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/__tests__/fixtures/bookkeeping-cold-guard.ts",
+      "sourceSha256": "0ea16ba7e19ccf0b330ffeac052babe479be7fbd71cab4f0faff054c61031a5c",
+      "patchSha256": "0af9268a97f65f2c52099bae976912b6c25862da1e92a564202fa18ba75d5319",
+      "hunkCount": 1,
+      "review": "P8-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/__tests__/fixtures/bookkeeping-contention.ts",
+      "sourceSha256": "825afef4b3f789cc768a5bab87dc56592c37f9158c370364ac6088be8ca10795",
+      "patchSha256": "729b360dce4311de04ab07a060e22367ee97e838486023bc17dbef36a0476476",
+      "hunkCount": 1,
+      "review": "P8-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/__tests__/fixtures/bookkeeping-export-oracle.ts",
+      "sourceSha256": "4b3c5db1f7453ec2f94233eff48d32833c570a257763fea754f257b4d8fcdaf6",
+      "patchSha256": "2da2cd988c684abf79029a7fcccf57e0016d490e40856b69ab819ec59196e72a",
+      "hunkCount": 1,
+      "review": "P8-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/__tests__/fixtures/bookkeeping-guard.ts",
+      "sourceSha256": "2aaf661b0d30a6a78c577b3519ede136d2544c9d03bce7383e48da4d99f59907",
+      "patchSha256": "dc6d40758c960719289bbcf95731f0213bee982268cb1927218946fde4e8f4f1",
+      "hunkCount": 1,
+      "review": "P8-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/__tests__/fixtures/bookkeeping-heartbeat.ts",
+      "sourceSha256": "c72e70fda53f730872a1bb0332343f7fad01ecb2eb45ed8a2d7ed6ef51948121",
+      "patchSha256": "dec5dce3032fb6cd2297878370ecc5d2a76a2aa5d7aba60542028a3cf27e57f1",
+      "hunkCount": 1,
+      "review": "P8-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/__tests__/fixtures/bookkeeping-lifecycle-backend.ts",
+      "sourceSha256": "240a024462f41022a0e4b5d59d4969da978a4b1d761918acf8a354d9908c5f3e",
+      "patchSha256": "88f00b281c363ed40ae11e019a41a81d06ec3ba434997fbdd02de22b136715b5",
+      "hunkCount": 1,
+      "review": "P8-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/__tests__/fixtures/bookkeeping-lifecycle-injection-effects.ts",
+      "sourceSha256": "7f447d52b7b544458637c38eeae540fe7e6ad66113d9dfb976238315b307047f",
+      "patchSha256": "5334b99405a15e6b90340f03ad83f811a8abaec8f9d22b5c410334e9e45667f7",
+      "hunkCount": 1,
+      "review": "P8-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/__tests__/fixtures/bookkeeping-lifecycle-injection.ts",
+      "sourceSha256": "397fd893e7cfa8f63c1d6ee6bf8a9368a550a1dfc7bb5d00fbcf87a5ef12a51d",
+      "patchSha256": "89e67c6c14237c88d06d523a2d2ac03ba066491fdd3f4e411261400ecc41a626",
+      "hunkCount": 1,
+      "review": "P8-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/__tests__/fixtures/bookkeeping-lifecycle-install.ts",
+      "sourceSha256": "212290f3f66e9a8b9c53ef6b755b1da0cbe1d9e5b7e80805ffc9e7bdbcf6cc05",
+      "patchSha256": "574d3846bf2283ef1478752849ac2ad20f66be55b78b7bdc8e826536dc27827a",
+      "hunkCount": 1,
+      "review": "P8-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/__tests__/fixtures/bookkeeping-lifecycle-observer.ts",
+      "sourceSha256": "4a495eeef6834b82000e36dec3161cd9563f9e7e5d4fc2eb757dea9f7e037c8a",
+      "patchSha256": "2c9bafc538a30c74f554661d53aa032518a795882d310a143ef0b5f2f8b1b771",
+      "hunkCount": 1,
+      "review": "P8-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/__tests__/fixtures/bookkeeping-migrate.ts",
+      "sourceSha256": "0c41bb971d7dcdb21fff6a0a8e2f654120916ed9f0ea5223d7b6bae6e6fe4340",
+      "patchSha256": "7587f7522c10cafb5d17121e062aa23334c5732ee2d1ed09332c6561f2a8a4f6",
+      "hunkCount": 1,
+      "review": "P8-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/__tests__/fixtures/bookkeeping-nested-codec-corpus.ts",
+      "sourceSha256": "44ca6b41f1ff66b800a1dfcf0878c4fcdf673ffa9c4d6ac21a74af719ef62c05",
+      "patchSha256": "9f74119811b7803dcca888291ea78275209fd3889b675f979f9cc0aa83bd7894",
+      "hunkCount": 1,
+      "review": "P8-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/__tests__/fixtures/bookkeeping-publication-process.ts",
+      "sourceSha256": "e0f0a8aff368e86833d47e499a1e6c746d905f0865110701e769cc7618184c1e",
+      "patchSha256": "2270971063618d66c125dec3958ffe6a4e1757107b8f3801f5cfeced42a7f643",
+      "hunkCount": 1,
+      "review": "P8-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/__tests__/fixtures/bookkeeping-residue-inventory.ts",
+      "sourceSha256": "ac0039afb34a783ed1b8621569680fcf02ef97fdcdd949726abc70391bd158df",
+      "patchSha256": "9de82d63a71593dc752620474998e20c51c4edc7b07a88d323092492c83963f1",
+      "hunkCount": 1,
+      "review": "P8-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/__tests__/fixtures/bookkeeping-rich-fixture.ts",
+      "sourceSha256": "c1e8714a33e520acc008dd41876d5f1b215ed838177dd50cc85a5d9d72a00df7",
+      "patchSha256": "7e0408d97df1f158b0e39024bf220170349674751317b089c2d225e393022f11",
+      "hunkCount": 1,
+      "review": "P8-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/__tests__/fixtures/bookkeeping-safety.ts",
+      "sourceSha256": "ea61f61f5d935b2977667c41350ec13e20a35ab932cd0c733744d6afea5b0411",
+      "patchSha256": "6adcd203164ff24c6d3b37dcd33db6050bdfc6475a4a15f3ea89d9d2330ad923",
+      "hunkCount": 1,
+      "review": "P8-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/__tests__/fixtures/bookkeeping-store-backend.ts",
+      "sourceSha256": "f61e333cd482f34f4568eb734f7b36f988a8920aa3ed9e9ae840859ae8ffeda4",
+      "patchSha256": "31a95904bb24ab25bdedb53c122376997815795298d546900ce5e7ee0f999add",
+      "hunkCount": 1,
+      "review": "P8-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/__tests__/fixtures/bookkeeping-store-racer.ts",
+      "sourceSha256": "f599cd84aa758ee55639196b3e3d030a7f77ba82cba23feba1cfa1c5d3a9a1ff",
+      "patchSha256": "60c9114f8defaae65e7c92c9085ad751743d9dfe94c676b9746957020af1709a",
+      "hunkCount": 1,
+      "review": "P8-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/__tests__/fixtures/bookkeeping-support.ts",
+      "sourceSha256": "9270096ae7654e28b3763a361b9eb67d67bcaf4194fb039396995760ef6b6835",
+      "patchSha256": "9af59071f12f608465407c4749bd1e99a844a780225b06e54fc3aa890e94adea",
+      "hunkCount": 1,
+      "review": "P8-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/__tests__/fixtures/bookkeeping-three-process.ts",
+      "sourceSha256": "881e2c698a925152e465750e356adc39de307bd2b019b8d4f4b484e2e8bf2c3e",
+      "patchSha256": "467f041b1988b9cd65568954a03bb7ee6c52ecd7c771673796244e6ac1aa7c71",
+      "hunkCount": 1,
+      "review": "P8-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/__tests__/fixtures/bookkeeping-transition.ts",
+      "sourceSha256": "29fa28d112a11de464166b471cbee06147137eb695e960cb91f2d32f95a205dc",
+      "patchSha256": "998fdb8681de81d9a580c34f8fc5d8badbab4af14c458dc45694ef3e46c27f4a",
+      "hunkCount": 1,
+      "review": "P8-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/__tests__/fixtures/full-document-store-rewrite.ts",
+      "sourceSha256": "ccd495f127c37f682f0f10a81f3440e7d45a717bad3abffe7d314bdb9c42bae8",
+      "patchSha256": "bfa2210a48ac5ab25f87bbdd855ab6c696dd1a80c6dcde8d7be3aa5ea5954695",
+      "hunkCount": 1,
+      "review": "P8-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/__tests__/priority-routing-integration.test.ts",
+      "sourceSha256": "22310267990173153dec57c254a30e68e9b690deb76ceb2931748e61e395153c",
+      "patchSha256": "94395a331bc1ddc3a6ca7c25f8dfb4c4ce915bd005f90154e2157fd4f6cd43ff",
+      "hunkCount": 8,
+      "review": "P0-P4-P7-review.json",
+      "scope": "prior complete parent review plus exact source delta"
+    },
+    {
+      "path": "src/__tests__/priority-session-store.test.ts",
+      "sourceSha256": "fac9bd6b28c89a18fa379ae580e65373eacc7266419122c6c1163a8b721cba71",
+      "patchSha256": "374ad57dfe67bc5bfedb877707c4a1b234fa0794f829deabd6ddc99dbc04be83",
+      "hunkCount": 30,
+      "review": "P8-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/__tests__/proxy-session-store.test.ts",
+      "sourceSha256": "eafbca20f78bb689aff49beb2b2abf9bf75c4e3eb45972bd218ec5a68e364190",
+      "patchSha256": "18e894b65215e08624739f341b657083e3684a7b12ff65f6cbf4a04ed662898d",
+      "hunkCount": 8,
+      "review": "P8-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/__tests__/session-cache-coherence.test.ts",
+      "sourceSha256": "5b142c9a6814ea6ab1a8306eab0dda96626c941bda312aee58748c7b901f0c6e",
+      "patchSha256": "c7246ea029031c7786575e0b37af3b9cfb9ba070d40d0c2da5add6b1654dd9a1",
+      "hunkCount": 2,
+      "review": "P8-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/__tests__/session-gc-contention.test.ts",
+      "sourceSha256": "32a78d468170eef38ba77bbcd9f5455e34f555bd5ba3518165f3c7bf61653157",
+      "patchSha256": "5aa5608e90e77b4431d76ef72b800b3c8bfe98aa41c1a8700ffce470f872c07b",
+      "hunkCount": 5,
+      "review": "P8-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/__tests__/session-lifecycle-gc-budgets.test.ts",
+      "sourceSha256": "2ad91bfcfab410c726b6ea77858a505c5b8608946c35def987256f611ccc2644",
+      "patchSha256": "3aa115f83aca10fb3a59970d46614e158a5aa9bffbbf2c891d08581c36635889",
+      "hunkCount": 1,
+      "review": "P8-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/__tests__/session-lifecycle-process.test.ts",
+      "sourceSha256": "6704502c865c3b0c07bf05bb69ca7786608669ea486e7c05c5c137d0f36581bd",
+      "patchSha256": "f4ec2ac02ff3936d2f2145e9cd36629b3561ae08283c1a2b2ece21a532297249",
+      "hunkCount": 11,
+      "review": "P8-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/__tests__/session-lifecycle-windows-gc.test.ts",
+      "sourceSha256": "cb45479ddaa282ee448613b6cb348cbf54bcf2e6738c286e569d60b8076a1668",
+      "patchSha256": "dc299545c6791165c2c1fa1aeb52178e5814b1697007a14febe3250378d9c234",
+      "hunkCount": 8,
+      "review": "P8-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/__tests__/session-lifecycle.test.ts",
+      "sourceSha256": "3ed46b5d9b99da141270f07d7d10ef9a5a584f43629decd813d68ee732ef779e",
+      "patchSha256": "13b674c2560f85b882f3803dd616b1243db676ee25dcc1b03e915fb7d3eb93b2",
+      "hunkCount": 26,
+      "review": "P8-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/__tests__/session-publication-lease.test.ts",
+      "sourceSha256": "5ba76be4a5c23556e4dcc27f2e12a91aa0673f0c11d69c954903a46372c708ec",
+      "patchSha256": "fdd8891013849bab4a6dba4c4e9ab2f94a812ccd7a42a17c2b489c92b357d2c4",
+      "hunkCount": 4,
+      "review": "P8-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/__tests__/session-store-pruning.test.ts",
+      "sourceSha256": "3fa871908dd4e2c95cc7a02c6bfcfd56c06f23574718a267bc15bf09a7c32e22",
+      "patchSha256": "5c54385ea2f33e2c7689348ff7c14cf408643ed2ea7af55b413ee7c64f1ac389",
+      "hunkCount": 2,
+      "review": "P8-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/__tests__/sse-failure-sniff.test.ts",
+      "sourceSha256": "78d338043655812cc595d3a0378fce9c67e57f1b8b0e0a0da754e975ce717fe0",
+      "patchSha256": "13ea3d028bd1f31f621051f2923452ca64ae23d30ea59b2746865798b5ea6366",
+      "hunkCount": 1,
+      "review": "P0-P4-P7-review.json",
+      "scope": "prior complete parent review plus exact source delta"
+    },
+    {
+      "path": "src/__tests__/sse-idle-relay.test.ts",
+      "sourceSha256": "74a8676e6c1f8523444d9291e5b04d7782c27381ab2f4eaa700eca1615296307",
+      "patchSha256": "26771d71ba4d8c79794e71cee9617f67329ee873f8ff39c2a8ffce4b846647b0",
+      "hunkCount": 1,
+      "review": "P0-P4-P7-review.json",
+      "scope": "prior complete parent review plus exact source delta"
+    },
+    {
+      "path": "src/__tests__/store-mutation-baseline.test.ts",
+      "sourceSha256": "9adfe486a834818be0349920d3b275d01a918c732109f565ddb8a13404b7bfa7",
+      "patchSha256": "261b7d7e78dd9fbec680462d5f549f1e2553803a09613c0937d315c35f6a7639",
+      "hunkCount": 1,
+      "review": "P8-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/__tests__/store-mutation-loop-lag.test.ts",
+      "sourceSha256": "4b46d543a74011a82f48518478ab9a62953f3ab7e7580888207d016510604b44",
+      "patchSha256": "852cbc156c963d34f97bb96e3fdfea323a878a2556b802a94b22683d9f9b45a7",
+      "hunkCount": 2,
+      "review": "P8-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/proxy/server.ts",
+      "sourceSha256": "8dce4d5fe344799222ad0d19f3eaaad3a2c23018a7fa87a2b3d7e74c3c3d0be4",
+      "patchSha256": "5c28d80752f59bee64f758e52c5ef42da9376c433802b4f93363cae7d9c859b2",
+      "hunkCount": 54,
+      "review": "P0-P4-P7-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/proxy/session/bookkeeping/abortMigration.ts",
+      "sourceSha256": "d5d006c6dfabd9b800c1975482246255f197e22aedc18527cbd06fa9684b98fb",
+      "patchSha256": "4a56a0a9e23911f92d2f9b6052c21e7946fb5c1fb634af146418f7258a7c994c",
+      "hunkCount": 1,
+      "review": "P6-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/proxy/session/bookkeeping/barrier.ts",
+      "sourceSha256": "c7566179557953934355b493d7181f0e1c15f48cd1f66f8fcfae4894fb1cc62b",
+      "patchSha256": "3918c349037b6cced892655be389a9ec321a1d7ebe4757cab1f406d3e4defa82",
+      "hunkCount": 1,
+      "review": "P6-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/proxy/session/bookkeeping/bootstrapOwner.ts",
+      "sourceSha256": "aa1609cbc9eb23c2e4b08cb5f840aca6431dff53b67f56e637fec3a6f1601e57",
+      "patchSha256": "378a69fa9f47583bfde3920b979b89b413d6c9645c663064889bc2800594fc51",
+      "hunkCount": 1,
+      "review": "P1-P2-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/proxy/session/bookkeeping/bootstrapRecovery.ts",
+      "sourceSha256": "4704dd928918fa9b35a6faedb350432be547e7f8e792f3f7099610c572eaa2b4",
+      "patchSha256": "2e97618d94ff25003f08a5d38dd89a22b017337b5f71c8eaf038b7ca48ea5ab9",
+      "hunkCount": 1,
+      "review": "P6-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/proxy/session/bookkeeping/cli.ts",
+      "sourceSha256": "3221369f7a8296722dafd3cc9420971404611649cd399c36f5e28dfb2aa2ff74",
+      "patchSha256": "53859bb0d3565f486753ef6a538f36c735394f8c12faef4d1ae1380c16cf90a1",
+      "hunkCount": 1,
+      "review": "P6-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/proxy/session/bookkeeping/connection.ts",
+      "sourceSha256": "48bf6243a159ce517a951198a5fe395484fbd19b20c982c06624b3f3021275be",
+      "patchSha256": "51b406e01f2a8a870476d1f9946e88fd1dd91c2e7a344cca25bcac8cd4ac1ff6",
+      "hunkCount": 1,
+      "review": "P1-P2-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/proxy/session/bookkeeping/cycles.ts",
+      "sourceSha256": "dd161c2b8deb38de0472e32820892fad4082b1aa3558b774521a3ab2f84f5a35",
+      "patchSha256": "f20228a0f20f3fba0d63705ec637f50430a218dbf16a3ee0a6c7450a7fd87319",
+      "hunkCount": 1,
+      "review": "P6-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/proxy/session/bookkeeping/database.ts",
+      "sourceSha256": "22b2a6da2e9dec909a45c7184250336d50c7476318764e7103f3eefb01e93769",
+      "patchSha256": "c80ec7e81eba3e611397466f2ab5442a6106f87bb80771415e8769b610e6e9ea",
+      "hunkCount": 1,
+      "review": "P1-P2-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/proxy/session/bookkeeping/exportJournal.ts",
+      "sourceSha256": "cea0d721cebb2c3ddfda35b340d839f4a3de79a9bac2b06c1e6f99513b9a7e3c",
+      "patchSha256": "f5f034b56013c9e1f93fddc9f9206769e267d51d1a6c7996fd3670d535c8b1d9",
+      "hunkCount": 1,
+      "review": "P6-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/proxy/session/bookkeeping/exportJson.ts",
+      "sourceSha256": "a70ff5d4a2108a3e4ef4275022e4723ea90bb2e4445dea5a3f49d7352c55b91e",
+      "patchSha256": "53e40d283f2555d47c6385206dd9be49ac1234f74414a8d39be6ea6a2d3c0b31",
+      "hunkCount": 1,
+      "review": "P6-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/proxy/session/bookkeeping/exportSnapshot.ts",
+      "sourceSha256": "b355ab5c64146552f459b9e9bc56b196204439c2a50a9183ee036849b25beb9a",
+      "patchSha256": "cb6dd3eafeaa23e9cdeb274afc35910c528264f1d811c5c3875d9504601449df",
+      "hunkCount": 1,
+      "review": "P6-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/proxy/session/bookkeeping/freshBootstrap.ts",
+      "sourceSha256": "3bfa048dd6aced1af963968d2c875de17e798c4e2972335058700e7050072f6c",
+      "patchSha256": "e84826eb72bc0a5f0e187b50a7b6c9162d4478c34e9a8a64c236cf690b40f73b",
+      "hunkCount": 1,
+      "review": "P1-P2-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/proxy/session/bookkeeping/guard.ts",
+      "sourceSha256": "882146de343612a055ddb431d79d51e6b8ba852d6bc2864aca3901a48fbe488f",
+      "patchSha256": "f99ae822ea53251a9f802d67c88c76b4cf86d83c99270725234090837ee886ed",
+      "hunkCount": 1,
+      "review": "P1-P2-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/proxy/session/bookkeeping/guardIdentity.ts",
+      "sourceSha256": "ca11f597b90ea7cf2388d62fe8084f106bd71c7e3c1dee46e45ffc4eeacf6e07",
+      "patchSha256": "b694728fa6e0ae274d72eaf08dfab00ca645482991d995f6029dc38e81c21db5",
+      "hunkCount": 1,
+      "review": "P1-P2-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/proxy/session/bookkeeping/guardRecovery.ts",
+      "sourceSha256": "c06e16e06082d5bd2fa56930d0968d2f4b5df5793cca8fac62efaa31e3d37901",
+      "patchSha256": "3fbe63641bcc9e89753da97f6f6808af8c23329059ea78c6f8c8994dfd1779dc",
+      "hunkCount": 1,
+      "review": "P6-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/proxy/session/bookkeeping/importValidation.ts",
+      "sourceSha256": "5e47da1f88aaad462c2ca845692dd80eb3d9cffda8f045bb0e5701f9e7c86bec",
+      "patchSha256": "69b5cf3e3c891ca25d5ed51b4b48ef16f36062809aad7783484e33a4af6b1f2e",
+      "hunkCount": 1,
+      "review": "P6-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/proxy/session/bookkeeping/inspect.ts",
+      "sourceSha256": "7c6f88bd26ed1292db7b389f809a990823b3e11aea69f1365f491a93db0ce9df",
+      "patchSha256": "dc10c21219fc0767a097c19399ffd1d9777f8cd3e8656793d0e4909ff984734b",
+      "hunkCount": 1,
+      "review": "P6-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/proxy/session/bookkeeping/jsonAuthority.ts",
+      "sourceSha256": "afae3a0c6ae9096edcd9d97b555be5cd687ffcbd7050495b9825ab4bc6126b58",
+      "patchSha256": "8f4c0e16bfe511cd276618489ad95bc8f91a9263446edc03cba8018554d663d1",
+      "hunkCount": 1,
+      "review": "P0-P4-P7-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/proxy/session/bookkeeping/legacyCodec.ts",
+      "sourceSha256": "1df8d90fd6dcf3558128351f7426ea2c27662f04a9f24630fbbc54f0078d49fd",
+      "patchSha256": "0f27c838568fd5e1f5fe74485a08e0de7a00340543c8940740f4be0124cfa119",
+      "hunkCount": 1,
+      "review": "P1-P2-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/proxy/session/bookkeeping/legacyExport.ts",
+      "sourceSha256": "21d601de00f3d2341b096c63f7149291ae70beb5bf2c30f989d700b37bc0f628",
+      "patchSha256": "baef8c38496d163eb595e33d9b0b281f2877a874b13d3740df2e546147cee2a6",
+      "hunkCount": 1,
+      "review": "P6-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/proxy/session/bookkeeping/lifecycleBackend.ts",
+      "sourceSha256": "b2f7dba6dc1338107729b5e5f6fe04153d3063a4e20b734a2cb4d91d0649811e",
+      "patchSha256": "8494d5d98ed467627ee868fde86d221d6135b8e7f757404a8614ee46734ac536",
+      "hunkCount": 1,
+      "review": "P1-P2-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/proxy/session/bookkeeping/lifecycleDeletionSql.ts",
+      "sourceSha256": "d47588bd90808c60868901b4031e1a2ed0fb72c7b61d8d1239ad5054d0e9f80d",
+      "patchSha256": "7402c96bc04242f8c881eabbcd92a10a69cab0f1679db4b2b7e8cf7221c3f716",
+      "hunkCount": 1,
+      "review": "P3-P5-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/proxy/session/bookkeeping/lifecycleGcSql.ts",
+      "sourceSha256": "c3d25e7ef9e4ebec45d3ff94b57ec4ad2a714823695d3b790d50d0c7b8d07d5d",
+      "patchSha256": "527fe34e0076b8e443b3dc4c3ad5920b30e5c89e8a4288075f6ccbf2708d272a",
+      "hunkCount": 1,
+      "review": "P3-P5-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/proxy/session/bookkeeping/lifecycleLeasesSql.ts",
+      "sourceSha256": "0cbb0ef79ef6ed77d8f8e6ffa55eadc6a158a3eb8afa1f635167c5d723cf0d8d",
+      "patchSha256": "1144dd64cf468da163069f2cdcc7cbcad653479f91cb894e6ba1258d4b488747",
+      "hunkCount": 1,
+      "review": "P3-P5-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/proxy/session/bookkeeping/lifecyclePrepareSql.ts",
+      "sourceSha256": "1330eb086438639b447562427e768de5b80eb7883e56c83d809be8389623aae3",
+      "patchSha256": "ad7645142ecb4b63be0557817dba6b59f7eb02de5041208273e1b382e660b7d3",
+      "hunkCount": 1,
+      "review": "P3-P5-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/proxy/session/bookkeeping/lifecyclePublicationSql.ts",
+      "sourceSha256": "7edb120d655316d25f16ab7f8fabb77d4c987ed63e959f8f2e27a310254bca69",
+      "patchSha256": "df1097304b13f9d58d8aa448137ea00b632f5940564e9bde965a5f6898d5d8c4",
+      "hunkCount": 1,
+      "review": "P3-P5-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/proxy/session/bookkeeping/lifecycleReconcileSql.ts",
+      "sourceSha256": "e2bdbc2b6bc5869a32f899d513a3864770cd4fcf3fe23cb19bc0ccfd91f6346d",
+      "patchSha256": "46f691138c31d0c4c8e7fd83625e8552092a602dd00862869e542e06e430a0cc",
+      "hunkCount": 1,
+      "review": "P3-P5-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/proxy/session/bookkeeping/lifecycleRegisterSql.ts",
+      "sourceSha256": "509b39b8ff50554d77bb1dc6731cb807a3f68a75221525ffb3f208412bf3b2c5",
+      "patchSha256": "ebb697f88a76e5c4a81bc9e235b4fbb64468bf14255d5b83101c4bea2446b57f",
+      "hunkCount": 1,
+      "review": "P3-P5-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/proxy/session/bookkeeping/lifecycleRowsSql.ts",
+      "sourceSha256": "ea1602319fb53c3fafac8fc4d0e3703450d60198ba3b457ccdad429928be344f",
+      "patchSha256": "b2b50d1ae148e6724893a57591f3d0ba94289020370d507342e88462e9653747",
+      "hunkCount": 1,
+      "review": "P3-P5-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/proxy/session/bookkeeping/lifecycleSql.ts",
+      "sourceSha256": "9cb0c96bd2bcfc3a794381d842518a71d0337534df4e00cb1832cfcabf430913",
+      "patchSha256": "7d5a3a8994bc437ecc480edad426be00f4a9f6a2a917af4f817a356fc5728a50",
+      "hunkCount": 1,
+      "review": "P3-P5-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/proxy/session/bookkeeping/lifecycleTransitionsSql.ts",
+      "sourceSha256": "2df9a74fe5181b46fbc2814830773867ca7ee624e7b8a65eaaa8a57f22546810",
+      "patchSha256": "adfbc7303a6f49c6b0ebe25ff32dda7ebaaf80816560a17ed6a70971fb16308f",
+      "hunkCount": 1,
+      "review": "P3-P5-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/proxy/session/bookkeeping/locator.ts",
+      "sourceSha256": "41772fbff4b16ccfe2441d4756eec70ffafb8ff30d9ada68881a7a960951f037",
+      "patchSha256": "28675997c7c63237e236ce49636cdd420ba6aef6a2bf86d4696537e33252dde8",
+      "hunkCount": 1,
+      "review": "P1-P2-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/proxy/session/bookkeeping/maintenance.ts",
+      "sourceSha256": "a3e606d3a0679cdd7a4ce6f61eafed437cf86f989eef90bceea24dff0f4d12ca",
+      "patchSha256": "b980f0490571f8bc0f9bf160e23ada48c2f4e0cbdba98dc4b3f7461b18cb1178",
+      "hunkCount": 1,
+      "review": "P6-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/proxy/session/bookkeeping/maintenanceJournal.ts",
+      "sourceSha256": "9d117a537e4f49e90bb404e860b210e62d0f9a1f4df9d1fc15e9a60dba844b30",
+      "patchSha256": "1440bac909c9288e74581d6553aea1c19b4db2b2e804cf9084943e7585c8b39b",
+      "hunkCount": 1,
+      "review": "P6-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/proxy/session/bookkeeping/maintenancePreflight.ts",
+      "sourceSha256": "4997923a58dfec6a9ef8d42a21b384112314a6477248fc459a1dc50fcd1d60a8",
+      "patchSha256": "d43720c6ae5681f9b7ee29133b59eaec5a336b63ee14b393d5430d9dcfd8f9c9",
+      "hunkCount": 1,
+      "review": "P6-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/proxy/session/bookkeeping/mappingMetadata.ts",
+      "sourceSha256": "4babe8df5a9ce2aaa9eae7a598dec32b9b668428b2865f8625ceb9f0c7ae9ea5",
+      "patchSha256": "4e7fbe1d4e310c0eef926014a95acd598fde0464948e408503207ab7f42ac204",
+      "hunkCount": 1,
+      "review": "P1-P2-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/proxy/session/bookkeeping/mappings.ts",
+      "sourceSha256": "99a2360f76337e136b0b39d0fb4b9505f16427903ae855ccebf9beaf1efaec84",
+      "patchSha256": "959064b8160b7ccfe4afa9bfc58befb745deb8dbda08ae0a0f195d6be1c72026",
+      "hunkCount": 1,
+      "review": "P3-P5-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/proxy/session/bookkeeping/migration.ts",
+      "sourceSha256": "bbd6e2f9f5e3b5e82f9c8af58ecdfaed5623f35d6d030181cd7cc2d7b9ab5e4b",
+      "patchSha256": "d92de1f5dfa211fd4e9ef4d9d648506c040b18358b6fd8ccd0e0a98b64e04b90",
+      "hunkCount": 1,
+      "review": "P6-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/proxy/session/bookkeeping/migrationImport.ts",
+      "sourceSha256": "de675b424a3ecf3025de8277c27f65f334702a4834c64db629421c8836cb027b",
+      "patchSha256": "90fa1b24804fd8f511d663fa955a39a2969cf4e674974ee8f8cec5dc28b291c5",
+      "hunkCount": 1,
+      "review": "P6-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/proxy/session/bookkeeping/offlineCheckpoint.ts",
+      "sourceSha256": "97c8d41b5c71b4a7d6cd660cc65c5ebff8f11b543626e66df55fa8adc57d540b",
+      "patchSha256": "f75e2ba07dc1123586a3569df91afbfe88d5f338f86302bcba8e0bcda72d8e8f",
+      "hunkCount": 1,
+      "review": "P6-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/proxy/session/bookkeeping/privateNames.ts",
+      "sourceSha256": "bb72fb13a67f37a0b3b884e3de2fe6aebf3d9dcebce44ef4acdf020aa1cf0f85",
+      "patchSha256": "b9f311bd1cbfb146df891b5c5ed242fa52e5225d832a939ae903b310c9eb7522",
+      "hunkCount": 1,
+      "review": "P6-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/proxy/session/bookkeeping/privateRetirement.ts",
+      "sourceSha256": "6e2f6b6f8d4f7db77a776b400d285f81763b4559050411958eb6752b51878635",
+      "patchSha256": "60cce844f0ab88d332ac55a9fd8db49b274e15cb4fed77519ea644a613e57f61",
+      "hunkCount": 1,
+      "review": "P6-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/proxy/session/bookkeeping/publicationLocators.ts",
+      "sourceSha256": "9d1d1cb5a15cf33c237fca1df932acac0be7d4b7572803888459394a35cab889",
+      "patchSha256": "3e10684bcd79f45f2ebf37052f6a261273b7f8b1abc986d6609ac6d9218f6285",
+      "hunkCount": 1,
+      "review": "P3-P5-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/proxy/session/bookkeeping/recanonicalize.ts",
+      "sourceSha256": "b34aa51852cda7f7a9f7c2c01af5f911c70915415ecd2731f5bce958edf080ba",
+      "patchSha256": "2b369a7f4191674e9621b48f11f23c4a40adfcb902d76c812cb1a6299acb9a9b",
+      "hunkCount": 1,
+      "review": "P6-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/proxy/session/bookkeeping/residueArchive.ts",
+      "sourceSha256": "59adbbf4912caf2b49e5ac2726d6668202e19d3dfd7dfdb2a8e230e00e94976b",
+      "patchSha256": "3cd20d491c503941ce88f6452ba7db6ac8e9fd28efe4063fa8b3b095645d24f1",
+      "hunkCount": 1,
+      "review": "P6-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/proxy/session/bookkeeping/residueDirectory.ts",
+      "sourceSha256": "af08b4761c0ea95d65d370032d516ad4d8837008d72c59bbe077e0e64395055e",
+      "patchSha256": "854789bff1fa1055eea2e270b76085f3555b4becbe4d3bed1ff4b1ecd1b27eda",
+      "hunkCount": 1,
+      "review": "P6-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/proxy/session/bookkeeping/residueInventory.ts",
+      "sourceSha256": "182469bc4dd79484225ecff928d17681e0c16a2f1fd5a64d8e84af502e74055d",
+      "patchSha256": "425deac533f6f6939df96be0efe29bc66778cc8efea7afc8a865cd821066ebca",
+      "hunkCount": 1,
+      "review": "P6-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/proxy/session/bookkeeping/residueTypes.ts",
+      "sourceSha256": "dc2bd49dc4f2c2d29b0348d8c3d0a6dfc521fd057f7fdc92b51131810690145a",
+      "patchSha256": "6b17af5b339cdf4b7cc650544617e105acb26370d8abf81b9a7de77bc7bb9d25",
+      "hunkCount": 1,
+      "review": "P6-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/proxy/session/bookkeeping/resourceImport.ts",
+      "sourceSha256": "2a27b81775ee564ba5dcb94a605fe8bd39c3e3d484f92c90c4e85a1b404edb5d",
+      "patchSha256": "3f2838f2811ad48bbd3e4b514cc67d716dfb301a9ca673e06711df314da84548",
+      "hunkCount": 1,
+      "review": "P3-P5-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/proxy/session/bookkeeping/resourceRow.ts",
+      "sourceSha256": "4202b3d49b955d8ff314ada00a59dc15381f27ce2bedf03d5d2e241edfe60e0e",
+      "patchSha256": "289e860a50f61b81d34ea10d551b76e7d4209c0575f42bff8000bbd5f309b88f",
+      "hunkCount": 1,
+      "review": "P3-P5-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/proxy/session/bookkeeping/resources.ts",
+      "sourceSha256": "b505dbd3dbfd68ef0b0d77f5be68162a2c40f3b850108822a9c37b3ceb9b0e43",
+      "patchSha256": "230b360e344f9a9c39a87685bceb568af8862fc4c467e66b46040ce17b4a06e6",
+      "hunkCount": 1,
+      "review": "P3-P5-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/proxy/session/bookkeeping/runtime.ts",
+      "sourceSha256": "7702fed0a2e4d7da406c493c566836e8ba52d54aa71b33b0eb21c6e0ba46e44b",
+      "patchSha256": "897265fdff9af5f5acf27cb800d40f417b4a2b673c7e3416746dc74ef8fc76f2",
+      "hunkCount": 1,
+      "review": "P0-P4-P7-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/proxy/session/bookkeeping/runtimeIdentity.ts",
+      "sourceSha256": "f74d62d4b3b373c644eb6a96031afc723f6735398c71ca9010545719b772ca2a",
+      "patchSha256": "6531360082d2463689c9b0ccc4a2c9f5394d94c5cc63dae7732ab06ffae83135",
+      "hunkCount": 1,
+      "review": "P1-P2-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/proxy/session/bookkeeping/schema.ts",
+      "sourceSha256": "23f9cca316451219df43121e9712bbc3ac93e2a8360b1fcccc6f9d1dec3445ad",
+      "patchSha256": "8971824c079e476ed34faf4043d9bc9ddabce6d2e64a66cdaa04b1b2be447d8d",
+      "hunkCount": 1,
+      "review": "P1-P2-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/proxy/session/bookkeeping/sqliteStoreBackend.ts",
+      "sourceSha256": "32dbf480ae19ccf07217cfcea6877e00d7637d428dc5bdefe1a6b80744332ed4",
+      "patchSha256": "10f2af5d311b3661e8682d55e7a06f03b4a36b51875c554a66414aff00877e03",
+      "hunkCount": 1,
+      "review": "P3-P5-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/proxy/session/bookkeeping/startupMaintenance.ts",
+      "sourceSha256": "1454824c5f8d64f8c0c671c3551688db75563f0bb1e40e292bf7018899f6439f",
+      "patchSha256": "95f018688c1d1680f9d8a1a57ae514314649fb4f929263f4abae18a6a662a664",
+      "hunkCount": 1,
+      "review": "P0-P4-P7-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/proxy/session/bookkeeping/storagePaths.ts",
+      "sourceSha256": "fdc58c9c1b2c511db5fd53e6bf28ec35a0d19873dffec9490422927c7d7cce1b",
+      "patchSha256": "e00cd9fdfd0a0d23dccc1bce272c3df2db5c048c569a502cf42a16bb476933b5",
+      "hunkCount": 1,
+      "review": "P1-P2-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/proxy/session/bookkeeping/storeAttemptsSql.ts",
+      "sourceSha256": "25db651cb8c973de42dd7ebeb79b80075a7eeb8a4c73b51caa78a5ff15e5d530",
+      "patchSha256": "6b955d08e0815e9f1acb4312ecb54d5bdb327caee92278ba4481c5df9eef900a",
+      "hunkCount": 1,
+      "review": "P3-P5-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/proxy/session/bookkeeping/storeBackend.ts",
+      "sourceSha256": "4c13861d392296391aa19ef3a5a6e4022e8747d79ffe43ee9ecbe874ce93c77a",
+      "patchSha256": "e141de082cb6047794850759d45af8e56a21c8cecb4a7ce4d8abaa7b75eff7f5",
+      "hunkCount": 1,
+      "review": "P1-P2-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/proxy/session/bookkeeping/storeIdentity.ts",
+      "sourceSha256": "447d55ae8b067612d64012b9d9cbf7eb6f30127e7f3cf6ef511cff529f7029db",
+      "patchSha256": "495010b7df8d9b7518828acd405b9a8e246c578df41bd905c79e681d11dc8db5",
+      "hunkCount": 1,
+      "review": "P1-P2-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/proxy/session/bookkeeping/storeMaintenanceSql.ts",
+      "sourceSha256": "036facc7eedb90487d6a376a79b1296df758e45bc1e11c1488c494a494b42ca9",
+      "patchSha256": "7f807c264b352c428598b54963b8ee6576865f0ae9f8b1e5ec59665dd7c697d9",
+      "hunkCount": 1,
+      "review": "P3-P5-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/proxy/session/bookkeeping/storeMaintenanceWriteSql.ts",
+      "sourceSha256": "44bddb69356ee9d69fe93436df3c08bb3b943c218c5cbfba7a78896e241dd5d3",
+      "patchSha256": "3138b7ea1f2113e0ecbeb15fd20aeca35cf0e67a9ce85748da1cb08ca3db8205",
+      "hunkCount": 1,
+      "review": "P3-P5-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/proxy/session/bookkeeping/storeMappingsSql.ts",
+      "sourceSha256": "6f5498e95e3a1deb40d2bb9e5ccc4904a21cd38a6b2b295ba73a35e2198cc84e",
+      "patchSha256": "4e9bda542e3848b9924fa95b981028c43cbac861c65680982fd17e8790dffc0c",
+      "hunkCount": 1,
+      "review": "P3-P5-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/proxy/session/bookkeeping/storeMutationSupport.ts",
+      "sourceSha256": "7249a000326dd19d27c6e0e5e6faaa8a57b1a22ebca76ff5a60760d1fb1785a0",
+      "patchSha256": "458902550407321c30c3f39829ffe121a17cffe0cc0d8bc40e6a5638d215392f",
+      "hunkCount": 1,
+      "review": "P3-P5-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/proxy/session/bookkeeping/storePrioritySql.ts",
+      "sourceSha256": "2ede74cd533b23e96beb35911d5163801ee179d1385e3298c51bc1f4468a0eed",
+      "patchSha256": "f13decf6867d5dc6664448be0b1dd3e7d929edfd5d08a2835a2c735a13a10752",
+      "hunkCount": 1,
+      "review": "P3-P5-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/proxy/session/bookkeeping/storePublicationSql.ts",
+      "sourceSha256": "bfd82c24782ffaf6f6deeb6cfc2527780bdacd1a9b709478d06fa3165bc12bc1",
+      "patchSha256": "36d9c6cb92ca9541c3437e32f14325491fb7a073da2c9c4db8a96c8353ae259c",
+      "hunkCount": 1,
+      "review": "P3-P5-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/proxy/session/bookkeeping/storeScope.ts",
+      "sourceSha256": "3156370ca4c7677f12ba11d28beeceb69f2ebb230961e6a62c6c93cd6dda3b89",
+      "patchSha256": "0b3235d1ee6c5cf987de1d7513257c2cfa20b9ea7451e3651f94fdd776f9b32e",
+      "hunkCount": 1,
+      "review": "P3-P5-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/proxy/session/bookkeeping/storeSettlementSql.ts",
+      "sourceSha256": "07a6e610a8a9a8190434d60935f4bf91c46581e77c9f00596a164beaa5e00aa5",
+      "patchSha256": "1e4df47801100068b45360362735a9a7ca4189fd5c199c0bae3f48901474557f",
+      "hunkCount": 1,
+      "review": "P3-P5-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/proxy/session/bookkeeping/storeTypes.ts",
+      "sourceSha256": "a982c8c9c9bc828c7cbdb2b7e7dd91b15dbb8db7c2cee17d4a4cf831efd3e40e",
+      "patchSha256": "6dc167184159515adc62939fe46615e871b67a8cec06bdd9d7de7e938ea2da42",
+      "hunkCount": 1,
+      "review": "P1-P2-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/proxy/session/bookkeeping/storeWriteSql.ts",
+      "sourceSha256": "73f402329ac31b8e4c4868389bddff9321f11951fd262171d4c68c1a0a6ceebf",
+      "patchSha256": "a6d91f37910478647b36887b839185f0b62203e30afc972942625324d55d911f",
+      "hunkCount": 1,
+      "review": "P3-P5-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/proxy/session/bookkeeping/transaction.ts",
+      "sourceSha256": "f0bd87d91d308c83626ba222b29da1bec1dca0cb9dfa86253fa1aa9f7120b24f",
+      "patchSha256": "30e700ebb5b61098fca9d94f113e79b6153b1185af3532ada0c6c35a6a26e84e",
+      "hunkCount": 1,
+      "review": "P1-P2-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/proxy/session/bookkeeping/types.ts",
+      "sourceSha256": "18059467b2f43e2262b368351e00f4fc57e6845832236732edc498240a4dfd4a",
+      "patchSha256": "8f1625fb56f3b4b0fdd1762969420751372edb90a9a6d3506b41ceda69ec9e46",
+      "hunkCount": 1,
+      "review": "P1-P2-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/proxy/session/bookkeeping/uuid.ts",
+      "sourceSha256": "2862f980f19f5e2d9d8104b9edba2ca8f88d4eee987d645bef3c364cd795fda6",
+      "patchSha256": "1fbf23404c5ab19356a3be1c51624fa26d2aa6b2f6888a5b35c5ce46b92d488a",
+      "hunkCount": 1,
+      "review": "P1-P2-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/proxy/session/cache.ts",
+      "sourceSha256": "0b6cf6d71247c852971df2584f780aa5bd565bc2d6f833ca10ee99817f70ed65",
+      "patchSha256": "83c6dda29986e82f4f88a1180773ad0e061e51cb4f815ca41410a5e6e6606881",
+      "hunkCount": 11,
+      "review": "P0-P4-P7-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/proxy/session/storeErrors.ts",
+      "sourceSha256": "186d3a85558d5f1e5efa02d6d26188d1f3f364b25f1e563470c4f7fd68ac03bf",
+      "patchSha256": "b111f9ff5c8eddcf7556acff4cfaeec2ffbb22e34758c1811dfc1021371d9d01",
+      "hunkCount": 1,
+      "review": "P1-P2-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/proxy/sessionLifecycle.ts",
+      "sourceSha256": "e111cc7a78f945ad475bd0c4f594d6d78de1e59c3746de7af3399ca598c99b7e",
+      "patchSha256": "59faed44d6cbfd230c00243b5133687f3fdaf5e474793c2fbcd009d5db9fc6c9",
+      "hunkCount": 34,
+      "review": "P3-P5-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/proxy/sessionStore.ts",
+      "sourceSha256": "b888e92ae87cedb7aa8c2415d223cab765c084e5aec9218e211fb8c925521d5b",
+      "patchSha256": "2cc4258d4ffc0f2f14fdaf3a2ea88ff0c9fece7940b1e3135d7949bc6a8b4fc9",
+      "hunkCount": 31,
+      "review": "P1-P2-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    },
+    {
+      "path": "src/proxy/sseFailureSniff.ts",
+      "sourceSha256": "fac2ab8fb2602f8262cd22d6d90ec8cc37aa3e8b43f0539431dffdff5f2a6199",
+      "patchSha256": "9692be79828afdc7476db5c135034d29cd437c805891297f200defcdf0e0f026",
+      "hunkCount": 1,
+      "review": "P0-P4-P7-review.json",
+      "scope": "prior complete parent review plus exact source delta"
+    },
+    {
+      "path": "tsconfig.json",
+      "sourceSha256": "279b39110448e87e152aed084e64bfa2f42a590b7761f075d0035eda31bbfd07",
+      "patchSha256": "bd32d2f0cc4c7be57340a821fe940edee449a7c03f9240b7ae4abb4aee2a3495",
+      "hunkCount": 1,
+      "review": "P0-P4-P7-review.json",
+      "scope": "all changed hunks semantically reviewed"
+    }
+  ]
+}

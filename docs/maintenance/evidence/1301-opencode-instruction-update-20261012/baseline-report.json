@@ -1,0 +1,374 @@
+{
+  "result": "FAIL",
+  "root": "/private/var/folders/ks/xnz659y11jl44j80b_lfws6r0000gn/T/meridian-opencode-instruction-update-JsuZVd",
+  "expected": "baseline",
+  "model": "claude-haiku-5-5",
+  "idleMs": 15000,
+  "platform": "darwin/arm64",
+  "node": "v22.22.3",
+  "environment": "unspecified",
+  "actors": [
+    {
+      "command": "/tmp/meridian-1301-opencode-20261012/node_modules/.bin/opencode",
+      "pid": 60896,
+      "close": true,
+      "stdoutClose": true,
+      "stderrClose": true,
+      "code": 0,
+      "signal": null
+    },
+    {
+      "command": "/tmp/meridian-1301-opencode-20261012/node_modules/.bin/opencode",
+      "pid": 60900,
+      "close": true,
+      "stdoutClose": true,
+      "stderrClose": true,
+      "code": 0,
+      "signal": null
+    },
+    {
+      "command": "/bin/sh",
+      "pid": 60940,
+      "close": true,
+      "stdoutClose": true,
+      "stderrClose": true,
+      "code": 0,
+      "signal": null
+    },
+    {
+      "command": "/bin/sh",
+      "pid": 60943,
+      "close": true,
+      "stdoutClose": true,
+      "stderrClose": true,
+      "code": 1,
+      "signal": null
+    },
+    {
+      "command": "/bin/sh",
+      "pid": 61195,
+      "close": true,
+      "stdoutClose": true,
+      "stderrClose": true,
+      "code": 1,
+      "signal": null
+    },
+    {
+      "command": "/bin/sh",
+      "pid": 61942,
+      "close": true,
+      "stdoutClose": true,
+      "stderrClose": true,
+      "code": 0,
+      "signal": null
+    },
+    {
+      "command": "/tmp/meridian-1301-opencode-20261012/node_modules/.bin/opencode",
+      "pid": 61979,
+      "close": true,
+      "stdoutClose": true,
+      "stderrClose": true,
+      "code": 0,
+      "signal": null
+    },
+    {
+      "command": "/bin/sh",
+      "pid": 62007,
+      "close": true,
+      "stdoutClose": true,
+      "stderrClose": true,
+      "code": 0,
+      "signal": null
+    }
+  ],
+  "requests": [
+    {
+      "requestId": "instruction-4a276007-5536-4454-8642-8db1d8d6e0d6",
+      "attested": false,
+      "agent": "title",
+      "source": "subagent-title",
+      "toolChars": 0,
+      "toolDeltas": 0,
+      "maxGapMs": 0,
+      "toolDurationMs": 0,
+      "clientProjectPresent": false,
+      "model": "claude-haiku-4-5",
+      "hasToolResult": false,
+      "roles": [
+        {
+          "role": "user",
+          "types": [
+            "text"
+          ]
+        }
+      ],
+      "trailingSystem": false,
+      "hasInstructionMarker": true,
+      "status": 200
+    },
+    {
+      "requestId": "instruction-eb40fb9c-10a0-47e6-9dfa-9681cd61be21",
+      "attested": true,
+      "session": "ses_ece0ebff8ffexjsEjpNH1IcLxg",
+      "agent": "build",
+      "toolChars": 244,
+      "toolDeltas": 18,
+      "maxGapMs": 104.49387499999966,
+      "toolDurationMs": 500.2955420000003,
+      "clientProjectPresent": true,
+      "model": "claude-haiku-5-5",
+      "hasToolResult": false,
+      "roles": [
+        {
+          "role": "user",
+          "types": [
+            "text"
+          ]
+        }
+      ],
+      "trailingSystem": false,
+      "hasInstructionMarker": true,
+      "tool": "write",
+      "status": 200
+    },
+    {
+      "requestId": "instruction-107b95a7-a501-4ddf-b089-dd107545a843",
+      "attested": false,
+      "session": "ses_ece0ebff8ffexjsEjpNH1IcLxg",
+      "agent": "build",
+      "toolChars": 131,
+      "toolDeltas": 1,
+      "maxGapMs": 284.2842499999988,
+      "toolDurationMs": 284.33837499999936,
+      "clientProjectPresent": true,
+      "model": "claude-haiku-5-5",
+      "hasToolResult": true,
+      "roles": [
+        {
+          "role": "user",
+          "types": [
+            "text"
+          ]
+        },
+        {
+          "role": "assistant",
+          "types": [
+            "thinking",
+            "tool_use"
+          ]
+        },
+        {
+          "role": "user",
+          "types": [
+            "tool_result"
+          ]
+        },
+        {
+          "role": "system",
+          "types": [
+            "text"
+          ]
+        }
+      ],
+      "trailingSystem": true,
+      "hasInstructionMarker": true,
+      "tool": "read",
+      "status": 200
+    },
+    {
+      "requestId": "instruction-afc06f1f-e02f-4eb1-8ea4-cf560a0b8470",
+      "attested": false,
+      "session": "ses_ece0ebff8ffexjsEjpNH1IcLxg",
+      "agent": "build",
+      "toolChars": 0,
+      "toolDeltas": 0,
+      "maxGapMs": 0,
+      "toolDurationMs": 0,
+      "clientProjectPresent": true,
+      "model": "claude-haiku-5-5",
+      "hasToolResult": true,
+      "roles": [
+        {
+          "role": "user",
+          "types": [
+            "text"
+          ]
+        },
+        {
+          "role": "assistant",
+          "types": [
+            "thinking",
+            "tool_use"
+          ]
+        },
+        {
+          "role": "user",
+          "types": [
+            "tool_result"
+          ]
+        },
+        {
+          "role": "system",
+          "types": [
+            "text"
+          ]
+        },
+        {
+          "role": "assistant",
+          "types": [
+            "thinking",
+            "tool_use"
+          ]
+        },
+        {
+          "role": "user",
+          "types": [
+            "tool_result"
+          ]
+        }
+      ],
+      "trailingSystem": false,
+      "hasInstructionMarker": false,
+      "status": 200
+    },
+    {
+      "requestId": "instruction-2fbc7833-9e1a-47c6-aabd-a05e4bcc9751",
+      "attested": true,
+      "session": "ses_ece0ebff8ffexjsEjpNH1IcLxg",
+      "agent": "build",
+      "toolChars": 0,
+      "toolDeltas": 0,
+      "maxGapMs": 0,
+      "toolDurationMs": 0,
+      "clientProjectPresent": true,
+      "model": "claude-haiku-5-5",
+      "hasToolResult": true,
+      "roles": [
+        {
+          "role": "user",
+          "types": [
+            "text"
+          ]
+        },
+        {
+          "role": "assistant",
+          "types": [
+            "thinking",
+            "tool_use"
+          ]
+        },
+        {
+          "role": "user",
+          "types": [
+            "tool_result"
+          ]
+        },
+        {
+          "role": "system",
+          "types": [
+            "text"
+          ]
+        },
+        {
+          "role": "assistant",
+          "types": [
+            "thinking",
+            "tool_use"
+          ]
+        },
+        {
+          "role": "user",
+          "types": [
+            "tool_result"
+          ]
+        },
+        {
+          "role": "assistant",
+          "types": [
+            "text"
+          ]
+        },
+        {
+          "role": "user",
+          "types": [
+            "text"
+          ]
+        }
+      ],
+      "trailingSystem": false,
+      "hasInstructionMarker": false,
+      "status": 200
+    }
+  ],
+  "harnessSha256": "c9ae6f419c3e6ce4e5dd9e7f9c7c446e786a251d8b9f324b16b16f81de796aeb",
+  "client": "opencode v2.0.21",
+  "scrubPreflight": {
+    "path": "/private/tmp/meridian-scrub-preflight-package-20261012/node_modules/@rynfar/meridian-plugin-opencode-scrub/dist/index.js",
+    "packageName": "@rynfar/meridian-plugin-opencode-scrub",
+    "packageVersion": "0.2.3",
+    "sha256": "4ab89412e6a59fad812a3f6e5500c84f3bdfc41863320bc794f5274a251da656",
+    "runtimeVersion": "0.2.3",
+    "invocations": 0,
+    "errors": 0
+  },
+  "setupQualification": "manual-owned-fixture; setup does not qualify 2.0.21",
+  "plugin": "/private/tmp/meridian-1301-baseline-installed-20261012/node_modules/@rynfar/meridian/dist/meridian-v2",
+  "clientExit": 0,
+  "scrubRequest": {
+    "path": "/private/tmp/meridian-scrub-preflight-package-20261012/node_modules/@rynfar/meridian-plugin-opencode-scrub/dist/index.js",
+    "packageName": "@rynfar/meridian-plugin-opencode-scrub",
+    "packageVersion": "0.2.3",
+    "sha256": "4ab89412e6a59fad812a3f6e5500c84f3bdfc41863320bc794f5274a251da656",
+    "runtimeVersion": "0.2.3",
+    "invocations": 4,
+    "errors": 0
+  },
+  "instructionsChanged": true,
+  "updates": [
+    {
+      "requestId": "instruction-107b95a7-a501-4ddf-b089-dd107545a843",
+      "attested": false,
+      "roles": [
+        {
+          "role": "user",
+          "types": [
+            "text"
+          ]
+        },
+        {
+          "role": "assistant",
+          "types": [
+            "thinking",
+            "tool_use"
+          ]
+        },
+        {
+          "role": "user",
+          "types": [
+            "tool_result"
+          ]
+        },
+        {
+          "role": "system",
+          "types": [
+            "text"
+          ]
+        }
+      ],
+      "metric": [
+        {
+          "isResume": false,
+          "lineageType": "continuation",
+          "sdkSessionId": "cd0a33a7-e789-48a4-835a-66ab2fbc9187"
+        }
+      ]
+    }
+  ],
+  "continued": true,
+  "observedModels": [
+    "claude-haiku-5-5",
+    "claude-haiku-4-5-20251001"
+  ],
+  "failure": "AssertionError [ERR_ASSERTION]: Actual SDK model differs",
+  "joined": true
+}

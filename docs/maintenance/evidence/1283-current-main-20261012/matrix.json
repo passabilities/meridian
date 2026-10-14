@@ -1,0 +1,51 @@
+[
+  {
+    "case": "baseline",
+    "exitCode": 1,
+    "outcome": "failed",
+    "expectedFailure": true,
+    "joined": true
+  },
+  {
+    "case": "cancel",
+    "exitCode": 0,
+    "outcome": "passed",
+    "expectedFailure": false,
+    "joined": true
+  },
+  {
+    "case": "candidate",
+    "exitCode": 0,
+    "outcome": "passed",
+    "expectedFailure": false,
+    "joined": true
+  },
+  {
+    "case": "init-timeout",
+    "exitCode": 1,
+    "outcome": "failed",
+    "expectedFailure": true,
+    "joined": true
+  },
+  {
+    "case": "pre-request-failure",
+    "exitCode": 1,
+    "outcome": "failed",
+    "expectedFailure": true,
+    "joined": true
+  },
+  {
+    "case": "shared",
+    "exitCode": 1,
+    "outcome": "failed",
+    "expectedFailure": true,
+    "joined": true
+  },
+  {
+    "case": "uncooperative",
+    "exitCode": 1,
+    "outcome": "failed",
+    "expectedFailure": true,
+    "joined": true
+  }
+]

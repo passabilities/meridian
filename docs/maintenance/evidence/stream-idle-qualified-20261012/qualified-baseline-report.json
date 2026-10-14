@@ -1,0 +1,107 @@
+{
+  "result": "PASS",
+  "root": "/tmp/meridian-long-input-opencode-YVBXa4",
+  "expected": "baseline",
+  "model": "claude-opus-5-5",
+  "idleMs": 15000,
+  "platform": "linux/x64",
+  "node": "v22.23.3",
+  "environment": "linux-amd64-docker-emulated-on-darwin-arm64",
+  "actors": [
+    {
+      "command": "/opt/client/node_modules/.bin/opencode",
+      "pid": 12,
+      "close": true,
+      "stdoutClose": true,
+      "stderrClose": true,
+      "code": 0,
+      "signal": null
+    },
+    {
+      "command": "/usr/local/bin/node",
+      "pid": 37,
+      "close": true,
+      "stdoutClose": true,
+      "stderrClose": true,
+      "code": 0,
+      "signal": null
+    },
+    {
+      "command": "/opt/client/node_modules/.bin/opencode",
+      "pid": 45,
+      "close": true,
+      "stdoutClose": true,
+      "stderrClose": true,
+      "code": null,
+      "signal": "SIGTERM"
+    },
+    {
+      "command": "/bin/sh",
+      "pid": 108,
+      "close": true,
+      "stdoutClose": true,
+      "stderrClose": true,
+      "code": 0,
+      "signal": null
+    },
+    {
+      "command": "/bin/sh",
+      "pid": 109,
+      "close": true,
+      "stdoutClose": true,
+      "stderrClose": true,
+      "code": 143,
+      "signal": null
+    }
+  ],
+  "requests": [
+    {
+      "session": "ses_ecec1c682ffeZGNKcP3CSNk1GZ",
+      "agent": "title",
+      "toolChars": 0,
+      "toolDeltas": 0,
+      "maxGapMs": 0,
+      "toolDurationMs": 0,
+      "model": "claude-opus-5-5",
+      "hasToolResult": false,
+      "status": 200
+    },
+    {
+      "session": "ses_ecec1c682ffeZGNKcP3CSNk1GZ",
+      "agent": "build",
+      "toolChars": 76,
+      "toolDeltas": 12,
+      "maxGapMs": 223.75185700000293,
+      "toolDurationMs": 15383.288903,
+      "model": "claude-opus-5-5",
+      "hasToolResult": false,
+      "tool": "write",
+      "error": "upstream_timeout",
+      "status": 200
+    }
+  ],
+  "harnessSha256": "972c09e69c50e0d2f0d127534023d598af05220c4f40dcbf0445a364223b8552",
+  "client": "1.18.34",
+  "scrubPreflight": {
+    "path": "/scrub/dist/index.js",
+    "packageName": "@rynfar/meridian-plugin-opencode-scrub",
+    "packageVersion": "0.2.3",
+    "sha256": "4ab89412e6a59fad812a3f6e5500c84f3bdfc41863320bc794f5274a251da656",
+    "runtimeVersion": "0.2.3",
+    "invocations": 0,
+    "errors": 0
+  },
+  "plugin": "/opt/baseline/node_modules/@rynfar/meridian/dist/meridian",
+  "clientExit": null,
+  "scrubRequest": {
+    "path": "/scrub/dist/index.js",
+    "packageName": "@rynfar/meridian-plugin-opencode-scrub",
+    "packageVersion": "0.2.3",
+    "sha256": "4ab89412e6a59fad812a3f6e5500c84f3bdfc41863320bc794f5274a251da656",
+    "runtimeVersion": "0.2.3",
+    "invocations": 2,
+    "errors": 0
+  },
+  "reproduced": true,
+  "joined": true
+}

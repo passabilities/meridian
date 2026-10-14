@@ -1,0 +1,27 @@
+{
+  "base": "e0f9feabf6fcef99a056141031f221da535d5391",
+  "source": "219160f2796422b31a54f2ed52ad101a44137f5a",
+  "incorporated": "13abefad5",
+  "author": "Nowaker <spam@nowaker.net>",
+  "sourceAuthorDate": "2026-10-13T00:05:10Z",
+  "baseline": {
+    "exitCode": 1,
+    "passed": 0,
+    "failed": 2,
+    "scope": "Same manifest/discovery-isolation assertions, unchanged main server in isolated worktree; no model requests."
+  },
+  "candidate": {
+    "focusedPassed": 34,
+    "failed": 0,
+    "assertions": 79,
+    "typecheck": "pass"
+  },
+  "logs": {
+    "baseline": {
+      "sha256": "8b9001ab8e41a5bf9cf4f64fbb8bdd13055dcb76c67a96f43ba8e3ac0e85a371"
+    },
+    "focused": {
+      "sha256": "dd39132ed0771b857aa4db594318bb362bb2611f9f51a4cd87ab3c67e463e43e"
+    }
+  }
+}

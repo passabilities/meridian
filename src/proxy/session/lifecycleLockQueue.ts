@@ -4,11 +4,22 @@ import {
   SessionLifecycleQueueStalledError,
   SessionLifecycleReentrancyError,
 } from "./lifecycleErrors"
+import { diagnosticLog } from "../../telemetry"
+import { plog } from "../operationalLog"
 
 interface QueueOptions {
   readonly maxPending?: number
   readonly stallMs?: number
+  /** A stall deadline running later than this was held up by the event loop. */
+  readonly lagToleranceMs?: number
   readonly schedule?: (callback: () => void, delay: number) => () => void
+  readonly now?: () => number
+  readonly log?: (message: string) => void
+}
+
+const logQueueEvent = (message: string): void => {
+  plog(`[PROXY] ${message}`)
+  diagnosticLog.session(message)
 }
 
 interface Pending {
@@ -29,13 +40,20 @@ export class LifecycleLockQueue {
   private readonly context = new AsyncLocalStorage<ReadonlyMap<string, { active: boolean }>>()
   private readonly maxPending: number
   private readonly stallMs: number
+  private readonly lagToleranceMs: number
   private readonly schedule: (callback: () => void, delay: number) => () => void
+  private readonly now: () => number
+  private readonly log: (message: string) => void
 
   constructor(options: QueueOptions = {}) {
+    this.log = options.log ?? logQueueEvent
     this.maxPending = options.maxPending ?? 256
     this.stallMs = options.stallMs ?? 60_000
+    this.lagToleranceMs = options.lagToleranceMs ?? 1_000
     if (!Number.isSafeInteger(this.maxPending) || this.maxPending < 0) throw new RangeError("invalid queue capacity")
     if (!Number.isSafeInteger(this.stallMs) || this.stallMs <= 0) throw new RangeError("invalid queue stall deadline")
+    if (!Number.isSafeInteger(this.lagToleranceMs) || this.lagToleranceMs < 0) throw new RangeError("invalid queue lag tolerance")
+    this.now = options.now ?? (() => performance.now())
     this.schedule = options.schedule ?? ((callback, delay) => {
       const timer = setTimeout(callback, delay)
       timer.unref()
@@ -93,14 +111,33 @@ export class LifecycleLockQueue {
   private start(path: string, state: QueueState, pending: Pending): void {
     state.active = true
     pending.cancelWait()
-    const stopTimer = this.schedule(() => {
-      state.stalled = true
-      for (const waiter of state.pending.values()) {
-        waiter.cancelWait()
-        waiter.reject(this.stallError(path))
-      }
-      state.pending.clear()
-    }, this.stallMs)
+    // A deadline that runs late was held up with everything else on the event
+    // loop - synchronous store I/O, a CPU-starved host - including the holder's
+    // own continuations, which are runnable now. Declaring the holder stalled
+    // then rejects every waiter moments before it would have handed off, so a
+    // late deadline gets one fresh window instead. Repeated lag must not grant
+    // an unbounded wait: after that grace, reject waiters even if the second
+    // deadline is late. The holder retains ownership until it actually settles.
+    let graceUsed = false
+    const armStallTimer = (): (() => void) => {
+      const dueAt = this.now() + this.stallMs
+      return this.schedule(() => {
+        const lateMs = this.now() - dueAt
+        if (lateMs > this.lagToleranceMs && !graceUsed) {
+          graceUsed = true
+          this.log(`session.lifecycle_stall_deadline_late late_ms=${Math.round(lateMs)} queued=${state.pending.size}; event loop was blocked, extending the holder's deadline`)
+          stopTimer = armStallTimer()
+          return
+        }
+        state.stalled = true
+        for (const waiter of state.pending.values()) {
+          waiter.cancelWait()
+          waiter.reject(this.stallError(path))
+        }
+        state.pending.clear()
+      }, this.stallMs)
+    }
+    let stopTimer = armStallTimer()
     pending.start(() => {
       stopTimer()
       state.active = false

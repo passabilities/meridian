@@ -1,0 +1,8 @@
+{
+  "applicationHead": "584bd172826e192282b20bb1a586a04fc6447da7",
+  "baseline": "e0f9feabf6fcef99a056141031f221da535d5391",
+  "tarballSha256": "c821c3eaff2812401e92ddb0f352bc7960b3d3fd485ac7ccf1d85f32972027fb",
+  "sourceRuntime": "Bun 1.3.14",
+  "installedRuntime": "Node v22.22.3",
+  "published": false
+}

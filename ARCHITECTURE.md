@@ -194,7 +194,14 @@ src/
 │   ├── query.ts               ← SDK query options builder (shared between stream/non-stream paths)
 │   ├── errors.ts              ← Error classification (SDK errors → HTTP responses)
 │   ├── retryAfter.ts          ← Retry-After computation for 429/503/529 (PURE)
+│   ├── sseFailureSniff.ts     ← SSE framing/classification and bounded priority stream transport (leaf)
 │   ├── models.ts              ← Model mapping, Claude executable resolution
+│   ├── authStatusProcess.ts   ← Bounded auth/resolver children and explicit process/pipe joins
+│   ├── claudeResolverOwnership.ts ← Independent leases for shared async resolver custody
+│   ├── authStatusOwnership.ts ← Per-instance ownership of shared auth-status refreshes
+│   ├── claudeExecutablePreference.ts ← System/bundled/custom executable choice, read from settings.json (leaf)
+│   ├── claudeExecutableSettings.ts ← GET/PUT /settings/api/claude-executable: the choice, what each would run, versions
+│   ├── claudeProbeOwnership.ts ← Request/instance ownership of executable probes and resolver leases
 │   ├── buildInfo.ts           ← Build provenance: source detection, semver compare (PURE)
 │   ├── localBuildInfo.ts      ← Local build comparisons and public forge links (PURE)
 │   ├── buildRuntime.ts        ← Immutable runtime identity and independent disk status
@@ -295,9 +302,18 @@ server.ts (HTTP layer)
 
 2. **`session/cache.ts` owns all mutable session state.** No other module should create or manage LRU caches for sessions.
 
-3. **`errors.ts`, `retryAfter.ts`, `models.ts`, `tools.ts`, `messages.ts`, `profiles.ts`, `profileCli.ts`, `buildInfo.ts`, `updateCheck.ts` are leaf modules.** They must not import from `server.ts`, `session/`, or `adapter.ts`. `buildInfo.ts` and `retryAfter.ts` are additionally pure — every export is a function of its arguments (plus `process.env` for `buildInfo.ts`), so the registry I/O lives in `updateCheck.ts` instead.
+3. **`errors.ts`, `retryAfter.ts`, `models.ts`, `tools.ts`, `messages.ts`, `profiles.ts`, `profileCli.ts`, `buildInfo.ts`, `updateCheck.ts`, `sseFailureSniff.ts` are leaf modules.** They must not import from `server.ts`, `session/`, or `adapter.ts`. `buildInfo.ts` and `retryAfter.ts` are additionally pure — every export is a function of its arguments (plus `process.env` for `buildInfo.ts`), so the registry I/O lives in `updateCheck.ts` instead. `sseFailureSniff.ts` keeps pure framing separate from reader/queue lifecycle helpers; account selection, publication and durable settlement remain in `server.ts`.
 
-4. **`server.ts` is the only module that imports from Hono** or touches HTTP concerns.
+4. **`server.ts` owns Hono route registration and orchestration.** Hono
+   middleware stays at the proxy boundary. Standard `Request`/`Response`
+   dispatch lives in the provider backend where needed. Shared
+   `src/headerSettings.ts` handles only hostname settings validation and
+   persisted consent, using standard web types and `settings.ts`;
+   it must not import a server, provider, Hono or session module. The Origin
+   policy for settings that disclose something or choose what runs lives in
+   `src/sameOrigin.ts` (standard web types only), used by the header and
+   Claude Code executable settings. Backend auth remains at each caller's
+   existing boundary.
 
 5. **No circular dependencies.** If you need to share types, put them in `types.ts` or the relevant leaf module.
 
@@ -306,6 +322,10 @@ server.ts (HTTP layer)
 7. **`query.ts` builds SDK options through the adapter interface**, never importing tool constants directly.
 
 8. **`sessionTree.ts` holds only live-request bookkeeping.** No HTTP, no I/O, no logging: the caller supplies each entry's abort handle and owns the eviction and telemetry discipline that follows an abort. It must not import from `server.ts`, `session/`, or `adapter.ts`.
+
+`operationalLog.ts` owns the existing process-wide operational stderr silence
+policy. Server orchestration and lifecycle queue logging use it without importing
+each other; diagnostic entries remain available to silent embedding hosts.
 
 ## Agent Adapter Pattern
 
@@ -362,8 +382,8 @@ the primary agent's key byte-identical to the header. An adapter whose client
 multiplexes agents over one session id needs the same treatment.
 
 **A session header is identity, never authentication.** Polytoken's native
-`X-Polytoken-Session` header is the cleanest example: the trimmed header value
-IS the conversation identity — no agent-mode scoping, no lineage
+`X-Polytoken-Conversation` header supplies the trimmed conversation identity,
+with `X-Polytoken-Session` retained only as a legacy fallback — no agent-mode scoping, no lineage
 canonicalization, no attestation. A blank/missing native header means "no
 identity" rather than an invented fallback key: a headerless tool-result
 continuation runs independent (never resumed, nothing stored) via the
@@ -407,6 +427,22 @@ it as a real `Retry-After` header; SSE turns carry it as `error.retry_after` in
 the error frame, because a stream's headers went out with `message_start` long
 before the failure existed. Under priority routing the wait names the *pool's*
 earliest opening, not the last account tried.
+
+**Failover runs inside the client-facing stream.** Under priority routing a
+streaming request is decided like a non-stream one until an account answers
+with SSE: a non-SSE answer (such as a session-conflict 400) keeps its HTTP
+status, and an account-failover refusal moves to the next candidate. Once an
+account streams, the outer SSE response goes out and the remaining candidates
+run inside it (`streamPriorityDispatch`, framing in `sseFailureSniff.ts`).
+Content-free keepalives (`: ping`, every 15s) reach the client while the
+account decides; SDK transport pings stay non-progress for the idle guard. An
+account-failover `event: error` before any real frame suppresses that account
+and starts the next — never on a cancelled request. The first real frame
+relays byte-exact, an exposure-committed attempt relays its error instead of
+failing over, and a pool exhausted after headers emits one SSE error frame.
+
+The relay is bounded: the outer queue holds 64 KiB, and an incomplete prelude
+reaching 64 KiB ends sniffing and relays the attempt unchanged.
 
 **A `[1m]` bench is scoped to whatever actually failed.** Extra Usage exhaustion
 is an entitlement fact about the account, so it benches the whole profile. A
@@ -504,8 +540,16 @@ An SDK writer lease is released once its writer has been joined. If the lifecycl
 FIFO with at most 256 waiting callers. Local waiting does not consume the
 two-second external-lock acquisition budget; only the head creates a durable
 candidate. A holder stalled for 60 seconds rejects queued/new callers without
-unlocking or abandoning its transaction. Capacity and stalled-holder errors are
+unlocking or abandoning its transaction. A stall deadline that runs more than a
+second late was delayed by a blocked event loop, which delayed the holder too, so
+it grants one additional window. The second deadline rejects waiters even if it
+is late; the holder still owns the lock until its actual completion. Capacity and
+stalled-holder errors are
 distinct, defined in the dependency-leaf `session/lifecycleErrors.ts`.
+A turn whose model already answered does not fail on any of these lock errors
+at terminal publication: they are raised before the transaction runs, so the
+turn invalidates its unchanged pre-turn mapping and the next turn replays. A
+durable priority attempt still requires its atomic publication.
 Request admission signals remove queued work and cancel external acquisition,
 but a running durable callback always finishes before returning ownership.
 Cleanup never receives the canceled admission signal. Publication callbacks
@@ -520,6 +564,8 @@ A conversation that has run under several profiles has one mapping per profile (
 ## Lineage hash encoding
 
 `session/lineage.ts` hashes structured v2 records with separate history, message and block domains. Records preserve roles, block and message boundaries, tool call identity/arguments, and result identity/error status. JSON object keys are canonicalized; plain text and a single text block remain equivalent, and opaque thinking/cache hints remain excluded. Display-oriented `normalizeContent` is not a lineage proof.
+
+Plugin `onRequest` message changes affect SDK execution, while the original client history remains authoritative for lineage and turn ownership. `executionHistory.ts` compares complete message/block values, including fields excluded from lineage hashing; equivalent clones keep ordinary resumes. A changed execution history replays fully instead of using raw offsets, rollback UUIDs or tool checkpoints. Its stored `lineageHash` is empty to withhold SDK-prefix proof, and the internal `clientLineageHash` retains raw continuation proof. Old proxies cannot use that record for resume. A later unchanged full replay restores ordinary SDK-prefix proof; repeated changes incur full replay cost and cannot recover hidden SDK thinking absent from client history. Ordinary and atomic priority publication retain this distinction, including rollback.
 
 Existing v1 digests cannot establish a v2 prefix. Their next request on an upgraded proxy safely replays the full supplied history and publishes v2 hashes; subsequent requests on upgraded proxies resume normally. Alternating between old and new proxy versions can repeat this replay cost until all participating proxies are upgraded. This migration relies on complete fresh replay, including completed tool calls/results and media. Stored transcript files are never rewritten to migrate hashes.
 
@@ -568,3 +614,29 @@ Both render the same manager snapshot and use the same lifecycle/profile actions
 category preferences, burst thresholds and persisted cooldown timestamps prevent
 per-request alerts. Recovery exhaustion is critical; individual child exits remain
 in the in-app history.
+
+## Auth-status refresh lifetime
+
+Auth-status caches remain shared by profile/default context. Each proxy instance
+owns only the refreshes its routes or keepalive requested; closing one owner
+does not cancel a sibling's shared check. The last owner cancels and joins its
+check through the existing shutdown path. An independent direct caller retains
+its own ownership until the bounded process finishes. Caller patience is five
+seconds, while the process deadline is ninety seconds.
+
+`authStatusProcess.ts` records callback, exit, close and both captured pipe
+closures independently. Cancellation uses the exact owned child handle, with
+bounded TERM/KILL escalation. Missing settlement rejects cleanup and retains
+the single-flight slot; neither a settled result promise nor `exitCode` alone
+proves the child joined. Cache expiry never detaches an in-flight check. The
+existing `ProxyInstance.close()` and `closeBackend()` signatures are unchanged.
+
+Executable settings and turn/readiness resolution also register independent
+leases with `claudeProbeOwnership.ts`. Disconnect/shutdown retires admission
+before canceling those leases, while a sibling caller retains its shared child.
+Version/lookup slots survive missing joins; changing preference cannot bypass an
+older resolver's unknown custody. Settings use a coherent preference/resolution
+snapshot and revalidate the saved mode/path after asynchronous path vetting,
+returning 409 instead of committing against a concurrent selection change.
+The settings boundary is limited to 32 pending requests per instance and 16
+shared live probe slots; the completed version cache holds at most 128 files.

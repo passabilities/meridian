@@ -12,12 +12,14 @@
  *
  *   bun scripts/e2e-passthrough-turns.mjs [--stream]
  */
-import { mkdtempSync, realpathSync, writeFileSync, readFileSync } from "node:fs"
+import assert from "node:assert/strict"
+import { mkdtempSync, realpathSync, writeFileSync, readFileSync, statSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { getSessionMessages } from "@anthropic-ai/claude-agent-sdk"
 import { isForwardedDenial } from "../src/proxy/passthroughDenial.ts"
 import { readSessionStoreSnapshot, setSessionStoreDir } from "../src/proxy/sessionStore.ts"
+import { parseAssistantResponse, replayAssistantBlocks } from "./lib/e41-assistant-response.ts"
 
 process.env.MERIDIAN_PASSTHROUGH = "1"
 process.env.OPENCODE_CLAUDE_PROVIDER_DEBUG = "1"
@@ -39,6 +41,21 @@ const CONTENT = { "a.txt": "alpha", "b.txt": "bravo", "c.txt": "charlie" }
 const FILES = Object.keys(CONTENT).map(f => join(WORKDIR, f))
 for (const f of FILES) writeFileSync(f, CONTENT[f.slice(-5)] + "\n")
 
+// Programmatic servers do not discover disk profiles automatically. Make a
+// selected read-only live fixture explicit rather than falling back to login.
+const profileFile = process.env.E2E_LIVE_PROFILE_FILE
+let profiles
+if (profileFile) {
+  assert.equal(statSync(profileFile).mode & 0o077, 0, "Live profile fixture must be private")
+  assert(process.env.MERIDIAN_CONFIG_DIR, "Set an isolated MERIDIAN_CONFIG_DIR")
+  profiles = JSON.parse(readFileSync(profileFile, "utf8"))
+  assert(Array.isArray(profiles) && profiles.length === 1 && profiles[0].type === "oauth-token"
+    && typeof profiles[0].id === "string" && /^[a-z0-9_-]{1,80}$/i.test(profiles[0].id)
+    && profiles[0].refreshToken === undefined && typeof profiles[0].oauthToken === "string"
+    && profiles[0].oauthToken, "Select one supported access-only OAuth profile")
+  process.env.MERIDIAN_CREDENTIALS_READONLY = "1"
+}
+
 const READ_TOOL = {
   name: "read",
   description: "Read a file from disk",
@@ -54,32 +71,14 @@ const say = console.log.bind(console)
 const proxyLog = []
 // claudeLog events use console.debug and request lines use console.error.
 for (const k of ["log", "error", "debug"]) console[k] = (...args) => { proxyLog.push(args.map(String).join(" ")) }
-const inst = await startProxyServer({ port: PORT, host: "127.0.0.1" })
+const inst = await startProxyServer({ port: PORT, host: "127.0.0.1", profiles,
+  defaultProfile: profiles?.[0].id })
+if (profiles) say(`  explicit isolated profile: ${profiles[0].id}`)
 const short = s => (typeof s === "string" && s.length > 10 ? s.slice(-8) : String(s))
 
 /** Parse either response shape into assistant content blocks plus usage. */
 async function assistantBlocks(res) {
-  const text = await res.text()
-  if (!STREAM) { const body = JSON.parse(text); return { blocks: body.content ?? [], usage: body.usage ?? {} } }
-  const blocks = []
-  let usage = {}
-  for (const line of text.split("\n")) {
-    if (!line.startsWith("data:")) continue
-    let ev
-    try { ev = JSON.parse(line.slice(5)) } catch { continue }
-    if (ev.type === "message_start") usage = { ...usage, ...(ev.message?.usage ?? {}) }
-    if (ev.type === "message_delta" && ev.usage) usage = { ...usage, ...ev.usage }
-    if (ev.type === "content_block_start") blocks[ev.index] = { ...ev.content_block, ...(ev.content_block.type === "tool_use" ? { _json: "" } : {}) }
-    if (ev.type === "content_block_delta") {
-      const b = blocks[ev.index]
-      if (ev.delta.type === "text_delta") b.text = (b.text ?? "") + ev.delta.text
-      if (ev.delta.type === "input_json_delta") b._json += ev.delta.partial_json
-    }
-  }
-  return { usage, blocks: blocks.filter(Boolean).map(b => {
-    if (b.type === "tool_use") { const { _json, ...rest } = b; return { ...rest, input: _json ? JSON.parse(_json) : (b.input ?? {}) } }
-    return b
-  }) }
+  return parseAssistantResponse(await res.text(), STREAM)
 }
 
 /** One line of prompt-cache accounting: what was read from cache vs paid for. */
@@ -132,9 +131,37 @@ const messages = [{
 }]
 
 const delivered = new Set()
+const sourceSnapshots = new Map()
+const sourceHistoryProblems = []
 const continuationPrefixes = []
 const toolCallBatchSizes = []
 let finalText = ""
+let followUpOk = false
+
+const storedSession = () => Object.entries(readSessionStoreSnapshot()).find(([key]) =>
+  key === sessionId || key.endsWith(`:${sessionId}`)
+)?.[1]
+async function supportedMessages(stored) {
+  if (!stored?.claudeSessionId) return []
+  const previous = process.env.CLAUDE_CONFIG_DIR
+  try {
+    if (stored.currentTranscript?.configDir) process.env.CLAUDE_CONFIG_DIR = stored.currentTranscript.configDir
+    return await getSessionMessages(stored.claudeSessionId, {
+      dir: stored.currentTranscript?.projectDir ?? WORKDIR,
+    })
+  } finally {
+    if (previous === undefined) delete process.env.CLAUDE_CONFIG_DIR
+    else process.env.CLAUDE_CONFIG_DIR = previous
+  }
+}
+async function captureSource() {
+  await new Promise(r => setTimeout(r, 1500))
+  const source = storedSession()
+  const sourceMessages = await supportedMessages(source)
+  if (!source?.claudeSessionId || sourceMessages.length === 0) sourceHistoryProblems.push("missing source snapshot")
+  else if (sourceSnapshots.has(source.claudeSessionId)) sourceHistoryProblems.push("reused source before fork")
+  else sourceSnapshots.set(source.claudeSessionId, { source, messages: JSON.stringify(sourceMessages) })
+}
 
 for (let turn = 1; turn <= MAX_TURNS; turn++) {
   const logFrom = proxyLog.length
@@ -156,9 +183,13 @@ for (let turn = 1; turn <= MAX_TURNS; turn++) {
   checkCache(`turn ${turn}`, usage, lineage)
   if (res.status !== 200) { say(`  body: ${JSON.stringify(blocks).slice(0, 300)}`); break }
 
-  messages.push({ role: "assistant", content: blocks.map(({ type, id, name, input, text }) => type === "tool_use" ? { type, id, name, input } : { type, text }) })
+  messages.push({ role: "assistant", content: replayAssistantBlocks(blocks) })
   if (calls.length === 0) { finalText = text; break }
   toolCallBatchSizes.push(calls.length)
+
+  // Inspect the published source before the next request forks it. The
+  // canonical drain may finish after the wire EOF, as in the final check below.
+  await captureSource()
 
   // Execute the forwarded calls like a client would.
   const results = calls.map(c => {
@@ -174,9 +205,11 @@ for (let turn = 1; turn <= MAX_TURNS; turn++) {
 // One more turn after the answer. This resumes the final live fork through all
 // delivered results and proves both the active transcript and its cache prefix.
 if (finalText) {
+  await captureSource()
   const logFrom = proxyLog.length
   const res = await send([...messages, { role: "user", content: "Reply with the single word OK." }])
-  const { usage } = await assistantBlocks(res)
+  const { blocks, usage } = await assistantBlocks(res)
+  followUpOk = res.status === 200 && blocks.filter(b => b.type === "text").map(b => b.text).join("").trim() === "OK"
   const lineage = proxyLog.slice(logFrom).map(l => l.match(/lineage=\S+ session=\S+/)?.[0]).find(Boolean) ?? "?"
   const resumedPrefix = lineage.match(/lineage=continuation session=(\S+)/)?.[1]
   if (resumedPrefix) {
@@ -191,14 +224,18 @@ if (finalText) {
 // Resolve Meridian's published session, then inspect it only through the
 // supported Agent SDK API. Never locate or read Claude's private transcript files.
 await new Promise(r => setTimeout(r, 1500))
-const storedSessions = readSessionStoreSnapshot()
-const activeStoredSession = Object.entries(storedSessions).find(([key]) =>
-  key === sessionId || key.endsWith(`:${sessionId}`)
-)?.[1]
+const activeStoredSession = storedSession()
 const activeSessionId = activeStoredSession?.claudeSessionId
-const activeMessages = activeSessionId
-  ? await getSessionMessages(activeSessionId, { dir: WORKDIR })
-  : []
+const activeMessages = await supportedMessages(activeStoredSession)
+for (const [id, snapshot] of sourceSnapshots) {
+  if (JSON.stringify(await supportedMessages(snapshot.source)) !== snapshot.messages) {
+    sourceHistoryProblems.push(`source ${short(id)} changed after fork`)
+  }
+}
+const sourceHistoryOk = sourceSnapshots.size === toolCallBatchSizes.length + 1 && sourceHistoryProblems.length === 0
+const observedModels = [...new Set(activeMessages.filter(row => row.type === "assistant")
+  .map(row => row.message?.model).filter(value => typeof value === "string"))]
+const modelOk = observedModels.length > 0 && observedModels.every(value => value === MODEL)
 
 say(`\n=== verdict (stream=${STREAM}, parallel=${PARALLEL}) ===`)
 const quotes = Object.values(CONTENT).filter(w => finalText.includes(w))
@@ -235,6 +272,9 @@ const activeHistoryVerdict = !activeSessionId
     ? activeAnswerProblems.join(", ")
     : "exactly one real answer per delivered call"
 say(`  active fork ${activeSessionId ?? "missing"}: ${activeHistoryVerdict}`)
+say(`  source history: ${sourceHistoryOk ? `${sourceSnapshots.size} unchanged parents` : sourceHistoryProblems.join("; ") || "missing parents"}`)
+say(`  saved-session follow-up: ${followUpOk ? "OK" : "failed"}`)
+say(`  actual assistant models: ${observedModels.join(",") || "missing"}`)
 say(`  prompt cache: ${cacheMisses.length ? cacheMisses.join("; ") + "   <-- PREFIX LOST" : "every continuation read the prior cached prefix"}`)
 if (!activeSessionId) say("  no published session was found — inconclusive")
 if (activeMessages.length === 0) say("  supported getSessionMessages() returned no active history")
@@ -246,6 +286,7 @@ const pass = quotes.length === 3 &&
   Boolean(activeSessionId) &&
   activeMessages.length > 0 &&
   activeAnswerProblems.length === 0 &&
+  sourceHistoryOk && modelOk && followUpOk &&
   cacheMisses.length === 0
 say(`  ${pass ? "PASS" : "FAIL"}: tool batching, active history, and prompt-cache continuity`)
 if (!pass) {

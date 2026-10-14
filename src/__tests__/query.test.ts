@@ -5,6 +5,7 @@ import { describe, it, expect } from "bun:test"
 import { buildQueryOptions, GIT_STATUS_PROVENANCE_NOTE, REPLAY_PROVENANCE_NOTE, SCRATCHPAD_COUNTER_INSTRUCTION, resolveQueryConfigDir, singleTurnCapLiftRaisesBudget, type QueryContext } from "../proxy/query"
 import { BLOCKED_BUILTIN_TOOLS, CLAUDE_CODE_ONLY_TOOLS, MCP_SERVER_NAME, ALLOWED_MCP_TOOLS } from "../proxy/tools"
 import { CHERRY_BLOCKED_BUILTIN_TOOLS, CHERRY_INCOMPATIBLE_TOOLS, CHERRY_WEB_TOOLS } from "../proxy/adapters/cherry"
+import { createPassthroughMcpServer } from "../proxy/passthroughTools"
 
 function makeContext(overrides: Partial<QueryContext> = {}): QueryContext {
   return {
@@ -115,6 +116,41 @@ describe("buildQueryOptions", () => {
     expect(env.DISABLE_TELEMETRY).toBe("1")
   })
 
+  describe("fine-grained tool streaming", () => {
+    const flag = (overrides: Partial<QueryContext>) =>
+      buildQueryOptions(makeContext(overrides)).options.env?.CLAUDE_CODE_ENABLE_FINE_GRAINED_TOOL_STREAMING
+
+    it.each([false, true])("asks the first-party API to stream tool input (passthrough=%s)", (passthrough) => {
+      expect(flag({ passthrough, stream: true })).toBe("1")
+      expect(flag({ passthrough, stream: false })).toBe("1")
+      expect(flag({ cleanEnv: { ANTHROPIC_BASE_URL: "https://api.anthropic.com" } })).toBe("1")
+    })
+
+    it("lets the inherited env and envOverrides turn it off", () => {
+      expect(flag({ cleanEnv: { CLAUDE_CODE_ENABLE_FINE_GRAINED_TOOL_STREAMING: "0" } })).toBe("0")
+      expect(flag({ envOverrides: { CLAUDE_CODE_ENABLE_FINE_GRAINED_TOOL_STREAMING: "false" } })).toBe("false")
+    })
+
+    it("leaves a custom base URL to Claude Code", () => {
+      expect(flag({ cleanEnv: { ANTHROPIC_BASE_URL: "https://gateway.example.com" } })).toBeUndefined()
+      expect(flag({ envOverrides: { ANTHROPIC_BASE_URL: "http://127.0.0.1:4000" } })).toBeUndefined()
+      expect(flag({ cleanEnv: { ANTHROPIC_BASE_URL: "not a url" } })).toBeUndefined()
+    })
+
+    it.each([
+      "CLAUDE_CODE_USE_BEDROCK",
+      "CLAUDE_CODE_USE_VERTEX",
+      "CLAUDE_CODE_USE_FOUNDRY",
+      "CLAUDE_CODE_USE_ANTHROPIC_AWS",
+      "CLAUDE_CODE_USE_ANTHROPIC_GOOGLE_CLOUD",
+      "CLAUDE_CODE_USE_MANTLE",
+    ])("leaves the cloud provider selected by %s to Claude Code", (key) => {
+      expect(flag({ cleanEnv: { [key]: "1" } })).toBeUndefined()
+      expect(flag({ envOverrides: { [key]: "true" } })).toBeUndefined()
+      expect(flag({ cleanEnv: { [key]: "0" } })).toBe("1")
+    })
+  })
+
   it.each([false, true])("suppresses implicit SDK attachments in passthrough (stream=%s)", (stream) => {
     const prompt = "class Middleware\n  @app = app\n  @config = config\nend"
     const result = buildQueryOptions(makeContext({ passthrough: true, stream, prompt }))
@@ -172,6 +208,15 @@ describe("buildQueryOptions", () => {
   it("sets includePartialMessages for streaming", () => {
     const result = buildQueryOptions(makeContext({ stream: true }))
     expect((result.options as any).includePartialMessages).toBe(true)
+  })
+
+  it("builds a separate passthrough MCP server for every query", () => {
+    const passthroughMcp = createPassthroughMcpServer([{ name: "bash", input_schema: { type: "object", properties: {} } }])
+    const first = buildQueryOptions(makeContext({ passthrough: true, passthroughMcp })).options.mcpServers?.oc
+    const second = buildQueryOptions(makeContext({ passthrough: true, passthroughMcp })).options.mcpServers?.oc
+    expect(first).toBeDefined()
+    expect(second).toBeDefined()
+    expect(second).not.toBe(first)
   })
 
   it("caps maxTurns at 1 in passthrough mode so the SDK stops at the tool handoff instead of generating a billed digest turn", () => {
@@ -275,6 +320,60 @@ describe("buildQueryOptions", () => {
     expect(result.options.maxTurns).toBe(200)
   })
 
+  describe("forwarded-batch stop on a lifted budget", () => {
+    const isForwardedToolUse = (id: string) => id === "toolu_client"
+    const postToolBatch = (result: ReturnType<typeof buildQueryOptions>) =>
+      (result.options as any).hooks?.PostToolBatch as Array<{ hooks: Array<(input: unknown) => Promise<unknown>> }> | undefined
+
+    it("ends a deferred-tools query after the batch forwarded to the client", async () => {
+      const result = buildQueryOptions(makeContext({ passthrough: true, hasDeferredTools: true, isForwardedToolUse }))
+      expect(result.options.maxTurns).toBe(4)
+      const hooks = postToolBatch(result)
+      expect(hooks).toHaveLength(1)
+      const hook = hooks![0]!.hooks[0]!
+      expect(await hook({ tool_calls: [{ tool_name: "mcp__oc__read", tool_use_id: "toolu_client" }] }))
+        .toMatchObject({ continue: false })
+      expect(await hook({ tool_calls: [{ tool_name: "ToolSearch", tool_use_id: "toolu_search" }] })).toEqual({})
+    })
+
+    it("keeps the caller's own hooks alongside the stop", () => {
+      const own = { matcher: "", hooks: [async () => ({})] }
+      const sdkHooks = { PreToolUse: [own], PostToolBatch: [own] }
+      const result = buildQueryOptions(makeContext({ passthrough: true, hasDeferredTools: true, isForwardedToolUse, sdkHooks }))
+      expect((result.options as any).hooks.PreToolUse).toEqual([own])
+      expect(postToolBatch(result)).toHaveLength(2)
+      expect(postToolBatch(result)![0]).toBe(own)
+    })
+
+    it("leaves the one-turn cap alone — its error_max_turns result is the expected terminal shape", () => {
+      const sdkHooks = { PreToolUse: [] }
+      const result = buildQueryOptions(makeContext({ passthrough: true, isForwardedToolUse, sdkHooks }))
+      expect(result.options.maxTurns).toBe(1)
+      expect((result.options as any).hooks).toBe(sdkHooks)
+    })
+
+    it("stays off under the early-stop kill switch", () => {
+      const result = buildQueryOptions(makeContext({ passthrough: true, hasDeferredTools: true, earlyStop: false, isForwardedToolUse }))
+      expect(postToolBatch(result)).toBeUndefined()
+    })
+
+    it("stays off outside passthrough", () => {
+      const result = buildQueryOptions(makeContext({ isForwardedToolUse }))
+      expect(postToolBatch(result)).toBeUndefined()
+    })
+
+    it("stays off with structured output — its answer is a StructuredOutput call after the denial", () => {
+      const result = buildQueryOptions(makeContext({
+        passthrough: true,
+        hasDeferredTools: true,
+        isForwardedToolUse,
+        outputFormat: { type: "json_schema", schema: { type: "object" } } as any,
+      }))
+      expect(result.options.maxTurns).toBe(4)
+      expect(postToolBatch(result)).toBeUndefined()
+    })
+  })
+
   it("includes system prompt as preset in normal mode", () => {
     const result = buildQueryOptions(makeContext({ systemContext: "Be helpful" }))
     const sp = (result.options as any).systemPrompt
@@ -362,17 +461,10 @@ describe("buildQueryOptions", () => {
   })
 
   it("uses passthrough MCP tools when in passthrough mode", () => {
-    const mockPassthroughMcp = {
-      toolNames: ["mcp__passthrough__custom_tool"],
-      server: {} as any,
-      hasDeferredTools: false,
-      clientNameByAlias: new Map([["custom_tool", "custom_tool"]]),
-      serverName: "passthrough",
-      prefix: "mcp__passthrough__",
-    }
+    const passthroughMcp = createPassthroughMcpServer([{ name: "custom_tool" }], undefined, "passthrough")
     const result = buildQueryOptions(makeContext({
       passthrough: true,
-      passthroughMcp: mockPassthroughMcp,
+      passthroughMcp,
     }))
     const allowed = (result.options as any).allowedTools as string[]
     expect(allowed).toContain("mcp__passthrough__custom_tool")
@@ -394,17 +486,10 @@ describe("buildQueryOptions", () => {
   })
 
   it("strips the catalog even when passthroughMcp tools are present", () => {
-    const mockPassthroughMcp = {
-      toolNames: ["mcp__passthrough__custom_tool"],
-      server: {} as any,
-      hasDeferredTools: false,
-      clientNameByAlias: new Map([["custom_tool", "custom_tool"]]),
-      serverName: "passthrough",
-      prefix: "mcp__passthrough__",
-    }
+    const passthroughMcp = createPassthroughMcpServer([{ name: "custom_tool" }], undefined, "passthrough")
     const result = buildQueryOptions(makeContext({
       passthrough: true,
-      passthroughMcp: mockPassthroughMcp,
+      passthroughMcp,
     }))
     // Catalog is empty — built-ins disabled.
     expect((result.options as any).tools).toEqual([])

@@ -1,0 +1,1 @@
+{"result":"PASS","pi":"1.1.0","package":"@rynfar/meridian-plugin-pi-scrub","version":"0.2.2","sha256":"919020957c22f04bee21e2198619ae35649618dcc82eb6b05d08d2bf44b14af5","actualPiPromptScrubbed":true,"cwdRetained":true,"wrongClientRejected":true,"missingInventoryRejected":true}

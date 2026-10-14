@@ -1,0 +1,15 @@
+{
+  "sourceCommit": "b90324930",
+  "packages": [
+    {
+      "id": "@rynfar/meridian@1.81.0",
+      "name": "@rynfar/meridian",
+      "version": "1.81.0",
+      "size": 1647486,
+      "unpackedSize": 6076798,
+      "shasum": "ebf14ed8a39c76682f067e2ad3594d87ffcb6a7e",
+      "integrity": "sha512-rPJxPCIE7UfPe13WtbgMlEv7cyQccBVTZG8d1x2ynQMmxlwMEsTCcIxJhD4XyRU5kkXGc462evQezA/iJmS7Ug==",
+      "filename": "rynfar-meridian-1.81.0.tgz"
+    }
+  ]
+}

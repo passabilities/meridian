@@ -90,7 +90,9 @@ const { createProxyServer, clearSessionCache } = await import("../proxy/server")
 const { storeSession } = await import("../proxy/session/cache")
 const { diagnosticLog } = await import("../telemetry")
 
-function post(app: any, messages: any[], headers: Record<string, string> = {}, stream = false, model = "sonnet") {
+// Sonnet 4.6 keeps the 200k window these budgets exercise; the canonical
+// Sonnet 5+ pin is 1M (#1212).
+function post(app: any, messages: any[], headers: Record<string, string> = {}, stream = false, model = "claude-sonnet-4-6") {
   return app.fetch(
     new Request("http://localhost/v1/messages", {
       method: "POST",
@@ -101,7 +103,11 @@ function post(app: any, messages: any[], headers: Record<string, string> = {}, s
 }
 
 describe("bounded fresh replay", () => {
+  const envKeys = ["ANTHROPIC_DEFAULT_SONNET_MODEL", "MERIDIAN_DEFAULT_SONNET_MODEL", "MERIDIAN_REPLAY_BUDGET_TOKENS"]
+  let savedEnv: Array<string | undefined> = []
   beforeEach(() => {
+    savedEnv = envKeys.map(key => process.env[key])
+    for (const key of envKeys) delete process.env[key]
     clearSessionCache()
     capturedPrompts = []
     overflowFailures = 0
@@ -110,7 +116,14 @@ describe("bounded fresh replay", () => {
     capturedOptions = []
     resetExtendedContextUnavailable()
   })
-  afterEach(() => { overflowFailures = 0; resetExtendedContextUnavailable() })
+  afterEach(() => {
+    envKeys.forEach((key, index) => {
+      if (savedEnv[index] === undefined) delete process.env[key]
+      else process.env[key] = savedEnv[index]
+    })
+    overflowFailures = 0
+    resetExtendedContextUnavailable()
+  })
 
   const history = () => [
     { role: "user", content: "objective" },
@@ -130,6 +143,32 @@ describe("bounded fresh replay", () => {
     expect(capturedPrompts[0]).toContain("objective")
     expect(capturedPrompts[0]).toEndWith("live question")
   })
+
+  it("does not trim plain sonnet at 200k when it resolves to Sonnet 5+ (#1212)", async () => {
+    const { app } = createProxyServer({ port: 0, host: "127.0.0.1" })
+    const res = await post(app, history(), {}, false, "sonnet")
+    expect(res.status).toBe(200)
+    expect(capturedOptions[0].model).toBe("sonnet")
+    expect(capturedPrompts[0]).not.toContain("were omitted from this replay")
+  })
+
+  for (const streaming of [false, true]) {
+    for (const fixture of [
+      { request: "sonnet", inherited: "claude-sonnet-4-6", trimmed: true, resolved: "claude-sonnet-4-6" },
+      { request: "claude-sonnet-5-5", inherited: "claude-sonnet-4-6", trimmed: false, resolved: "claude-sonnet-5-5" },
+      { request: "claude-sonnet-4-6", inherited: "claude-sonnet-5-5", trimmed: true, resolved: "claude-sonnet-4-6" },
+    ]) {
+      it(`budgets from the Sonnet pin the SDK actually serves for ${JSON.stringify(fixture)} (stream=${streaming})`, async () => {
+        process.env.ANTHROPIC_DEFAULT_SONNET_MODEL = fixture.inherited
+        const { app } = createProxyServer({ port: 0, host: "127.0.0.1" })
+        const response = await post(app, history(), {}, streaming, fixture.request)
+        await response.text()
+        expect(response.status).toBe(200)
+        expect(capturedOptions[0].env.ANTHROPIC_DEFAULT_SONNET_MODEL).toBe(fixture.resolved)
+        expect(String(capturedPrompts[0]).includes("were omitted from this replay")).toBe(fixture.trimmed)
+      })
+    }
+  }
 
   for (const streaming of [false, true]) {
     for (const error of ["rate limit exceeded", "extra usage required for 1m"]) {

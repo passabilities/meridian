@@ -1,0 +1,12 @@
+bun test v1.3.11 (af24e281)
+
+src/__tests__/build-observer.test.ts:
+(pass) cached requests stay responsive and share one pending observation [1.75ms]
+(pass) demand refresh respects minimum start cadence without idle scans [0.32ms]
+(pass) Bun source worker reports failure without blocking timers [58.71ms]
+(pass) Node bundled worker resolves alongside the bundled observer [125.94ms]
+
+ 4 pass
+ 0 fail
+ 10113 expect() calls
+Ran 4 tests across 1 file. [232.00ms]

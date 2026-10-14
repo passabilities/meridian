@@ -1,0 +1,41 @@
+{
+  "result": "FAIL",
+  "scope": "Streaming branch source, both installed plugins, real SDK/model protocol host",
+  "image": "sha256:469a232dee2fcf27efbdc3a667ea90ce4ef99b28fde4f9e649bfd28068b3da24",
+  "serverSource": "77b6770d8e6b44e2588a4e85a74058b526069c14",
+  "installedPackageSource": "6974747fe910658c33056f1b6194292c23247bd2",
+  "harnessSource": "451c43c7",
+  "harnessSha256": "9306af7e3e47c5ed55cb693d12a51a692d0350ae4614f162e8881861fd9fe3bf",
+  "sdk": "0.2.141",
+  "native": "2.1.296",
+  "platform": "Linux amd64 Docker emulation on Darwin arm64",
+  "grantAbsent": true,
+  "arms": [
+    {
+      "arm": "qualified-chain-json",
+      "result": "PASS",
+      "batches": [
+        1,
+        1,
+        1
+      ],
+      "modelOk": true,
+      "cacheMisses": [],
+      "joined": true
+    },
+    {
+      "arm": "qualified-chain-sse",
+      "result": "FAIL",
+      "batches": [
+        1
+      ],
+      "modelOk": true,
+      "cacheMisses": [],
+      "joined": true
+    }
+  ],
+  "notRun": [
+    "parallel-json",
+    "parallel-sse"
+  ]
+}

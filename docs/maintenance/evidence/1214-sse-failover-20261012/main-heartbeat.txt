@@ -1,0 +1,24 @@
+
+src/__tests__/priority-routing-integration.test.ts:
+[PROXY] Claude auth status for profile "work" exited with code 1 reporting loggedIn: false; login required
+[PROXY] c26d8079-b320-42a7-b4a1-5d8c66df7859 adapter=opencode profile=work(priority) model=sonnet stream=true tools=0 lineage=new session=new diverged=not-found sdkActive=0/10 sdkQueued=0 sessionWait=0ms msgCount=1 msgs=user[string]
+1834 |       body: STREAM_BODY,
+1835 |     }))
+1836 |     expect(res.status).toBe(200)
+1837 |     const text = await res.text()
+1838 |     expect(text).toContain(": ping")
+1839 |     expect(text).toContain("prof-personal")
+                        ^
+error: expect(received).toContain(expected)
+
+Expected to contain: "prof-personal"
+Received: ": ping\n\nevent: error\ndata: {\"type\":\"error\",\"error\":{\"type\":\"billing_error\",\"message\":\"Claude Max subscription issue. Check your subscription status at https://claude.ai/settings/subscription\"}}\n\n"
+
+      at <anonymous> (/Users/rynfar/repos/meridian-sse-baseline-1214-20261012/src/__tests__/priority-routing-integration.test.ts:1839:18)
+(fail) priority routing > streams fail over when the service heartbeat precedes the account error [20895.83ms]
+
+ 0 pass
+ 83 filtered out
+ 1 fail
+ 3 expect() calls
+Ran 1 test across 1 file. [22.50s]

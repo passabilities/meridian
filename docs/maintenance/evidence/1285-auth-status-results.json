@@ -1,0 +1,1357 @@
+{
+  "scope": "Controlled actual native auth-only before/after; no model, client, owner-store or whole-OS claim",
+  "sourceHead": "065e7c7f620f871774a4fe0caa2497950818fd6e",
+  "base": "097530c824c7c2096c82b89de85fd6550479b603",
+  "harnessSHA256": "fe89d335a8dec9eef9b30587e580f86da36a2e6a85e96be77780dff183e08fdf",
+  "nativeSHA256": "50a14c2f50f56668380fdda490167f1d3630d5cc18fb8aed3073c2c7ea7314fe",
+  "tuple": {
+    "platform": "darwin-arm64",
+    "bun": "1.3.11",
+    "nodeCompatibility": "24.3.0",
+    "sdk": "0.2.141",
+    "nativeCLI": "2.1.284"
+  },
+  "records": [
+    {
+      "scope": "baseline",
+      "case": "cold",
+      "context": "default",
+      "result": "FAIL",
+      "firstFailure": "LATE_NOT_HEALTHY",
+      "SDKQueries": 0,
+      "http": [
+        {
+          "label": "cold-health-1",
+          "path": "/health",
+          "status": 200,
+          "ms": 5047,
+          "health": "degraded",
+          "loggedIn": null
+        },
+        {
+          "label": "cold-health-2",
+          "path": "/health",
+          "status": 200,
+          "ms": 5047,
+          "health": "degraded",
+          "loggedIn": null
+        },
+        {
+          "label": "cold-list",
+          "path": "/profiles/list",
+          "status": 200,
+          "ms": 5047,
+          "loggedIn": false,
+          "provenance": "never",
+          "lastSuccessObserved": false
+        },
+        {
+          "label": "late-health",
+          "path": "/health",
+          "status": 200,
+          "ms": 0,
+          "health": "degraded",
+          "loggedIn": null
+        },
+        {
+          "label": "late-list",
+          "path": "/profiles/list",
+          "status": 200,
+          "ms": 0,
+          "loggedIn": false,
+          "provenance": "never",
+          "lastSuccessObserved": false
+        }
+      ],
+      "native": [
+        {
+          "elapsedMs": 4761,
+          "code": null,
+          "signal": "SIGTERM",
+          "loggedIn": null,
+          "authMethod": null,
+          "exitSeen": true,
+          "closeSeen": true,
+          "stdoutClosed": true,
+          "stderrClosed": true,
+          "writesFlushed": true
+        }
+      ],
+      "nativeInvocationCount": 1,
+      "wrapperJoinsComplete": true,
+      "workerJoinsComplete": true,
+      "resultSHA256": "328f9a9f8fa3af53a884aaf227f4ab7e1ab2f12a7fa9f6967f3fbb6a28fb5c17",
+      "coordinatorSHA256": "516d3621c0baf72fcb2d155b293f3c97e40aacebf629fbbdd6ffdde5d276f0f6",
+      "warnings": {
+        "total": 0,
+        "loggedOutExit": 0
+      }
+    },
+    {
+      "scope": "baseline",
+      "case": "cold",
+      "context": "profile",
+      "result": "FAIL",
+      "firstFailure": "LATE_NOT_HEALTHY",
+      "SDKQueries": 0,
+      "http": [
+        {
+          "label": "cold-health-1",
+          "path": "/health",
+          "status": 200,
+          "ms": 5065,
+          "health": "degraded",
+          "loggedIn": null
+        },
+        {
+          "label": "cold-health-2",
+          "path": "/health",
+          "status": 200,
+          "ms": 5065,
+          "health": "degraded",
+          "loggedIn": null
+        },
+        {
+          "label": "cold-list",
+          "path": "/profiles/list",
+          "status": 200,
+          "ms": 5065,
+          "loggedIn": false,
+          "provenance": "never",
+          "lastSuccessObserved": false
+        },
+        {
+          "label": "late-health",
+          "path": "/health",
+          "status": 200,
+          "ms": 1,
+          "health": "degraded",
+          "loggedIn": null
+        },
+        {
+          "label": "late-list",
+          "path": "/profiles/list",
+          "status": 200,
+          "ms": 1,
+          "loggedIn": false,
+          "provenance": "never",
+          "lastSuccessObserved": false
+        }
+      ],
+      "native": [
+        {
+          "elapsedMs": 4665,
+          "code": null,
+          "signal": "SIGTERM",
+          "loggedIn": null,
+          "authMethod": null,
+          "exitSeen": true,
+          "closeSeen": true,
+          "stdoutClosed": true,
+          "stderrClosed": true,
+          "writesFlushed": true
+        }
+      ],
+      "nativeInvocationCount": 1,
+      "wrapperJoinsComplete": true,
+      "workerJoinsComplete": true,
+      "resultSHA256": "ab795cdeccba3819463d21e71f9717b5682a6ae2348f33efd3eb165fc5b74947",
+      "coordinatorSHA256": "1fd58ee25850ee39b808cc64ad5b5fec430045c14b615447819e304f1e72c971",
+      "warnings": {
+        "total": 0,
+        "loggedOutExit": 0
+      }
+    },
+    {
+      "scope": "source",
+      "case": "logged-out",
+      "context": "profile",
+      "result": "PASS",
+      "firstFailure": null,
+      "SDKQueries": 0,
+      "http": [
+        {
+          "label": "cold-health-1",
+          "path": "/health",
+          "status": 200,
+          "ms": 5041,
+          "health": "degraded",
+          "loggedIn": null
+        },
+        {
+          "label": "cold-health-2",
+          "path": "/health",
+          "status": 200,
+          "ms": 5043,
+          "health": "degraded",
+          "loggedIn": null
+        },
+        {
+          "label": "cold-list",
+          "path": "/profiles/list",
+          "status": 200,
+          "ms": 5044,
+          "loggedIn": false,
+          "provenance": "never",
+          "lastSuccessObserved": false
+        },
+        {
+          "label": "late-health",
+          "path": "/health",
+          "status": 200,
+          "ms": 1,
+          "health": "degraded",
+          "loggedIn": null
+        },
+        {
+          "label": "late-list",
+          "path": "/profiles/list",
+          "status": 200,
+          "ms": 0,
+          "loggedIn": false,
+          "provenance": "never",
+          "lastSuccessObserved": false
+        }
+      ],
+      "native": [
+        {
+          "elapsedMs": 8226,
+          "code": 1,
+          "signal": null,
+          "loggedIn": false,
+          "authMethod": "none",
+          "exitSeen": true,
+          "closeSeen": true,
+          "stdoutClosed": true,
+          "stderrClosed": true,
+          "writesFlushed": true
+        }
+      ],
+      "nativeInvocationCount": 1,
+      "wrapperJoinsComplete": true,
+      "workerJoinsComplete": true,
+      "resultSHA256": "4c083dbeb7ac3dd9058c3441c2783683a5389f90c3a4baf65b4b2830969e4e6d",
+      "coordinatorSHA256": "e8246035089f8dcc389f445e2eaa496b668aa1aaf3e7fed3f073458062e4d3b3",
+      "warnings": {
+        "total": 1,
+        "loggedOutExit": 1
+      }
+    },
+    {
+      "scope": "source",
+      "case": "cold",
+      "context": "default",
+      "result": "PASS",
+      "firstFailure": null,
+      "SDKQueries": 0,
+      "http": [
+        {
+          "label": "cold-health-1",
+          "path": "/health",
+          "status": 200,
+          "ms": 5051,
+          "health": "degraded",
+          "loggedIn": null
+        },
+        {
+          "label": "cold-health-2",
+          "path": "/health",
+          "status": 200,
+          "ms": 5055,
+          "health": "degraded",
+          "loggedIn": null
+        },
+        {
+          "label": "cold-list",
+          "path": "/profiles/list",
+          "status": 200,
+          "ms": 5055,
+          "loggedIn": false,
+          "provenance": "never",
+          "lastSuccessObserved": false
+        },
+        {
+          "label": "late-health",
+          "path": "/health",
+          "status": 200,
+          "ms": 1,
+          "health": "healthy",
+          "loggedIn": true
+        },
+        {
+          "label": "late-list",
+          "path": "/profiles/list",
+          "status": 200,
+          "ms": 0,
+          "loggedIn": true,
+          "provenance": "live",
+          "lastSuccessObserved": true
+        }
+      ],
+      "native": [
+        {
+          "elapsedMs": 8156,
+          "code": 0,
+          "signal": null,
+          "loggedIn": true,
+          "authMethod": "oauth_token",
+          "exitSeen": true,
+          "closeSeen": true,
+          "stdoutClosed": true,
+          "stderrClosed": true,
+          "writesFlushed": true
+        }
+      ],
+      "nativeInvocationCount": 1,
+      "wrapperJoinsComplete": true,
+      "workerJoinsComplete": true,
+      "resultSHA256": "7fa1c30d970713d455cd362fb511d73cc1129cbf4e564e6a10cd4a8a5631635a",
+      "coordinatorSHA256": "dfd19fbb14a9fa7363c7eaae7e93a89673d2d7a3d2f354b4c4ca1c46bad0f70b",
+      "warnings": {
+        "total": 1,
+        "loggedOutExit": 0
+      }
+    },
+    {
+      "scope": "source",
+      "case": "cold",
+      "context": "profile",
+      "result": "PASS",
+      "firstFailure": null,
+      "SDKQueries": 0,
+      "http": [
+        {
+          "label": "cold-health-1",
+          "path": "/health",
+          "status": 200,
+          "ms": 5043,
+          "health": "degraded",
+          "loggedIn": null
+        },
+        {
+          "label": "cold-health-2",
+          "path": "/health",
+          "status": 200,
+          "ms": 5045,
+          "health": "degraded",
+          "loggedIn": null
+        },
+        {
+          "label": "cold-list",
+          "path": "/profiles/list",
+          "status": 200,
+          "ms": 5046,
+          "loggedIn": false,
+          "provenance": "never",
+          "lastSuccessObserved": false
+        },
+        {
+          "label": "late-health",
+          "path": "/health",
+          "status": 200,
+          "ms": 1,
+          "health": "healthy",
+          "loggedIn": true
+        },
+        {
+          "label": "late-list",
+          "path": "/profiles/list",
+          "status": 200,
+          "ms": 1,
+          "loggedIn": true,
+          "provenance": "live",
+          "lastSuccessObserved": true
+        }
+      ],
+      "native": [
+        {
+          "elapsedMs": 8202,
+          "code": 0,
+          "signal": null,
+          "loggedIn": true,
+          "authMethod": "oauth_token",
+          "exitSeen": true,
+          "closeSeen": true,
+          "stdoutClosed": true,
+          "stderrClosed": true,
+          "writesFlushed": true
+        }
+      ],
+      "nativeInvocationCount": 1,
+      "wrapperJoinsComplete": true,
+      "workerJoinsComplete": true,
+      "resultSHA256": "e10609aa3b415f6cf97ade80d4751c64fabfda5d5ac9410520da77b38c91faf7",
+      "coordinatorSHA256": "3f04e36eda4d829d181856d053f2e26cd93f062abfd336e56880f87c6fc40a7d",
+      "warnings": {
+        "total": 1,
+        "loggedOutExit": 0
+      }
+    },
+    {
+      "scope": "source",
+      "case": "sibling",
+      "context": "profile",
+      "result": "PASS",
+      "firstFailure": null,
+      "SDKQueries": 0,
+      "http": [
+        {
+          "label": "owner-a-pending",
+          "path": "/health",
+          "status": 200,
+          "ms": 5051,
+          "health": "degraded",
+          "loggedIn": null
+        },
+        {
+          "label": "owner-b-pending",
+          "path": "/health",
+          "status": 200,
+          "ms": 5004,
+          "health": "degraded",
+          "loggedIn": null
+        },
+        {
+          "label": "surviving-healthy",
+          "path": "/health",
+          "status": 200,
+          "ms": 1,
+          "health": "healthy",
+          "loggedIn": true
+        }
+      ],
+      "native": [
+        {
+          "elapsedMs": 8217,
+          "code": 0,
+          "signal": null,
+          "loggedIn": true,
+          "authMethod": "oauth_token",
+          "exitSeen": true,
+          "closeSeen": true,
+          "stdoutClosed": true,
+          "stderrClosed": true,
+          "writesFlushed": true
+        }
+      ],
+      "nativeInvocationCount": 1,
+      "wrapperJoinsComplete": true,
+      "workerJoinsComplete": true,
+      "resultSHA256": "6f6a522472ec9905b035839a02125841bb802b53e277e1e3a20952d3f02fe0f2",
+      "coordinatorSHA256": "896f5fe4a253d17031c35a31137a8e0da625b003a452a20ad079c206067c3d2a",
+      "warnings": {
+        "total": 1,
+        "loggedOutExit": 0
+      }
+    },
+    {
+      "scope": "source",
+      "case": "last-owner",
+      "context": "profile",
+      "result": "PASS",
+      "firstFailure": null,
+      "SDKQueries": 0,
+      "http": [
+        {
+          "label": "owner-a-pending",
+          "path": "/health",
+          "status": 200,
+          "ms": 354,
+          "health": "degraded",
+          "loggedIn": null
+        },
+        {
+          "label": "replacement-pending",
+          "path": "/health",
+          "status": 200,
+          "ms": 5004,
+          "health": "degraded",
+          "loggedIn": null
+        },
+        {
+          "label": "surviving-healthy",
+          "path": "/health",
+          "status": 200,
+          "ms": 1,
+          "health": "healthy",
+          "loggedIn": true
+        }
+      ],
+      "native": [
+        {
+          "elapsedMs": 28,
+          "code": null,
+          "signal": "SIGTERM",
+          "loggedIn": null,
+          "authMethod": null,
+          "exitSeen": true,
+          "closeSeen": true,
+          "stdoutClosed": true,
+          "stderrClosed": true,
+          "writesFlushed": true
+        },
+        {
+          "elapsedMs": 8229,
+          "code": 0,
+          "signal": null,
+          "loggedIn": true,
+          "authMethod": "oauth_token",
+          "exitSeen": true,
+          "closeSeen": true,
+          "stdoutClosed": true,
+          "stderrClosed": true,
+          "writesFlushed": true
+        }
+      ],
+      "nativeInvocationCount": 2,
+      "wrapperJoinsComplete": true,
+      "workerJoinsComplete": true,
+      "resultSHA256": "9fcc41b3571aa575b501a6c3a0c3f07ef9060b3f7fbdaace9e61f0590b861d87",
+      "coordinatorSHA256": "39810b823391f2d1127bab90fbdc79ea310cbf1138410dd23cb3c068a41d4133",
+      "warnings": {
+        "total": 1,
+        "loggedOutExit": 0
+      }
+    },
+    {
+      "scope": "source",
+      "case": "direct",
+      "context": "profile",
+      "result": "PASS",
+      "firstFailure": null,
+      "SDKQueries": 0,
+      "http": [
+        {
+          "label": "owner-a-pending",
+          "path": "/health",
+          "status": 200,
+          "ms": 5060,
+          "health": "degraded",
+          "loggedIn": null
+        }
+      ],
+      "native": [
+        {
+          "elapsedMs": 8218,
+          "code": 0,
+          "signal": null,
+          "loggedIn": true,
+          "authMethod": "oauth_token",
+          "exitSeen": true,
+          "closeSeen": true,
+          "stdoutClosed": true,
+          "stderrClosed": true,
+          "writesFlushed": true
+        }
+      ],
+      "nativeInvocationCount": 1,
+      "wrapperJoinsComplete": true,
+      "workerJoinsComplete": true,
+      "resultSHA256": "530091635ac772c935ab6f3019d459fab81028cdba24fffe18e0e4c71f8f7d38",
+      "coordinatorSHA256": "fa94fea30f40184304e1221e0d81abfc97b673d3c48e3d7130b688a972aacaaf",
+      "warnings": {
+        "total": 1,
+        "loggedOutExit": 0
+      }
+    },
+    {
+      "scope": "source",
+      "case": "stale",
+      "context": "default",
+      "result": "PASS",
+      "firstFailure": null,
+      "SDKQueries": 0,
+      "http": [
+        {
+          "label": "cold-health-1",
+          "path": "/health",
+          "status": 200,
+          "ms": 5057,
+          "health": "degraded",
+          "loggedIn": null
+        },
+        {
+          "label": "cold-health-2",
+          "path": "/health",
+          "status": 200,
+          "ms": 5060,
+          "health": "degraded",
+          "loggedIn": null
+        },
+        {
+          "label": "cold-list",
+          "path": "/profiles/list",
+          "status": 200,
+          "ms": 5061,
+          "loggedIn": false,
+          "provenance": "never",
+          "lastSuccessObserved": false
+        },
+        {
+          "label": "late-health",
+          "path": "/health",
+          "status": 200,
+          "ms": 1,
+          "health": "healthy",
+          "loggedIn": true
+        },
+        {
+          "label": "late-list",
+          "path": "/profiles/list",
+          "status": 200,
+          "ms": 0,
+          "loggedIn": true,
+          "provenance": "live",
+          "lastSuccessObserved": true
+        },
+        {
+          "label": "stale-health",
+          "path": "/health",
+          "status": 200,
+          "ms": 2,
+          "health": "healthy",
+          "loggedIn": true
+        },
+        {
+          "label": "stale-list",
+          "path": "/profiles/list",
+          "status": 200,
+          "ms": 2,
+          "loggedIn": true,
+          "provenance": "live",
+          "lastSuccessObserved": true
+        },
+        {
+          "label": "refreshed-health",
+          "path": "/health",
+          "status": 200,
+          "ms": 1,
+          "health": "healthy",
+          "loggedIn": true
+        }
+      ],
+      "native": [
+        {
+          "elapsedMs": 8184,
+          "code": 0,
+          "signal": null,
+          "loggedIn": true,
+          "authMethod": "oauth_token",
+          "exitSeen": true,
+          "closeSeen": true,
+          "stdoutClosed": true,
+          "stderrClosed": true,
+          "writesFlushed": true
+        },
+        {
+          "elapsedMs": 8142,
+          "code": 0,
+          "signal": null,
+          "loggedIn": true,
+          "authMethod": "oauth_token",
+          "exitSeen": true,
+          "closeSeen": true,
+          "stdoutClosed": true,
+          "stderrClosed": true,
+          "writesFlushed": true
+        }
+      ],
+      "nativeInvocationCount": 2,
+      "wrapperJoinsComplete": true,
+      "workerJoinsComplete": true,
+      "resultSHA256": "7d7b887fa07285fb0a8832a489f8379e2d5876a34570c9da9542d3367db4c61e",
+      "coordinatorSHA256": "000cd402668378e97a51e5d040ea12bf70fc3ed0fb9683128bd915f8df86fddc",
+      "warnings": {
+        "total": 1,
+        "loggedOutExit": 0
+      }
+    },
+    {
+      "scope": "source",
+      "case": "stale",
+      "context": "profile",
+      "result": "PASS",
+      "firstFailure": null,
+      "SDKQueries": 0,
+      "http": [
+        {
+          "label": "cold-health-1",
+          "path": "/health",
+          "status": 200,
+          "ms": 5040,
+          "health": "degraded",
+          "loggedIn": null
+        },
+        {
+          "label": "cold-health-2",
+          "path": "/health",
+          "status": 200,
+          "ms": 5041,
+          "health": "degraded",
+          "loggedIn": null
+        },
+        {
+          "label": "cold-list",
+          "path": "/profiles/list",
+          "status": 200,
+          "ms": 5042,
+          "loggedIn": false,
+          "provenance": "never",
+          "lastSuccessObserved": false
+        },
+        {
+          "label": "late-health",
+          "path": "/health",
+          "status": 200,
+          "ms": 1,
+          "health": "healthy",
+          "loggedIn": true
+        },
+        {
+          "label": "late-list",
+          "path": "/profiles/list",
+          "status": 200,
+          "ms": 0,
+          "loggedIn": true,
+          "provenance": "live",
+          "lastSuccessObserved": true
+        },
+        {
+          "label": "stale-health",
+          "path": "/health",
+          "status": 200,
+          "ms": 2,
+          "health": "healthy",
+          "loggedIn": true
+        },
+        {
+          "label": "stale-list",
+          "path": "/profiles/list",
+          "status": 200,
+          "ms": 2,
+          "loggedIn": true,
+          "provenance": "live",
+          "lastSuccessObserved": true
+        },
+        {
+          "label": "refreshed-health",
+          "path": "/health",
+          "status": 200,
+          "ms": 1,
+          "health": "healthy",
+          "loggedIn": true
+        }
+      ],
+      "native": [
+        {
+          "elapsedMs": 8132,
+          "code": 0,
+          "signal": null,
+          "loggedIn": true,
+          "authMethod": "oauth_token",
+          "exitSeen": true,
+          "closeSeen": true,
+          "stdoutClosed": true,
+          "stderrClosed": true,
+          "writesFlushed": true
+        },
+        {
+          "elapsedMs": 8145,
+          "code": 0,
+          "signal": null,
+          "loggedIn": true,
+          "authMethod": "oauth_token",
+          "exitSeen": true,
+          "closeSeen": true,
+          "stdoutClosed": true,
+          "stderrClosed": true,
+          "writesFlushed": true
+        }
+      ],
+      "nativeInvocationCount": 2,
+      "wrapperJoinsComplete": true,
+      "workerJoinsComplete": true,
+      "resultSHA256": "2ba010af4e7a94820e63a3b3d8cf5f6978f6ed1d0a84bd537c08ee6231ccba5c",
+      "coordinatorSHA256": "c4c31c546eb1d55ef392504254c3dfb9479c31919a99ac233ec684968ff22a8f",
+      "warnings": {
+        "total": 1,
+        "loggedOutExit": 0
+      }
+    },
+    {
+      "scope": "installed",
+      "case": "logged-out",
+      "context": "profile",
+      "result": "PASS",
+      "firstFailure": null,
+      "SDKQueries": 0,
+      "http": [
+        {
+          "label": "cold-health-1",
+          "path": "/health",
+          "status": 200,
+          "ms": 5099,
+          "health": "degraded",
+          "loggedIn": null
+        },
+        {
+          "label": "cold-health-2",
+          "path": "/health",
+          "status": 200,
+          "ms": 5099,
+          "health": "degraded",
+          "loggedIn": null
+        },
+        {
+          "label": "cold-list",
+          "path": "/profiles/list",
+          "status": 200,
+          "ms": 5100,
+          "loggedIn": false,
+          "provenance": "never",
+          "lastSuccessObserved": false
+        },
+        {
+          "label": "late-health",
+          "path": "/health",
+          "status": 200,
+          "ms": 1,
+          "health": "degraded",
+          "loggedIn": null
+        },
+        {
+          "label": "late-list",
+          "path": "/profiles/list",
+          "status": 200,
+          "ms": 0,
+          "loggedIn": false,
+          "provenance": "never",
+          "lastSuccessObserved": false
+        }
+      ],
+      "native": [
+        {
+          "elapsedMs": 8193,
+          "code": 1,
+          "signal": null,
+          "loggedIn": false,
+          "authMethod": "none",
+          "exitSeen": true,
+          "closeSeen": true,
+          "stdoutClosed": true,
+          "stderrClosed": true,
+          "writesFlushed": true
+        }
+      ],
+      "nativeInvocationCount": 1,
+      "wrapperJoinsComplete": true,
+      "workerJoinsComplete": true,
+      "resultSHA256": "e7f28774600b503a052a02ebb2d730a54bd75583daff75e6c21ccb3986139d87",
+      "coordinatorSHA256": "50350e49393d54c819d8204448b2c685096dffbb650ea5eedae44566c4f3e420",
+      "warnings": {
+        "total": 1,
+        "loggedOutExit": 1
+      }
+    },
+    {
+      "scope": "installed",
+      "case": "cold",
+      "context": "default",
+      "result": "PASS",
+      "firstFailure": null,
+      "SDKQueries": 0,
+      "http": [
+        {
+          "label": "cold-health-1",
+          "path": "/health",
+          "status": 200,
+          "ms": 5102,
+          "health": "degraded",
+          "loggedIn": null
+        },
+        {
+          "label": "cold-health-2",
+          "path": "/health",
+          "status": 200,
+          "ms": 5105,
+          "health": "degraded",
+          "loggedIn": null
+        },
+        {
+          "label": "cold-list",
+          "path": "/profiles/list",
+          "status": 200,
+          "ms": 5105,
+          "loggedIn": false,
+          "provenance": "never",
+          "lastSuccessObserved": false
+        },
+        {
+          "label": "late-health",
+          "path": "/health",
+          "status": 200,
+          "ms": 1,
+          "health": "healthy",
+          "loggedIn": true
+        },
+        {
+          "label": "late-list",
+          "path": "/profiles/list",
+          "status": 200,
+          "ms": 1,
+          "loggedIn": true,
+          "provenance": "live",
+          "lastSuccessObserved": true
+        }
+      ],
+      "native": [
+        {
+          "elapsedMs": 8166,
+          "code": 0,
+          "signal": null,
+          "loggedIn": true,
+          "authMethod": "oauth_token",
+          "exitSeen": true,
+          "closeSeen": true,
+          "stdoutClosed": true,
+          "stderrClosed": true,
+          "writesFlushed": true
+        }
+      ],
+      "nativeInvocationCount": 1,
+      "wrapperJoinsComplete": true,
+      "workerJoinsComplete": true,
+      "resultSHA256": "5a863bafc2d46fd8a047745f5b13752c3a3725883399b770c840fd4d8a433d99",
+      "coordinatorSHA256": "b233c6923beaf66ac358f4102013063afe6ecb4eb6fb6c27711155d6739ed237",
+      "warnings": {
+        "total": 1,
+        "loggedOutExit": 0
+      }
+    },
+    {
+      "scope": "installed",
+      "case": "cold",
+      "context": "profile",
+      "result": "PASS",
+      "firstFailure": null,
+      "SDKQueries": 0,
+      "http": [
+        {
+          "label": "cold-health-1",
+          "path": "/health",
+          "status": 200,
+          "ms": 5100,
+          "health": "degraded",
+          "loggedIn": null
+        },
+        {
+          "label": "cold-health-2",
+          "path": "/health",
+          "status": 200,
+          "ms": 5101,
+          "health": "degraded",
+          "loggedIn": null
+        },
+        {
+          "label": "cold-list",
+          "path": "/profiles/list",
+          "status": 200,
+          "ms": 5102,
+          "loggedIn": false,
+          "provenance": "never",
+          "lastSuccessObserved": false
+        },
+        {
+          "label": "late-health",
+          "path": "/health",
+          "status": 200,
+          "ms": 1,
+          "health": "healthy",
+          "loggedIn": true
+        },
+        {
+          "label": "late-list",
+          "path": "/profiles/list",
+          "status": 200,
+          "ms": 0,
+          "loggedIn": true,
+          "provenance": "live",
+          "lastSuccessObserved": true
+        }
+      ],
+      "native": [
+        {
+          "elapsedMs": 8161,
+          "code": 0,
+          "signal": null,
+          "loggedIn": true,
+          "authMethod": "oauth_token",
+          "exitSeen": true,
+          "closeSeen": true,
+          "stdoutClosed": true,
+          "stderrClosed": true,
+          "writesFlushed": true
+        }
+      ],
+      "nativeInvocationCount": 1,
+      "wrapperJoinsComplete": true,
+      "workerJoinsComplete": true,
+      "resultSHA256": "ce762fe38cbf8c42cb361d2fed534e5a3d60423327ceeea6d3f27e09fd5c0f30",
+      "coordinatorSHA256": "be8eccf74f86ab5006ff6740e576d824ed27e5460ce501767c11963a2d965685",
+      "warnings": {
+        "total": 1,
+        "loggedOutExit": 0
+      }
+    },
+    {
+      "scope": "installed",
+      "case": "sibling",
+      "context": "profile",
+      "result": "PASS",
+      "firstFailure": null,
+      "SDKQueries": 0,
+      "http": [
+        {
+          "label": "owner-a-pending",
+          "path": "/health",
+          "status": 200,
+          "ms": 5095,
+          "health": "degraded",
+          "loggedIn": null
+        },
+        {
+          "label": "owner-b-pending",
+          "path": "/health",
+          "status": 200,
+          "ms": 5002,
+          "health": "degraded",
+          "loggedIn": null
+        },
+        {
+          "label": "surviving-healthy",
+          "path": "/health",
+          "status": 200,
+          "ms": 1,
+          "health": "healthy",
+          "loggedIn": true
+        }
+      ],
+      "native": [
+        {
+          "elapsedMs": 8152,
+          "code": 0,
+          "signal": null,
+          "loggedIn": true,
+          "authMethod": "oauth_token",
+          "exitSeen": true,
+          "closeSeen": true,
+          "stdoutClosed": true,
+          "stderrClosed": true,
+          "writesFlushed": true
+        }
+      ],
+      "nativeInvocationCount": 1,
+      "wrapperJoinsComplete": true,
+      "workerJoinsComplete": true,
+      "resultSHA256": "11b4e391ab9d3d3266f0f1986fcb310249aa9d7cd50bd964d4cb979e539607e1",
+      "coordinatorSHA256": "5aebf7e17308092b275fde5da18eaa27f94c94b8a3e8fa9ede13f4e849ba47b3",
+      "warnings": {
+        "total": 1,
+        "loggedOutExit": 0
+      }
+    },
+    {
+      "scope": "installed",
+      "case": "last-owner",
+      "context": "profile",
+      "result": "PASS",
+      "firstFailure": null,
+      "SDKQueries": 0,
+      "http": [
+        {
+          "label": "owner-a-pending",
+          "path": "/health",
+          "status": 200,
+          "ms": 367,
+          "health": "degraded",
+          "loggedIn": null
+        },
+        {
+          "label": "replacement-pending",
+          "path": "/health",
+          "status": 200,
+          "ms": 5002,
+          "health": "degraded",
+          "loggedIn": null
+        },
+        {
+          "label": "surviving-healthy",
+          "path": "/health",
+          "status": 200,
+          "ms": 1,
+          "health": "healthy",
+          "loggedIn": true
+        }
+      ],
+      "native": [
+        {
+          "elapsedMs": 9,
+          "code": null,
+          "signal": "SIGTERM",
+          "loggedIn": null,
+          "authMethod": null,
+          "exitSeen": true,
+          "closeSeen": true,
+          "stdoutClosed": true,
+          "stderrClosed": true,
+          "writesFlushed": true
+        },
+        {
+          "elapsedMs": 8174,
+          "code": 0,
+          "signal": null,
+          "loggedIn": true,
+          "authMethod": "oauth_token",
+          "exitSeen": true,
+          "closeSeen": true,
+          "stdoutClosed": true,
+          "stderrClosed": true,
+          "writesFlushed": true
+        }
+      ],
+      "nativeInvocationCount": 2,
+      "wrapperJoinsComplete": true,
+      "workerJoinsComplete": true,
+      "resultSHA256": "59814890852f8aeb0579986d53428da186bd3ffddf2d985e0c17e94245ac79fc",
+      "coordinatorSHA256": "3f400003021e6ceaf03e308651e5403884ad8bbbbad203afe648b4c17989970b",
+      "warnings": {
+        "total": 1,
+        "loggedOutExit": 0
+      }
+    },
+    {
+      "scope": "installed",
+      "case": "stale",
+      "context": "default",
+      "result": "PASS",
+      "firstFailure": null,
+      "SDKQueries": 0,
+      "http": [
+        {
+          "label": "cold-health-1",
+          "path": "/health",
+          "status": 200,
+          "ms": 5087,
+          "health": "degraded",
+          "loggedIn": null
+        },
+        {
+          "label": "cold-health-2",
+          "path": "/health",
+          "status": 200,
+          "ms": 5089,
+          "health": "degraded",
+          "loggedIn": null
+        },
+        {
+          "label": "cold-list",
+          "path": "/profiles/list",
+          "status": 200,
+          "ms": 5089,
+          "loggedIn": false,
+          "provenance": "never",
+          "lastSuccessObserved": false
+        },
+        {
+          "label": "late-health",
+          "path": "/health",
+          "status": 200,
+          "ms": 1,
+          "health": "healthy",
+          "loggedIn": true
+        },
+        {
+          "label": "late-list",
+          "path": "/profiles/list",
+          "status": 200,
+          "ms": 0,
+          "loggedIn": true,
+          "provenance": "live",
+          "lastSuccessObserved": true
+        },
+        {
+          "label": "stale-health",
+          "path": "/health",
+          "status": 200,
+          "ms": 1,
+          "health": "healthy",
+          "loggedIn": true
+        },
+        {
+          "label": "stale-list",
+          "path": "/profiles/list",
+          "status": 200,
+          "ms": 2,
+          "loggedIn": true,
+          "provenance": "live",
+          "lastSuccessObserved": true
+        },
+        {
+          "label": "refreshed-health",
+          "path": "/health",
+          "status": 200,
+          "ms": 1,
+          "health": "healthy",
+          "loggedIn": true
+        }
+      ],
+      "native": [
+        {
+          "elapsedMs": 8168,
+          "code": 0,
+          "signal": null,
+          "loggedIn": true,
+          "authMethod": "oauth_token",
+          "exitSeen": true,
+          "closeSeen": true,
+          "stdoutClosed": true,
+          "stderrClosed": true,
+          "writesFlushed": true
+        },
+        {
+          "elapsedMs": 8159,
+          "code": 0,
+          "signal": null,
+          "loggedIn": true,
+          "authMethod": "oauth_token",
+          "exitSeen": true,
+          "closeSeen": true,
+          "stdoutClosed": true,
+          "stderrClosed": true,
+          "writesFlushed": true
+        }
+      ],
+      "nativeInvocationCount": 2,
+      "wrapperJoinsComplete": true,
+      "workerJoinsComplete": true,
+      "resultSHA256": "a1bdd6c4bca4a238c41496fa0dd1ae429a6d5b1519cd5bad5fae616bf1c1eca5",
+      "coordinatorSHA256": "99953c038d1145c47f8331b188acb5bb1d1771c2eea0d17517495ca6dec47413",
+      "warnings": {
+        "total": 1,
+        "loggedOutExit": 0
+      }
+    },
+    {
+      "scope": "installed",
+      "case": "stale",
+      "context": "profile",
+      "result": "PASS",
+      "firstFailure": null,
+      "SDKQueries": 0,
+      "http": [
+        {
+          "label": "cold-health-1",
+          "path": "/health",
+          "status": 200,
+          "ms": 5090,
+          "health": "degraded",
+          "loggedIn": null
+        },
+        {
+          "label": "cold-health-2",
+          "path": "/health",
+          "status": 200,
+          "ms": 5090,
+          "health": "degraded",
+          "loggedIn": null
+        },
+        {
+          "label": "cold-list",
+          "path": "/profiles/list",
+          "status": 200,
+          "ms": 5093,
+          "loggedIn": false,
+          "provenance": "never",
+          "lastSuccessObserved": false
+        },
+        {
+          "label": "late-health",
+          "path": "/health",
+          "status": 200,
+          "ms": 1,
+          "health": "healthy",
+          "loggedIn": true
+        },
+        {
+          "label": "late-list",
+          "path": "/profiles/list",
+          "status": 200,
+          "ms": 0,
+          "loggedIn": true,
+          "provenance": "live",
+          "lastSuccessObserved": true
+        },
+        {
+          "label": "stale-health",
+          "path": "/health",
+          "status": 200,
+          "ms": 2,
+          "health": "healthy",
+          "loggedIn": true
+        },
+        {
+          "label": "stale-list",
+          "path": "/profiles/list",
+          "status": 200,
+          "ms": 3,
+          "loggedIn": true,
+          "provenance": "live",
+          "lastSuccessObserved": true
+        },
+        {
+          "label": "refreshed-health",
+          "path": "/health",
+          "status": 200,
+          "ms": 1,
+          "health": "healthy",
+          "loggedIn": true
+        }
+      ],
+      "native": [
+        {
+          "elapsedMs": 8141,
+          "code": 0,
+          "signal": null,
+          "loggedIn": true,
+          "authMethod": "oauth_token",
+          "exitSeen": true,
+          "closeSeen": true,
+          "stdoutClosed": true,
+          "stderrClosed": true,
+          "writesFlushed": true
+        },
+        {
+          "elapsedMs": 8122,
+          "code": 0,
+          "signal": null,
+          "loggedIn": true,
+          "authMethod": "oauth_token",
+          "exitSeen": true,
+          "closeSeen": true,
+          "stdoutClosed": true,
+          "stderrClosed": true,
+          "writesFlushed": true
+        }
+      ],
+      "nativeInvocationCount": 2,
+      "wrapperJoinsComplete": true,
+      "workerJoinsComplete": true,
+      "resultSHA256": "01dc1832de777141c0f2fc5aaefe81d78c51da800e8c3ac397b1af93b07064dd",
+      "coordinatorSHA256": "d0fb0a33d66afd7d63d5af9040c95a368ef4a51490a093061140e5f4275fa1c3",
+      "warnings": {
+        "total": 1,
+        "loggedOutExit": 0
+      }
+    }
+  ]
+}

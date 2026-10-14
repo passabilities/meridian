@@ -1,0 +1,3 @@
+no-opt-in: exit=1; AssertionError [ERR_ASSERTION]: Explicit live opt-in required
+missing-grant: exit=1; AssertionError [ERR_ASSERTION]: An explicit access-only grant is required
+missing-plugins: exit=1; AssertionError [ERR_ASSERTION]: E2E_PLUGIN_PATH must name an absolute installed OpenCode scrub entrypoint

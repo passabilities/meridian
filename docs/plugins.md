@@ -67,7 +67,7 @@ npm install @rynfar/meridian-plugin-hermes-scrub
 
 Use absolute paths for npm packages. Bare filenames are resolved in the plugin discovery directory; the loader does not expand `~`.
 
-Both plugin locations are configurable for the standalone CLI: `MERIDIAN_PLUGIN_DIR` overrides the auto-discovery directory and `MERIDIAN_PLUGIN_CONFIG` the manifest path (useful for Nix, containers, or running several instances with different plugin sets).
+Both plugin locations live in Meridian's config directory, so an instance started with its own `MERIDIAN_CONFIG_DIR` reads its own `plugins/` and `plugins.json`. For the standalone CLI, `MERIDIAN_PLUGIN_DIR` overrides the auto-discovery directory and `MERIDIAN_PLUGIN_CONFIG` the manifest path (useful for Nix or containers).
 
 The metering and failure observations behind these scrubbers are historical and account-specific. A prompt rewrite cannot guarantee subscription eligibility or avoid a genuine quota limit.
 

@@ -1,0 +1,77 @@
+{
+  "expect": "baseline",
+  "module": "/tmp/meridian-1352-baseline-hm-module.nix",
+  "assignments": [
+    "MERIDIAN_HOST=127.0.0.1",
+    "MERIDIAN_IDLE_TIMEOUT_SECONDS=120",
+    "MERIDIAN_PORT=3456",
+    "MERIDIAN_TELEMETRY_PERSIST=false",
+    "CLAUDE_CONFIG_DIR=%h/.claude-work",
+    "ESCAPES=tab\tline\nquote\"slash\\",
+    "EXAMPLE=two  spaces",
+    "MERIDIAN_PORT=4567",
+    "MERIDIAN_PROFILES=[{\"claudeConfigDir\":\"/home/example/claude work\",\"id\":\"personal\"}]",
+    "MERIDIAN_WORKDIR=/home/example/back\\slash",
+    "UNICODE=café 雪"
+  ],
+  "cases": [
+    {
+      "name": "MERIDIAN_PROFILES",
+      "exit": 0,
+      "expected": "[{\"claudeConfigDir\":\"/home/example/claude work\",\"id\":\"personal\"}]",
+      "observed": "[{claudeConfigDir:/home/example/claude work,id:personal}]",
+      "pass": false,
+      "stderr": ""
+    },
+    {
+      "name": "MERIDIAN_WORKDIR",
+      "exit": 0,
+      "expected": "/home/example/back\\slash",
+      "observed": "/home/example/back lash",
+      "pass": false,
+      "stderr": ""
+    },
+    {
+      "name": "CLAUDE_CONFIG_DIR",
+      "exit": 0,
+      "expected": "/home/rynfar/.claude-work",
+      "observed": "%h/.claude-work",
+      "pass": false,
+      "stderr": ""
+    },
+    {
+      "name": "MERIDIAN_PORT",
+      "exit": 0,
+      "expected": "4567",
+      "observed": "4567",
+      "pass": true,
+      "stderr": ""
+    },
+    {
+      "name": "EXAMPLE",
+      "exit": 1,
+      "expected": "two  spaces",
+      "observed": "",
+      "pass": false,
+      "stderr": "Failed to start transient service unit: Invalid environment block.\n"
+    },
+    {
+      "name": "ESCAPES",
+      "exit": 1,
+      "expected": "tab\tline\nquote\"slash\\",
+      "observed": "",
+      "pass": false,
+      "stderr": "Failed to parse Environment= value 'ESCAPES=tab\tline\nquote\"slash\\': Invalid argument\n"
+    },
+    {
+      "name": "UNICODE",
+      "exit": 1,
+      "expected": "café 雪",
+      "observed": "",
+      "pass": false,
+      "stderr": "Failed to start transient service unit: Invalid environment block.\n"
+    }
+  ],
+  "modelCalls": 0,
+  "result": "FAIL"
+}

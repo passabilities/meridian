@@ -381,7 +381,8 @@ describe("proxy coordination across OS processes", () => {
           await release(waiter)
           expect((await result(paths, waiter)).status).toBe(200)
         } else {
-          expect((await result(paths, waiter)).status).toBe(400)
+          const waiterResult = await result(paths, waiter)
+          expect(waiterResult.status, JSON.stringify(waiterResult)).toBe(400)
           expect((await readEvents(paths.events)).some(row => row.workerId === waiter.id && row.name === "sdk-start")).toBe(false)
         }
       }, 20_000)

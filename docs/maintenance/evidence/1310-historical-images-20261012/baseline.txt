@@ -1,0 +1,80 @@
+        "type": "base64",
+      },
+      "type": "image",
+    },
+    {
+      "source": {
+        "type": "url",
+        "url": "https://example.invalid/image.png",
+      },
+      "type": "image",
+    },
+    {
+      "source": {
+        "type": "url",
+        "url": "https://example.invalid/image.png",
+      },
+      "type": "image",
+    },
+    {
+      "source": {
+        "data": "not!base64",
+        "media_type": "image/png",
+        "type": "base64",
+      },
+      "type": "image",
+    },
+    {
+      "source": {
+        "data": "not!base64",
+        "media_type": "image/png",
+        "type": "base64",
+      },
+      "type": "image",
+    },
+  ]
+
+- Expected  - 0
++ Received  + 8
+
+      at <anonymous> (/Users/rynfar/repos/meridian-historical-images-1310-20261012/src/__tests__/replay-image-dedup.test.ts:43:56)
+(fail) historical image replay deduplication > compares valid base64 bytes, retaining URLs, malformed sources and distinct MIME types [0.44ms]
+42 |     const source = [entry([image,unpadded,jpeg,url,url,invalid,invalid]),entry("current")]
+43 |     expect(imageBlocks(frameStructuredReplay(source))).toEqual([image,jpeg,url,url,invalid,invalid])
+44 |   })
+45 | 
+46 |   it("also deduplicates history when replay ends in an assistant context turn", () => {
+47 |     expect(imageBlocks(frameStructuredReplay([entry([image,image]),entry("[Assistant: prior answer]")],false))).toEqual([image])
+                                                                                                                     ^
+error: expect(received).toEqual(expected)
+
+  [
+    {
+      "source": {
+        "data": "aGlzdG9yaWNhbA==",
+        "media_type": "image/png",
+        "type": "base64",
+      },
+      "type": "image",
+    },
++   {
++     "source": {
++       "data": "aGlzdG9yaWNhbA==",
++       "media_type": "image/png",
++       "type": "base64",
++     },
++     "type": "image",
++   },
+  ]
+
+- Expected  - 0
++ Received  + 8
+
+      at <anonymous> (/Users/rynfar/repos/meridian-historical-images-1310-20261012/src/__tests__/replay-image-dedup.test.ts:47:113)
+(fail) historical image replay deduplication > also deduplicates history when replay ends in an assistant context turn [0.11ms]
+(pass) historical image replay deduplication > leaves native checkpoint results and ordinary resume coalescing unchanged [0.07ms]
+
+ 1 pass
+ 4 fail
+ 7 expect() calls
+Ran 5 tests across 1 file. [58.00ms]

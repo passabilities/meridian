@@ -1,0 +1,276 @@
+{
+  "label": "timed-installed-0b080b02",
+  "result": "PASS",
+  "model": "gemini-3.8-flash-low",
+  "platform": "darwin",
+  "arch": "arm64",
+  "node": "v22.22.3",
+  "nativeHash": "8c01ef82307dc01455418eb2e6e82f2989a3fa8b815c4b192efaaa89a55bef8d",
+  "pluginHash": "0b40c022e3883332b39ad5bc6411033f0d836dc3bd303476d4bfe7226cc77e8e",
+  "toolMs": 1000,
+  "idleMs": 10000,
+  "pauseMs": 1600,
+  "clientPreflight": true,
+  "metrics": [
+    {
+      "model": "gemini-3.8-flash-low",
+      "status": 200,
+      "continuation": "new",
+      "conversationId": "02b170cf-6eee-48ce-8462-72a28da72ea8",
+      "inputTokens": 14334,
+      "outputTokens": 10,
+      "observedAtMs": 13821.648125
+    },
+    {
+      "model": "gemini-3.8-flash-low",
+      "status": 200,
+      "continuation": "live",
+      "conversationId": "02b170cf-6eee-48ce-8462-72a28da72ea8",
+      "inputTokens": 14900,
+      "outputTokens": 9,
+      "observedAtMs": 19517.681541
+    },
+    {
+      "model": "gemini-3.8-flash-low",
+      "status": 200,
+      "continuation": "new",
+      "conversationId": "772f1de8-599d-4ec6-8f0b-46a268c38071",
+      "inputTokens": 14443,
+      "outputTokens": 7,
+      "observedAtMs": 77830.499916
+    }
+  ],
+  "requests": [
+    {
+      "model": "gemini-3.8-flash-low",
+      "id": "d9a8591b-59b6-4eae-9621-70e890b07652",
+      "messageCount": 1
+    },
+    {
+      "model": "gemini-3.8-flash-low",
+      "id": "e69ca22b-73d4-40a9-9a49-e784252b5bb9",
+      "messageCount": 3
+    },
+    {
+      "model": "gemini-3.8-flash-low",
+      "id": "9682071f-d341-4678-8f69-6ecbe0df59ec",
+      "messageCount": 5
+    }
+  ],
+  "health": [
+    {
+      "processes": 0,
+      "active": 0,
+      "pending": 0,
+      "reused": 1,
+      "completed": 2,
+      "failed": 0
+    },
+    {
+      "processes": 0,
+      "active": 0,
+      "pending": 0,
+      "reused": 1,
+      "completed": 2,
+      "failed": 0
+    },
+    {
+      "processes": 1,
+      "active": 0,
+      "pending": 0,
+      "reused": 1,
+      "completed": 3,
+      "failed": 0
+    }
+  ],
+  "children": [
+    {
+      "pid": 55691,
+      "close": true,
+      "stdoutEof": true,
+      "stderrEof": true,
+      "code": 143,
+      "signal": null
+    },
+    {
+      "pid": 55692,
+      "close": true,
+      "stdoutEof": true,
+      "stderrEof": true,
+      "code": 0,
+      "signal": null
+    },
+    {
+      "pid": 55693,
+      "close": true,
+      "stdoutEof": true,
+      "stderrEof": true,
+      "code": 0,
+      "signal": null
+    },
+    {
+      "pid": 56145,
+      "close": true,
+      "stdoutEof": true,
+      "stderrEof": true,
+      "code": 0,
+      "signal": null
+    },
+    {
+      "pid": 56154,
+      "close": true,
+      "stdoutEof": true,
+      "stderrEof": true,
+      "code": 143,
+      "signal": null
+    },
+    {
+      "pid": 56155,
+      "close": true,
+      "stdoutEof": true,
+      "stderrEof": true,
+      "code": 0,
+      "signal": null
+    },
+    {
+      "pid": 56156,
+      "close": true,
+      "stdoutEof": true,
+      "stderrEof": true,
+      "code": 0,
+      "signal": null
+    },
+    {
+      "pid": 56251,
+      "close": true,
+      "stdoutEof": true,
+      "stderrEof": true,
+      "code": 1,
+      "signal": null
+    },
+    {
+      "pid": 56990,
+      "close": true,
+      "stdoutEof": true,
+      "stderrEof": true,
+      "code": 0,
+      "signal": null
+    },
+    {
+      "pid": 57048,
+      "close": true,
+      "stdoutEof": true,
+      "stderrEof": true,
+      "code": 0,
+      "signal": null
+    },
+    {
+      "pid": 57120,
+      "close": true,
+      "stdoutEof": true,
+      "stderrEof": true,
+      "code": 0,
+      "signal": null
+    },
+    {
+      "pid": 57121,
+      "close": true,
+      "stdoutEof": true,
+      "stderrEof": true,
+      "code": null,
+      "signal": "SIGKILL"
+    },
+    {
+      "pid": 62240,
+      "close": true,
+      "stdoutEof": true,
+      "stderrEof": true,
+      "code": 0,
+      "signal": null
+    },
+    {
+      "pid": 62565,
+      "close": true,
+      "stdoutEof": true,
+      "stderrEof": true,
+      "code": 0,
+      "signal": null
+    },
+    {
+      "pid": 62566,
+      "close": true,
+      "stdoutEof": true,
+      "stderrEof": true,
+      "code": 0,
+      "signal": null
+    },
+    {
+      "pid": 62772,
+      "close": true,
+      "stdoutEof": true,
+      "stderrEof": true,
+      "code": 0,
+      "signal": null
+    },
+    {
+      "pid": 62773,
+      "close": true,
+      "stdoutEof": true,
+      "stderrEof": true,
+      "code": 0,
+      "signal": null
+    },
+    {
+      "pid": 62777,
+      "close": true,
+      "stdoutEof": true,
+      "stderrEof": true,
+      "code": 0,
+      "signal": null
+    },
+    {
+      "pid": 62784,
+      "close": true,
+      "stdoutEof": true,
+      "stderrEof": true,
+      "code": 0,
+      "signal": null
+    },
+    {
+      "pid": 62868,
+      "close": true,
+      "stdoutEof": true,
+      "stderrEof": true,
+      "code": 0,
+      "signal": null
+    },
+    {
+      "pid": 62875,
+      "close": true,
+      "stdoutEof": true,
+      "stderrEof": true,
+      "code": 1,
+      "signal": null
+    },
+    {
+      "pid": 63613,
+      "close": true,
+      "stdoutEof": true,
+      "stderrEof": true,
+      "code": 0,
+      "signal": null
+    },
+    {
+      "pid": 63616,
+      "close": true,
+      "stdoutEof": true,
+      "stderrEof": true,
+      "code": 0,
+      "signal": null
+    }
+  ],
+  "joined": true,
+  "actualPauseMs": 1601,
+  "nextDispatchAfterCompletionMs": 1628.987916,
+  "finalNativeHash": "8c01ef82307dc01455418eb2e6e82f2989a3fa8b815c4b192efaaa89a55bef8d"
+}

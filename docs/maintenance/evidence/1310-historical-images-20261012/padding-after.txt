@@ -1,0 +1,30 @@
+bun test v1.3.11 (af24e281)
+
+src/__tests__/replay.test.ts:
+(pass) trailing system reminders in a live user turn > keeps earlier history and combines multiple terminal reminders in order without editing input [0.57ms]
+(pass) trailing system reminders in a live user turn > keeps current media and a completed tool result in the current turn, ahead of reminder text [0.58ms]
+(pass) trailing system reminders in a live user turn > leaves assistant-ending history, system-only input, and middle reminders alone [0.06ms]
+(pass) faithful tool history rendering > delivers a complete resume delta atomically without changing native results, media or input [0.14ms]
+(pass) faithful tool history rendering > retains every call, argument and identity when an assistant turn has no text [0.24ms]
+(pass) faithful tool history rendering > keeps assistant text and calls in their original order [0.43ms]
+(pass) faithful tool history rendering > renders an earlier call with its registered SDK name only when requested [0.03ms]
+(pass) faithful tool history rendering > distinguishes successful and failed results even if their payloads match [0.01ms]
+(pass) faithful tool history rendering > renders fresh results without orphan wrappers and keeps nested media [0.45ms]
+(pass) faithful tool history rendering > preserves exact native results at a real SDK tool checkpoint [0.04ms]
+(pass) faithful tool history rendering > keeps non-tool user blocks and strings unchanged [0.01ms]
+(pass) faithful tool history rendering > renders client tool-change blocks as text, since user turns reject them [0.03ms]
+(pass) faithful tool history rendering > frames multimodal history before the live turn without changing images or the source [0.58ms]
+(pass) faithful tool history rendering > attributes historical media without labelling the current user's attachment [0.60ms]
+
+src/__tests__/replay-image-dedup.test.ts:
+(pass) historical image replay deduplication > does not amplify one historical payload through three attachment read-back cycles [0.56ms]
+(pass) historical image replay deduplication > preserves distinct historical bytes and all current media, even matching bytes [0.16ms]
+(pass) historical image replay deduplication > compares valid base64 bytes, retaining URLs, malformed sources and distinct MIME types [0.07ms]
+(pass) historical image replay deduplication > does not hide malformed padding behind an otherwise matching valid image [0.04ms]
+(pass) historical image replay deduplication > also deduplicates history when replay ends in an assistant context turn [0.03ms]
+(pass) historical image replay deduplication > leaves native checkpoint results and ordinary resume coalescing unchanged [0.03ms]
+
+ 20 pass
+ 0 fail
+ 81 expect() calls
+Ran 20 tests across 2 files. [46.00ms]

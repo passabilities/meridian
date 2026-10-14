@@ -1,0 +1,26 @@
+{
+  "mode": "profile-prune",
+  "source": "0bf16b0d83f2fcc8c9b55df06bf20f97d763a23f",
+  "node": "v22.22.3",
+  "platform": "darwin",
+  "arch": "arm64",
+  "jsonCandidatesBeforeMigration": [
+    "conversation"
+  ],
+  "sqlMappingsBefore": [
+    "conversation",
+    "work:conversation"
+  ],
+  "sqlFacadeCandidates": [],
+  "sqlFacadePruned": 0,
+  "sqlLifecyclePruneError": {
+    "name": "SessionLifecycleLockError",
+    "message": "Error: timed out waiting for /private/tmp/meridian-backlog-20261004/meridian/1219/semantic-round1/p1-p2-probe-runtime/profile-prune/state/session-gc.json.lock"
+  },
+  "sqlMappingsAfter": [
+    "conversation",
+    "work:conversation"
+  ],
+  "sqlPinsRetained": 2,
+  "assertions": "PASS (defect reproduced; not product acceptance)"
+}

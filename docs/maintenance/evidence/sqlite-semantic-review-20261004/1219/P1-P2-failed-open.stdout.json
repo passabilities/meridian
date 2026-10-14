@@ -1,0 +1,15 @@
+{
+  "mode": "failed-open",
+  "source": "0bf16b0d83f2fcc8c9b55df06bf20f97d763a23f",
+  "node": "v22.22.3",
+  "platform": "darwin",
+  "arch": "arm64",
+  "openRejected": true,
+  "openError": {
+    "name": "SessionLifecycleCorruptError",
+    "message": "Error: bookkeeping startup failed: Error: synthetic provenance read I/O fault"
+  },
+  "nativeHandleStillUsable": true,
+  "exclusiveAcquiredWhileNativeHandleOpen": true,
+  "assertions": "PASS (defect reproduced; not product acceptance)"
+}

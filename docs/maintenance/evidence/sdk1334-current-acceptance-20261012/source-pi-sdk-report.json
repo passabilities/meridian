@@ -1,0 +1,250 @@
+{
+  "root": "/var/folders/ks/xnz659y11jl44j80b_lfws6r0000gn/T/meridian-pi-image-dedup-1t04Li",
+  "result": "PASS",
+  "expected": "candidate",
+  "model": "claude-opus-5-5",
+  "pi": "1.1.0",
+  "platform": "darwin/arm64",
+  "rounds": [
+    {
+      "round": 0,
+      "current": false,
+      "reads": 1,
+      "historicalImages": 1,
+      "currentImages": 0,
+      "observedModels": [
+        "claude-opus-5-5"
+      ],
+      "requests": 2
+    },
+    {
+      "round": 1,
+      "current": false,
+      "reads": 1,
+      "historicalImages": 1,
+      "currentImages": 0,
+      "observedModels": [
+        "claude-opus-5-5"
+      ],
+      "requests": 2
+    },
+    {
+      "round": 2,
+      "current": false,
+      "reads": 1,
+      "historicalImages": 1,
+      "currentImages": 0,
+      "observedModels": [
+        "claude-opus-5-5"
+      ],
+      "requests": 2
+    },
+    {
+      "round": 3,
+      "current": true,
+      "reads": 0,
+      "historicalImages": 1,
+      "currentImages": 1,
+      "observedModels": [
+        "claude-opus-5-5"
+      ],
+      "requests": 1
+    }
+  ],
+  "scope": "Actual Pi read-back of an owned same-byte image; SDK input inspected through supported APIs, not private attachment-file discovery",
+  "harnessSha256": "d18e33dea2b699d6b16d4b6d19222802bdb241535f096fc1b467b42f31537153",
+  "nativeVersion": "2.1.296 (Claude Code)",
+  "sdk": "0.2.141",
+  "scrubPreflight": {
+    "path": "/private/tmp/meridian-1351-pi-client-20261012/node_modules/@rynfar/meridian-plugin-pi-scrub/dist/index.js",
+    "packageName": "@rynfar/meridian-plugin-pi-scrub",
+    "packageVersion": "0.2.2",
+    "sha256": "919020957c22f04bee21e2198619ae35649618dcc82eb6b05d08d2bf44b14af5",
+    "runtimeVersion": "0.2.2",
+    "invocations": 0,
+    "errors": 0
+  },
+  "requestWitnesses": [
+    [
+      {
+        "status": 200,
+        "adapter": "pi",
+        "requestModel": "claude-opus-5-5",
+        "model": "opus[1m]",
+        "lineageType": "new"
+      },
+      {
+        "status": 200,
+        "adapter": "pi",
+        "requestModel": "claude-opus-5-5",
+        "model": "opus[1m]",
+        "lineageType": "continuation"
+      }
+    ],
+    [
+      {
+        "status": 200,
+        "adapter": "pi",
+        "requestModel": "claude-opus-5-5",
+        "model": "opus[1m]",
+        "lineageType": "new"
+      },
+      {
+        "status": 200,
+        "adapter": "pi",
+        "requestModel": "claude-opus-5-5",
+        "model": "opus[1m]",
+        "lineageType": "continuation"
+      }
+    ],
+    [
+      {
+        "status": 200,
+        "adapter": "pi",
+        "requestModel": "claude-opus-5-5",
+        "model": "opus[1m]",
+        "lineageType": "new"
+      },
+      {
+        "status": 200,
+        "adapter": "pi",
+        "requestModel": "claude-opus-5-5",
+        "model": "opus[1m]",
+        "lineageType": "continuation"
+      }
+    ],
+    [
+      {
+        "status": 200,
+        "adapter": "pi",
+        "requestModel": "claude-opus-5-5",
+        "model": "opus[1m]",
+        "lineageType": "new"
+      }
+    ]
+  ],
+  "counts": [
+    1,
+    1,
+    1
+  ],
+  "scrubFinal": {
+    "path": "/private/tmp/meridian-1351-pi-client-20261012/node_modules/@rynfar/meridian-plugin-pi-scrub/dist/index.js",
+    "packageName": "@rynfar/meridian-plugin-pi-scrub",
+    "packageVersion": "0.2.2",
+    "sha256": "919020957c22f04bee21e2198619ae35649618dcc82eb6b05d08d2bf44b14af5",
+    "runtimeVersion": "0.2.2",
+    "invocations": 7,
+    "errors": 0
+  },
+  "actors": [
+    {
+      "exitSeen": true,
+      "closeSeen": true,
+      "stdoutClosed": true,
+      "stderrClosed": true,
+      "spawnFailed": false,
+      "exitCode": 0,
+      "exitSignal": null,
+      "joined": true,
+      "termSent": false,
+      "killSent": false,
+      "signalFailure": null
+    },
+    {
+      "exitSeen": true,
+      "closeSeen": true,
+      "stdoutClosed": true,
+      "stderrClosed": true,
+      "spawnFailed": false,
+      "exitCode": 1,
+      "exitSignal": null,
+      "joined": true,
+      "termSent": false,
+      "killSent": false,
+      "signalFailure": null
+    },
+    {
+      "exitSeen": true,
+      "closeSeen": true,
+      "stdoutClosed": true,
+      "stderrClosed": true,
+      "spawnFailed": false,
+      "exitCode": 0,
+      "exitSignal": null,
+      "joined": true,
+      "termSent": false,
+      "killSent": false,
+      "signalFailure": null
+    },
+    {
+      "exitSeen": true,
+      "closeSeen": true,
+      "stdoutClosed": true,
+      "stderrClosed": true,
+      "spawnFailed": false,
+      "exitCode": 1,
+      "exitSignal": null,
+      "joined": true,
+      "termSent": false,
+      "killSent": false,
+      "signalFailure": null
+    },
+    {
+      "exitSeen": true,
+      "closeSeen": true,
+      "stdoutClosed": true,
+      "stderrClosed": true,
+      "spawnFailed": false,
+      "exitCode": 0,
+      "exitSignal": null,
+      "joined": true,
+      "termSent": false,
+      "killSent": false,
+      "signalFailure": null
+    },
+    {
+      "exitSeen": true,
+      "closeSeen": true,
+      "stdoutClosed": true,
+      "stderrClosed": true,
+      "spawnFailed": false,
+      "exitCode": 1,
+      "exitSignal": null,
+      "joined": true,
+      "termSent": false,
+      "killSent": false,
+      "signalFailure": null
+    },
+    {
+      "exitSeen": true,
+      "closeSeen": true,
+      "stdoutClosed": true,
+      "stderrClosed": true,
+      "spawnFailed": false,
+      "exitCode": 0,
+      "exitSignal": null,
+      "joined": true,
+      "termSent": false,
+      "killSent": false,
+      "signalFailure": null
+    },
+    {
+      "exitSeen": true,
+      "closeSeen": true,
+      "stdoutClosed": true,
+      "stderrClosed": true,
+      "spawnFailed": false,
+      "exitCode": 0,
+      "exitSignal": null,
+      "joined": true,
+      "termSent": false,
+      "killSent": false,
+      "signalFailure": null
+    }
+  ],
+  "joined": true,
+  "originalExit": 0,
+  "sourceCommit": "35784e08",
+  "acceptanceScope": "Healthy actual Pi/Opus5.5/SDK process cleanup and historical-image replay; not original Linux-x64/OpenCode OAuth hang or natural fault reproduction"
+}

@@ -1,4 +1,1724 @@
+## STOP: contributor attribution — #1363 (2026-10-13)
+
+Read this before touching any contributor PR. Entries below that record credit
+as "`Co-authored-by` present" or "Author/AuthorDate preserved" describe a
+cherry-pick on a maintainer branch that was then squashed; the commit on `main`
+names the maintainer as Author. Those notes are not evidence of credit. The
+verified record is the [attribution ledger](ATTRIBUTION_LEDGER.md).
+
+The integration-PR procedure is withdrawn. Follow
+[Contributor pull requests](../../.agents/references/contributing.md#contributor-pull-requests):
+merge the contributor's own PR, push fixes to their branch, never close silently.
+
+Open maintainer drafts that carry contributor commits. **Do not squash-merge
+them.** The maintainer commits in each belong on the contributor's branch, and
+the contributor's PR is what merges:
+
+| Draft | Carries | Contributor PR to merge instead |
+|---|---|---|
+| #1362 | @Nowaker `13abefad5` | #1360 — merged; #1362 closed unmerged |
+| #1317 | @Cd1s `80d4b9667` | #1314 (unsigned, `BLOCKED`) |
+| #1322 | @passabilities (10), @justprosh (7), @Nowaker (1) | #1211, #1231, #1292; Nowaker's `52965e113` is from closed #1283 |
+
+Corrections to past PRs (reopening, comment edits, release notes, any rewrite of
+`main`) are the owner's decisions in #1363. Do not start them from this note.
+
+## Contributor merges under the new process (2026-10-13)
+
+Each landed as the contributor's own PR. Author is the output of
+`git log -1 --format='%an <%ae>'` on `origin/main`.
+
+| PR | Landed | Author on `main` | Maintainer commits on their branch | Path |
+|---|---|---|---|---|
+| #1360 | `58c4126c3` | Damian Nowak (@Nowaker) | tests, CLI help, evidence, merge of `main` | direct (signed) |
+| #1213 | `55edbcc35` | Robert (@robertn702) | conflict resolution, two test corrections, doc correction, live gate | `--admin` (unsigned) |
+| #1201 | `fa4266e16` | jmuz (@XInTheDark) | conflict-free merge of `main` only | `--admin` (unsigned), explicit `--body`, no maintainer trailer |
+| #1370 | `431ec2014` | Aleksey Proshutinskiy (@justprosh) | none | `--admin` (unsigned), explicit `--body`, no maintainer trailer |
+
+- #1213: [evidence](evidence/1213-sonnet-native-context-20261013/README.md).
+  5,773 local tests, build, final-head CI, live OpenCode 2.0.16 / Sonnet 5.5
+  before/after on macOS arm64. Not carried from the earlier draft: the exact-id
+  restriction and `CLAUDE_CODE_DISABLE_1M_CONTEXT` handling; the second is an
+  open follow-up if wanted. Issue #1212 closed by the merge.
+- #1201: [evidence](evidence/1201-per-call-results-20261013/README.md).
+  5,766 local tests, build, final-head CI, live Opus 5.5 `/v1/responses`
+  before/after. Its CI runs needed first-time-contributor approval. The landed
+  patch is identical to the contributor's commit. The reporter's own client was
+  not run.
+- #1370: [evidence](evidence/1370-digest-turn-live-20261013/README.md). Local
+  `npm test` and build, final-head CI, live Opus 5.5 before/after: three model
+  requests per deferred hand-off on unchanged `main`, one with the fix. Issue
+  #1367 closed by the merge.
+- #1361 (@jaedync, raw control characters in tool arguments) is reviewed and
+  held for an owner decision, not merged. Head `b07e11254`, CI green, merges
+  cleanly. Its fixture stands were rerun here with real Claude Code 2.1.296 and
+  real Pi 1.2.0: `e2e-capped-turns.mjs --case=unparsed-input --stream` (plus
+  `--headerless`, `--deferred`) and `e2e-pi-unparsed-tool-input.mjs` pass on
+  the PR and the Pi stand fails as expected on `f8eea2c35`. The live gate is
+  open: in 10 live Opus 5.5 edits of TAB-indented source with fine-grained tool
+  streaming on, the model never emitted a raw TAB, so the defect was not
+  reproduced with a real model here or by the contributor. Review ruled out
+  double execution (the rejection match needs the error envelope, the id and
+  the resolved name, and any captured sibling vetoes recovery). Two product
+  questions remain: the repair also doubles invalid backslash escapes, which
+  for clients other than Pi turns a rejected call into an executable one whose
+  argument is a guess (`C:\Users\new` reads `\n` as a newline); and tools
+  with only string arguments are not buffered, so a strict client gets
+  `stop_reason: tool_use` over arguments it cannot parse. Narrower options:
+  keep only the control-character escaping, or limit the unbuffered case to Pi.
+- A squash with an explicit `--body` carries no automatic `Co-authored-by`
+  line (observed on #1201); without one, every commit author on the branch is
+  added (#1213).
+- The earlier preparation branches for these two
+  (`codex/sonnet-context-1213-20261012`, `codex/checkpoint-pairs-1201-20261012`)
+  are superseded and must not be merged.
+
+## Plugin config isolation — #1360 (2026-10-13)
+
+Nowaker's own PR #1360 carries the change; maintainer tests, CLI help and
+evidence are separate commits on their branch. This replaces draft #1362, which
+held a cherry-picked copy and is closed unmerged. With `MERIDIAN_CONFIG_DIR`
+set, plugin discovery and `plugins.json` follow that directory; explicit
+`MERIDIAN_PLUGIN_DIR` / `MERIDIAN_PLUGIN_CONFIG` still win. Unchanged main fails
+both isolation assertions and the real CLI probe; the candidate passes them
+through the source CLI and a packed, installed CLI.
+[Receipts and harness](evidence/1360-plugin-config-20261012/README.md).
+Not run: model inference through a plugin loaded from a relocated config
+directory. The change only moves two default paths, so no request path differs.
+
+## Current Nix runtime integration — #1342 → #1357
+
+Authored current-main incorporation26e2dd4a5/dd4bf666 preserves Connor Grady's
+commits/dates, current test isolation, npm native floor and Home Manager quoting.
+Native Linux ARM64 build, home check, dependency/package reproducibility and
+10 installed SDK/native HTTP controls pass. Package160→51MiB; closure763→578MiB;
+all application bundles unchanged except the Nix-pinned Node shebang. Original
+full local99164 exits0 (clean npm ci,5752 tests,35 skips,0 failures,typecheck/build).
+[Exact evidence](evidence/1342-nix-runtime-20261012/README.md).
+Final-head CI, macOS runtime artifact review and credited exact-head merge remain.
+Source#1342 stays open. No release.
+
+Sonnet #1213 has current-main preparation preserved at branch
+codex/sonnet-context-1213-20261012 (dab7630a3):5767 tests/typecheck/build and actual
+Linux/OpenCode offline source/package admission pass (200k7/14 vs1M14/14).
+Supported default credential store returned no access token, so no grant was
+staged or live call started. Native model/history/resume acceptance stays open.
+
+#1261 current b999654d retains byte-identical sweep/retention/query blobs from
+rejected7475d08c; ownership, concurrent deletion and join findings still apply.
+#1266 remains draft atd9594af with its original exact macOS/nono/client evidence
+hold. Neither item is accepted by this checkpoint.
+
+## Current #1356 acceptance — full local and actual source/package pass
+
+Delivery [#1356](https://github.com/rynfar/meridian/pull/1356) incorporates
+source #1341 (8e7b40cbde70481e7838d9bc5a8d8775dfce0a67) through authored
+d4590e9b3, preserving Cd1s's identity/date, with separate compatibility
+correction3140ccbd. Full local original59007 exited0 on frozen0b080b02:
+5752 pass / 35 skip / 0 fail in23 isolated groups, typecheck/build pass.
+
+Actual Pi1.1.0 + matching Antigravity retry plugin + official agy1.2.7 +
+Gemini3.8FlashLow/DarwinARM64 reproduces baseline failure and passes corrected
+source and independently installed package, including the bundled client
+plugin. The measured pause is between tool and idle deadlines; same native
+conversation continues, then expires beyond the configured idle window.
+All original processes/pipes join, paid credits remain disabled and the
+native executable hash is unchanged. No model process remains active.
+
+Original15301 baseline exit1,50314 source exit0,70924 installed exit0.
+Initial53395/30143 failures are retained: the initial harness inserted blocking
+native readiness checks into an unmeasured pause. The corrected harness measures
+the complete interval without those calls. No product change or unexplained
+rerun. [Durable evidence](evidence/1341-idle-window-20261012.md) and runnable
+`scripts/e2e-antigravity-idle-conversation.mjs` are committed. Final-head CI and
+exact-head merge with verified Cd1s coauthor credit remain. Recheck source head
+before closing #1341; #1073/#1325 remain open. No release authorized.
+
+Post-SDK queue refresh:32 PRs/21 issues across six managed repositories, including
+source/delivery pairs and deferred releases. Ranked report now explicitly includes
+#1212/#1213/#1315 native context-window work and its original-platform evidence hold.
+
+## Current integration checkpoint — SDK close landed; idle window in review
+
+#1334 merged as 0d12f6a11f52f78bdb8760a5b16f29acea4bb8a7 from final
+cb6950476c55c7227058c9531a05bd2b31483783. Original69316 exited0: 5746 pass,
+35 skip, zero failures across23 isolated groups; typecheck/build pass. Required
+final-head test CI38313634366 and all relevant checks pass. Merged tree
+927be89a62ef57dbf19b48c3d8847210de819167 matches the reviewed prospective tree
+exactly, including separately verified npm-lock repair #1355 (fb5854be5).
+#1326 remains open: its original Linux/OpenCode/Opus hang is not established fixed.
+No release. Earlier pending SDK/lock statements below are historical.
+
+#1341 source8e7b40cb is incorporated as authored d4590e9b3 with separate
+compatibility correction3140ccbd. 78 focused tests/typecheck pass; old timer
+negative control fails two tests. Official isolated agy1.2.7 read-only settings
+pass with paid credits disabled and stable binary identity. Live client gate
+and full local/CI remain. See [review evidence](evidence/1341-idle-window-20261012.md).
+
+## Current integration checkpoint — OpenCode landed
+
+#1354 merged fa90c9aaf1e99d5fbd69f6725ce8be0dcc3cfff3 after final-head CI.
+Exact merged tree equals4edfb46cb; Aleksey coauthor verified. Source#1301
+unchanged05e2381f was rechecked and closed. No new release.
+
+#1334 original full local91165 exited1 with three error-reporting tests reading
+transient conflict markers during the ancestry merge. This was an orchestration
+error; retain its failed result. The exact stderr identifies sdkProcessGate.ts
+with `Unexpected <<`. No actual-client proof was invalidated: both live arms
+finished before the merge and used the unchanged built package. Current main
+fa90c9aaf is now integrated; only this chronological handoff conflicted. Freeze
+the completed checkout throughout the replacement full local run. Both native
+platforms and actual source/installed Pi SDK proofs remain available below.
+
+#1355 npm-lock fix remains ready with clean install/typecheck/build; CI watched.
+Post-merge paginated rediscovery finds six managed repositories,33 open PRs and
+21 issues including source/delivery/release pairs. Ranked report updated.
+
+## SDK #1334 current acceptance continuation — 2026-10-12
+
+Fresh branch codex/sdk-close-acceptance-1334-20261012 from main506a811d3
+preserves original source commits and prepared TERM cap separately. Both native
+before/after platforms and actual source/installed Pi/SDK/Opus5.5 gates pass;
+all original handles joined and grants removed. See
+[evidence/sdk1334-current-acceptance-20261012.md](evidence/sdk1334-current-acceptance-20261012.md).
+Remote original10f4132a is an ancestor of tree-identical merge8e778b99, allowing
+same-PR fast-forward delivery. Full local original91165 is running. Do not
+restart it on timeout. No actual #1326 Linux-x64/OpenCode/Opus hang resolution.
+Older preparation worktree95cc52ea3 remains preserved and unchanged.
+
+OpenCode #1354 head4edfb46cb passed actual required live matrix and full local
+5743pass/35skip/0fail,typecheck/build; ready, awaiting CI. Separate #1355
+dece601a fixes npm-lock drift below the existing Claude Code floor; clean npm
+install/typecheck/build pass, CI pending. Both linked and watched. No new release.
+
+## Current #1354 checkpoint — all live gates complete
+
+All three pinned beta extended live gates pass against independently installed
+b90324930: originals58550 (18314),15803 (18866),44041 (19271), all exit0.
+Each has two distinct proxy worker PIDs, PASS/joined reports, and removed grants.
+Actual Haiku5.5 and installed client/server plugins were verified. Stable2.0.16
+and2.0.21 live E42, six offline source/installed beta arms, actual instruction
+before/after and all four Opus5.5 E41 modes also pass. Durable evidence is under
+1301-opencode-instruction-update-20261012, with every causally diagnosed failure.
+
+Maintainer gate corrections: accept both supported effort wire fields; require
+completion of primary xhigh requests, retaining asynchronous title traces; wait
+for the warm host's actual /api/model catalog before selecting a newly discovered
+model. The distinct cold standalone gate remains unchanged. Beta19271's initial
+catalog race made zero model requests; credentialless readiness control and the
+full corrected actual run both confirm the cause. No unexplained rerun claimed.
+
+Full local npm test/typecheck/build original89187 was started before this
+checkpoint. Its terminal result must be recorded in #1354 before integration;
+poll the original handle until terminal. Final diff review, final-head CI and
+exact-head integration with Aleksey credit remain mandatory.
+#1301 unchanged05e2381f remains open; #1354 remains draft. No release authorized.
+
+## Latest #1354 checkpoint — broad gates passed, extended beta harness needs correction
+
+Clean0aab7d26 original28183 exited0:5743pass/35skip/0fail,typecheck/build.
+Original32660 all four qualified E41 modes pass (Opus5.5, joined grants removed).
+Original83785 all six offline E42 beta source/installed arms pass. Installed
+stable2.0.16 live E42 original57684 passes full flow with qualified external
+proxy/scrub, actual Haiku5.5, joined actors/grant removed. Durable receipts now
+under evidence/1301-opencode-instruction-update-20261012.
+
+Extended beta18314 original34036 failed missing external restart handle.
+Original61202 then failed stale Haiku4.5#xhigh catalog selection; its in-process
+proxy restart is also insufficient for the actual process-restart gate. Do not
+count either as acceptance. Both terminal/joined/grants removed. Next: update
+real subprocess e2e-opencode-proxy-host.mjs to require installed server scrub
+and explicit private access-only profiles, capture SDK original process joins,
+and keep the beta harness's genuine child-process restart. Use current live
+Haiku5.5 for xhigh, retaining controlled offline catalog. Then run each beta's
+extended live flow. Do not rerun completed local28183 absent material changes.
+OpenCode2.0.21 still rejected by setup; its actual manual-fixture instruction
+proof is retained without claiming qualified setup support. No merge/release.
+
+#1334 refreshed unchanged10f4132a, linked to thread; held draft. Quota blocker
+is now stale but actual SDK/client acceptance remains. Existing authored branch
+/Users/rynfar/repos/meridian-sdk-close-completion-1334-20261011 is a lead; inspect
+worktree state before using. Keep #1326 original hang issue open independently.
+
+## Latest OpenCode #1354 evidence
+
+Actual installed OpenCode2.0.21/Haiku5.5 now reproduces the trailing-system
+checkpoint failure on baseline and passes candidate (isResume false -> true).
+Candidate original36496exit0; actors/pipes joined and access grant removed.
+See evidence/1301-opencode-instruction-update-20261012/README.md for exact
+package identities, retained harness failures and setup qualification gap.
+No new release; #1354 remains draft pending E41/E42 and full final gates.
+
+## Current authoritative checkpoint — Nix merged, OpenCode instruction updates active
+
+#1353 merged `506a811d319184381164dab5995703cbcd5b9906`; exact tree versus
+`5498892b30c55f437fc690599328aae9583da22f` and Connor Grady coauthor verified.
+Original final local session56950 exited0:5730pass/35skip/0fail,typecheck/build.
+Final-head CI test succeeded; cancelled duplicate Nix run was superseded by
+same-head success. Source1352 unchangedde3c6fe5 rechecked and closed.
+Real systemd seven-case and actual installed Meridian profile proof retained.
+No new release. This supersedes historical Nix-pending statements below.
+
+Active draft #1354 in /Users/rynfar/repos/meridian-opencode-system-delta-1301-20261012
+incorporates #1301 authored05e2381f as e836a81a9 plus separate mandatoryV2/server
+scrub harness correction1da7bdf3. Nix main merged cleanly. Targeted202pass;
+only restoring the old opt-in gives132pass/5expectedfail; typecheck/build pass.
+No live calls yet. Actual @opencode/cli2.0.21 installation being prepared;
+legacy opencode-ai package/release lookup404 was a package-name lookup error,
+not evidence the target version is unavailable. Required actual-client,
+installed-package,E41/E42 and final combined local/CI gates remain.
+
+#1201 review branch /Users/rynfar/repos/meridian-checkpoint-pairs-1201-20261012
+contains authored0bd4ff218 and local evidencef6e9f5d4;75focusedtests/typecheck
+pass. Original Meowbert runtime/exact model remains unknown; existing evidence
+hold unchanged. No live call/source closure or extra PR for that held item.
+
+## Current authoritative state — 2026-10-12
+
+Nix source #1352 is incorporated in draft #1353. Current SSE main `736e9fd61`
+is now integrated; only this chronological handoff conflicted. Product files
+merged cleanly. Before this integration, the original local gate completed:
+5,682 pass, 35 skip, zero failures, typecheck and build. A fresh combined gate
+is next. Do not restart completed session 24351.
+
+Live Nix qualification is complete for the changed configuration behavior:
+seven actual systemd unit-file cases pass, and installed Meridian starts with the
+configured profile. The unchanged module corrupts JSON and loses that profile.
+All proof and the retained harness limitations are in the #1353 evidence record.
+This is credentialless configuration testing, not model inference.
+
+SSE #1350 and image #1351 are merged and their originals are closed. No new
+release has been authorized. Historical “active” and “pending” entries below
+record earlier stages and are superseded by this section and final PR bodies.
+
+The owner's Docker cleanup is complete: 29 Meridian image tags and 33 stopped
+test containers removed; targeted build cache reduced from 30.65 GB to 14.58 GB.
+All 25 running containers and volumes were preserved. Old Docker image/container
+references are evidence identities, not available runtime fixtures. Rebuild only
+what is needed, and clean up completed test artifacts promptly.
+
+## Latest local gate and owner storage request — 2026-10-12
+
+Nix draft #1353 original local session24351 finished exit0:5682pass/35skip/
+zero failures, typecheck/build, clean583797d8 source. Do not restart. This is
+still based on image maina8a214bfc; next integrate SSE main736e9fd61, refresh
+combined gates/CI and finish authored integration. Actual Nix/systemd seven-case
+proof and real installed Meridian startup comparison are preserved in1352evidence.
+Startup candidate session83370 passed; baseline22315 reproduced JSONloss/empty
+profiles but exited1 on an over-specific default-profile assertion (retained).
+Nixfmt session36354 passed. Owned isolated VMmeridian-nix-1352 remains available;
+no services/model actors or credentials remain active there.
+
+Owner requested Docker storage cleanup. All29Meridian image tags and33stopped
+Meridian test containers removed; targeted Meridian build-cache cleanup follows.
+No running container was removed. Old Docker images/container IDs in historical
+receipts no longer exist; rebuild from preserved source/package versions if needed.
+Reports and runnable harnesses remain escrowed. Thread model selection was changed
+through T3 configuration to codex/gpt-6.1-sol at the owner's request, verified by
+configuration readback. Backlog goal remains active.
+
+## Current checkpoint: SSE merged; Nix environment fix active — 2026-10-12
+
+SSE #1350 merged736e9fd6162ebd8cadbfbcd687dfec2c7acdc129. Verified exact
+merged tree versus76038fb7 and Aleksey Proshutinskiy co-author credit. Source
+#1214 rechecked unchanged1c8f17099 and closed without comment. Final gates5730
+pass/35skip/zero failures,typecheck/build; exact-head CI all passes. Actual
+installed OpenCode1.18.34/SDK0.2.141/native2.1.296/Opus5.5 realread/result/
+continuation passes in session62951 exit0. Bothplugins verified; alloriginal
+actors/pipes join and grant removed. Final receipts escrowed here; full final
+acceptance and packageintegrity in #1350 body. No new release.
+
+Nix source #1352 → draft #1353, worktree meridian-nix-systemd-env-1352-20261012.
+Both Connor Grady commits cherry-picked with Author/Date preserved. Actual
+NixOS25.11 ARM64/systemd258.7 user-unit before/after passes all7candidatecases;
+main reproduces JSON/pathcorruption. Committed credentialless harness and receipts
+under1352-nix-systemd-env-20261012. Full local gates currently original session
+24351 at /tmp/meridian-1352-local-gates.log; do not restart on timeout. This gate
+started on image maina8a214bfc; integrate SSE main only AFTER it finishes, not
+while tests mutate/read files. Actual Meridian service startup qualification is
+being prepared in owned isolated OrbStack VMmeridian-nix-1352; no credentials
+or model call. Node22 installation original session51300. Source remains open.
+
+## Current authoritative checkpoint — 2026-10-12
+
+Image #1351 merged as a8a214bfc53784c3e87456447ae9a327be6a70b2, exact tree
+match against validated 5b58b1b9. #1310 closed. Final local gates original session
+3276 exit 0:5682 pass/35 skip/zero failures, typecheck/build, clean source.
+Final installed actual Pi session 26537 exit 0: historical image counts1,1,1,
+current control1old+1new, actualOpus5.5, scrub0.2.2 zeroerrors, allactors/pipes
+joined and grant removed. Full final-head CI passes. Final tarball integrity,
+review findings and acceptance are durable in #1351 body; prior records below
+are chronological history, not current pending gates. No new release.
+
+SSE #1350: combined installed local-refusal/live-working probe23810 exit0,
+headers25.1ms, actualOpus5.5 confirmed, bothplugins zeroerrors, joined and grant
+removed. Four-mode E41 session78225 exit0 allPASS on cbb340eba. Evidence is
+escrowed under1214-sse-failover-20261012. Newly merged image main is now being
+incorporated. Actual OpenCode executable qualification, combined final gates
+and final-head CI remain; source #1214 stays open. Do not rerun finished sessions.
+
+## SSE combined local gate complete — 2026-10-12
+
+Original session 8226 terminated exit 0: 5722 pass /35 skip /zero failures,
+typecheck and build, clean a41e1998 source including streaming main 8edccd790.
+Do not restart. Installed transport proof for a9fece93 remains valid for that
+package; final combined installed/live and four-mode E41 gates remain open.
+
+## SSE installed transport comparison complete — 2026-10-12
+
+Same revised harness `932c8f92` on unchanged installed baseline and candidate:
+baseline headers 15,083 ms FAIL versus 1000 ms bound; candidate 104 ms PASS.
+Nonstream parity, first heartbeat before local refusal, one account fallback,
+suppressed error and joined processes/pipes all pass on candidate. Network disabled;
+no grants or real model requests. Original sessions 94533 /7573 are terminal exit
+1/0. Preserve earlier absolute-100ms failure; see [durable review](evidence/1214-sse-failover-20261012/REVIEW.md).
+
+#1350 merged streaming main into `0730fab1`; final combined local gate remains
+active session 8226, log `/tmp/meridian-1350-combined-gates.log`. Both installed
+transport and live client/model evidence must qualify the final tree.
+#1351 merged streaming main as `2127507c`; isolated dependency installation makes
+the same four build-observer controls pass. Full combined gate session 32853 is
+active at `/tmp/meridian-1351-combined-gates.log`. Do not restart active handles.
+
+## SSE current-main integration — 2026-10-12
+
+Streaming main `8edccd790` is now incorporated into #1350. Product files merged
+cleanly; this handoff retains both evidence histories. Original-source installed
+fixture timing controls are active in sessions 94533 (unchanged package) and
+7573 (candidate a9fece93), network disabled and the same committed harness 932c8f92.
+Both use the one-second header deadline, well before the 15-second heartbeat;
+retain the earlier 100 ms failure. Do not equate their original-source results
+with final combined-tree acceptance. Fresh local/live gates follow integration.
+
+## SSE installed fixture terminal failure — 2026-10-12
+
+Original session 25498 is terminal exit 1, not still running. Independently
+installed `a9fece93` with Docker network disabled passes nonstreaming fallback,
+then fails absolute SSE header deadline: 335.1 ms observed versus 100 ms asserted.
+All original processes/pipes joined. Durable report/console and analysis:
+[evidence](evidence/1214-sse-failover-20261012/REVIEW.md). No grant or model call.
+Review the timing assertion against baseline before rerunning; do not claim live
+or packaged SSE success. Streaming merge `8edccd790` remains verified and complete.
+
+## Streaming merged; SSE installed fixture active — 2026-10-12
+
+Streaming #1344 merged as `8edccd790f56fdee72a20b71337eef8ab6dec1ed`.
+Verified exact tree equality against `5f26a29b` and Nowaker co-author credit.
+Source #1294 was rechecked unchanged at `7f0a0235` and closed without a comment.
+Final-head test, Windows, Docker, desktop, Linux/macOS builds and replacement
+Nix CI pass. Earlier cancelled Nix duplicate is superseded. No release published.
+Post-merge discovery/pagination still covers six managed repos: 36 open PRs and
+22 issues, including new draft deliveries #1350/#1351 and source/delivery pairs.
+
+SSE #1350 clean `a9fece93` passed full local gates. Independent installed image
+`meridian1350:installed-20261012` is running its credentialless native fixture
+in original exec session 25498, container `meridian-1350-fixture-20261012`, with
+Docker network disabled. Only loopback refusal/answer fixtures are reachable.
+Log `/tmp/meridian-1350-package-20261012/fixture-console.txt`. Node and original
+claude.exe were confirmed live; no timeout/restart inference. Report comes from
+owned root printed on completion. Copy report before removing anything. No grant
+was staged. Pack metadata is in the same directory. Integrate new main into #1350
+and revalidate final combined tree after this exact-source result is recorded.
+
+Image #1310 → draft #1351 has owned full local gate session 73954 active at
+`/tmp/meridian-1310-full-gates.log`; source `6d522aaa` remains based on old main
+`3f5f4f81`, so integrate streaming before final acceptance. 19 pure and 44 HTTP
+controls pass; actual Pi/SDK and applicable live gates remain. No issue closure.
+
+## SSE full local gate complete — 2026-10-12
+
+#1350 clean `a9fece93` completed original session 54534 with exit 0: 5707 pass,
+35 skip, zero failures, typecheck and certified build. No restart needed. Independent
+package fixture image is building in owned session 33870, log
+`/tmp/meridian-1350-package-20261012/build.log`. Package source remains clean;
+subsequent changes are evidence only. Real affected-client/model/account and E41
+remain required. No live call, merge or release.
+
+## SSE failover preparation — 2026-10-12
+
+Source #1214 at `1c8f17099` incorporated from current main `3f5f4f81` in isolated
+`/Users/rynfar/repos/meridian-sse-failover-1214-20261012`, branch
+`codex/sse-failover-1214-20261012`. Actual authored mappings and review are in
+[evidence](evidence/1214-sse-failover-20261012/REVIEW.md). Clean main reproduces
+heartbeat preventing failover; candidate passes the same HTTP test. Corrected
+unbounded non-SSE inspection; 37 relay controls and typecheck pass. Live harness now requires explicit opt-in, an access-only grant and both installed
+plugin preflights, with original process/pipe join receipts. Three credentialless
+negative preflights pass; installed fixture/live execution is still pending. No model calls.
+
+Full local gates running in owned exec session 54534; log
+`/tmp/meridian-1214-full-gates.log`. Observe the same handle, do not restart on a
+wait timeout. Installed package fixture and qualified actual-client/account E2E,
+four-mode E41 and final CI still required. No merge/source closure/release.
+Streaming #1344 at `5f26a29b` remains watched for final CI with combined-package
+and four-mode live evidence published; do not rerun those without a changed gate.
+## Image actual Pi and E41 pass; malformed-padding correction — 2026-10-12
+
+#1351 has actual independently installed Pi before/after evidence: published
+1.81.0 grows historical SDK image copies 1,2; clean b6624d9f keeps 1,1,1 and retains
+a genuine current-image control. Pi1.1.0 /SDK0.2.141 /CLI2.1.296 /Opus5.5 /Darwin
+ARM64, scrub0.2.2 active; all actors/pipes joined and grants removed. Four E41
+modes also pass on b92cc66f with both OpenCode plugins in Linux Docker; original
+matrix session 27386 is terminal exit 0. No model process or grant remains.
+See [durable review](evidence/1310-historical-images-20261012/REVIEW.md).
+
+Final review found malformed padded base64 could be hidden by deduplication.
+A discriminating negative control now passes after strict padded-canonical checking.
+Valid-image live behavior is unchanged; 20 pure tests/typecheck pass. Final full
+local gate and clean final artifact qualification follow this correction; do not
+merge on the older tree alone. Original Pi metadata assertion failure is retained
+and explained (resolvedModel is Haiku-only, actual Opus is checked through SDK).
+
+## Combined image local gate passed; live harness prepared — 2026-10-12
+
+#1351 original session 32853 is terminal exit 0: 5681 pass /35 skip /zero failures,
+typecheck and build. New actual-Pi image read-back harness and Pi scrub preflight
+are now escrowed. Credentialless actual-client constructor and actual generated
+prompt scrub controls pass; no model call or grant was used. The full-gate build
+was dirty only from this new harness work, so commit and rebuild clean before
+independent package qualification. Actual Pi/SDK and E41/E65 remain open.
+SSE #1350 combined session 8226 also terminated exit 0: 5722 pass /35 skip /zero
+failures, typecheck/build, clean package source a41e1998. Do not restart either.
+
+## Image fix current-main integration and dependency correction — 2026-10-12
+
+#1351 now incorporates streaming main `8edccd790`. Product files merged cleanly;
+this handoff preserves both histories. Original image full-suite session 73954
+terminated exit 1: 5239 pass, 35 skip, one build-observer failure, EISDIR reading
+zod/index.js through the shared SSE-worktree node_modules link. The target was a
+regular file; do not claim it was a corrupt directory. Removed only this owned
+symlink and installed frozen dependencies locally. Revalidate the same build-worker
+control, then full combined-tree checks. Pure/image HTTP controls already pass.
+No actual Pi/SDK or E41/E65 live acceptance is established.
+
+## Historical image amplification preparation — 2026-10-12
+
+#1310 reproduced on current main `3f5f4f81`: fresh replay/read-back cycles emit
+1,2,4 identical images; both HTTP stream modes send duplicate SDK input blocks.
+Isolated `codex/historical-images-1310-20261012` now retains one historical visual
+copy with occurrence references, preserving current media and resume behavior.
+19 pure and 44 HTTP tests pass. Full local gates are running in original session
+73954, `/tmp/meridian-1310-full-gates.log`; actual Pi/SDK, E41/E65 and final CI
+remain. See [review/evidence](evidence/1310-historical-images-20261012/REVIEW.md).
+No live call or issue closure. Keep #1310 open until acceptance is established.
+
+SSE delivery #1350 is separately prepared at `a9fece93`; owned full local gate
+session 54534 remains active, `/tmp/meridian-1214-full-gates.log`. Its plugin-qualified
+probe is implemented but not yet fixture/live verified. Streaming #1344 at
+`5f26a29b` has complete combined-tree local/live evidence and is watched for CI.
+Last direct readiness check still had required jobs running; no merge was performed.
+## Combined streaming package verified — 2026-10-12
+
+#1344 incorporates landed MCP main `3f5f4f81`. Clean package/source `6ef677ce`
+passes all four plugin-qualified E41 modes and actual Linux OpenCode 1.18.34 /
+Opus 5.5 long write, tool result and same-session continuation: 49,037 characters
+over 123 seconds, max gap 511 ms below 15-second deadline. All four requests 200,
+all actors/pipes joined and temporary grants removed. Local suite records 5674
+pass /35 skip /zero failures, typecheck and certified build. Only documentation
+and evidence change afterward. Required final-head CI is still a merge gate.
+
+Earlier SSE refusal remains preserved: supported SDK inspection found ordinary
+end_turn refusal text, not a proven classifier event; no causal explanation or
+transport fault established. New-tree success does not erase it. See the
+[current evidence](evidence/stream-idle-1294-20261012.md) for the applicability
+review, package identity, baseline reproduction and retained failures. No release.
+Source #1294 last refreshed unchanged at `7f0a0235`; recheck before closure.
+
+## MCP merged; streaming updated to current main — 2026-10-12
+
+MCP [#1349](https://github.com/rynfar/meridian/pull/1349) merged as
+`3f5f4f81cd2205ebd62381d8c574d6a6f9ded2d9`. Its tree exactly matches validated
+`fc3fe028`, final-head CI passes (test, Windows, Docker, Linux/macOS desktop,
+Nix), and the squash preserves `Co-authored-by: Nowaker <spam@nowaker.net>`.
+Source #1283 was rechecked at `571a6716` and closed as incorporated, without
+posting a comment. No release was published. Earlier pending-MCP text below
+is historical and superseded by this entry.
+
+Current main is being merged into streaming #1344. All product files merge
+without conflicts; this handoff combines both evidence histories. The prior
+streaming E41 SSE refusal remains unresolved. Validate the integrated tree
+rather than reusing either branch's separate results. No model process remains
+active, and all previously staged grants were removed.
+
+## Streaming verification checkpoint — 2026-10-12
+
+[#1344](https://github.com/rynfar/meridian/pull/1344) clean installed package
+`6974747fe` now passes actual Linux OpenCode 1.18.34 / Opus 5.5 long write,
+tool result and same-session continuation with both plugins. 39761 characters,
+1921 deltas over 96.3 seconds, max gap 700 ms vs 15-second deadline; all four
+HTTP requests 200, original actors/pipes joined and grant removed.
+
+Its independent source-tree E41 matrix passes sequential JSON but fails SSE:
+after one read the model says a safety classifier stopped it and declines the
+remaining benign fixture reads. Actual model, cache, history/fork/follow-up
+predicates pass; required tool shape fails. Both plugins were active with zero
+hook errors. Matrix stopped before parallel modes; all actors joined and grants
+removed. No model process remains active. Preserve this failure; do not merge
+#1344 or close #1294. See [evidence](evidence/stream-idle-1294-20261012.md).
+
+MCP #1349 at `fc3fe028` has completed local gates and all four qualified E41
+modes. Its final adjacent-flow applicability review is now in its PR body:
+no V2 API or checkpoint policy changes trigger E42/E66/E67. Final-head CI is
+its remaining gate; use the existing T3 watch rather than a polling loop.
+
+## Final integrated streaming gate remains open — 2026-10-12
+
+Clean #1344 package at `6974747fe` passed actual long-input streaming (42,900
+characters over 106 seconds, no idle timeout), both plugin witnesses and joins.
+Its following tool-result request received an explicit OAuth-token-revoked error.
+This final run is FAIL; do not merge until final-tree continuation is verified.
+The earlier qualified artifact's full successful continuation remains valid only
+for that artifact. Staged grant removed; no refresh, account change or retry.
+See the durable integrated report and identity under
+`evidence/stream-idle-qualified-20261012/`. The refusal is authentication evidence,
+not a new billing/quota explanation. Continue independent #1338/#1283 work.
+
+## Scrub-qualified streaming progress — 2026-10-12
+
+Mandatory OpenCode server-scrub preflight merged as #1348, `ab615ca70`:
+5,637 local tests pass, 35 skip, zero failures; typecheck/build and required CI
+pass. The same preflight in #1344 qualified actual Linux/OpenCode 1.18.34/Opus
+5.5 baseline failure (15.4-second timeout) and candidate success (43,040 input
+characters over 108.7 seconds, real tool result and same-session continuation).
+Both matching client plugin and active server scrub 0.2.3 were verified; child/
+pipe joins passed and staged grant removed. An invalid inherited Docker
+entrypoint launch is retained as rejected evidence. See
+[evidence](evidence/stream-idle-1294-20261012.md) and adjacent sanitized receipts.
+The installed candidate's dirty build provenance is recorded, not hidden; final
+integrated package equivalence and final-head CI remain before #1344 can land.
+Main `ab615ca70` is being incorporated; contributor cherry-picks remain intact.
+
+## Current MCP/plugin checkpoint — 2026-10-12
+
+This entry supersedes stale running-session and draft descriptions below.
+MCP delivery [#1349](https://github.com/rynfar/meridian/pull/1349) preserves
+source #1283 as authored cherry-pick `158e6c18d` from fresh main `ab615ca70`.
+Actual independently installed Linux OpenCode 1.18.34 / Opus 5.5 read and
+same-session continuation passed with both matching client plugin and scrub
+0.2.3, all four requests 200 and original processes/pipes joined.
+
+All four corrected E41 modes now pass with real Opus 5.5, SDK 0.2.141/native
+2.1.296, Linux amd64, actual installed client hook and scrub 0.2.3. Both hooks
+run 16 times with zero errors; all histories/cache predicates pass and actors
+join. Every grant is removed. Earlier plugin-incomplete cache/model failures
+and their supported-API audit remain preserved, not explained away.
+See [evidence](evidence/1283-current-main-20261012/REVIEW.md).
+
+Owned local gate session **4259 is terminal exit 0**: 5659 pass / 35 skip /
+zero failures, then typecheck/build pass, with CI Bun 1.3.11. Do not restart or
+poll that completed process. Earlier full-run fixture races were corrected
+without changing final assertions; the unrelated cross-process 500 remains
+unexplained. Final-head CI and adjacent V2/interrupted-flow applicability and
+qualification review remain before merge/source closure. No model process is
+currently running. Product code is unchanged from authored source incorporation.
+
+Priority remains #1338 paid-overage routing, #1283 lost tools, #1294 stalled
+streaming, scrub #22/#23 cwd corruption, #1214 SSE failover and #1310 image
+amplification, before feature work. Haiku 5.5 is already published in 1.81.0.
+
+## Active prepared deliveries — 2026-10-12
+
+- MCP #1283 → [draft #1349](https://github.com/rynfar/meridian/pull/1349),
+  source `571a671676d6b8604cde932199d77c34bc6a46f3`, authored mapping below.
+  Seven credentialless transport controls complete; current-main full npm test
+  remains active (owned session 96749, `/tmp/meridian-1283-current-full.log`).
+- OpenCode scrub #22/#23 → [draft #24](https://github.com/rynfar/meridian-plugin-opencode-scrub/pull/24)
+  at `c3ec923`, in `/Users/rynfar/repos/meridian-plugin-opencode-scrub`, branch
+  `codex/cwd-preservation-22-23-20261012`. Both authors preserved. Main reproduces
+  23 new path failures; an additional two label/protection interaction failures
+  were fixed separately. All 57 tests/build pass. Source PR Windows fixture
+  claims lack an escrowed executable/artifact, and actual-client/model/installed
+  package verification remains open; do not merge/close source or release yet.
+- Priority overage #1338 → draft #1347 remains ahead of features, followed by
+  MCP loss, streaming #1294/#1344, cwd corruption, failover #1214 and image #1310.
+  Preserve existing owner deferrals. Authenticated live work must qualify both
+  plugins; no refresh/account switch is inferred from the last revoked-token
+  observation. No new live model call was made during this continuation.
+
+## MCP current-main delivery — 2026-10-12
+
+#1283 source `571a671676d6b8604cde932199d77c34bc6a46f3` is preserved as
+Nowaker-authored cherry-pick `158e6c18d` on fresh main `ab615ca70` in
+`codex/mcp-tools-1283-20261012`. Narrow source incorporation plus recovered
+maintainer transport-harness corrections replaces blindly replaying the old
+97-file preparation. That historical branch remains intact.
+
+Real credentialless SDK/native transport on Darwin reproduces lost tools on
+main, preserves both overlapping catalogs after the fix, and restores the
+failure when server sharing is deliberately reintroduced. All seven transport/
+fault/cancellation cases join owned resources; expected failures remain failures.
+Focused 103 tests and 17 harness/SDK controls pass; typecheck/build pass; full
+npm test is running. Actual Linux/OpenCode/Opus, E41/E42 and package/CI gates
+remain open. See [review and receipts](evidence/1283-current-main-20261012/REVIEW.md).
+No new credential access, refresh or model call occurred for this item.
+
+#1344 final integrated local gates now pass 5,652 / 35 skip / zero failures,
+typecheck/build. Its final actual continuation failed token-revoked; E41 modes
+are also still required. #1348 merged as `ab615ca70`. Do not infer a release.
+
+## OpenCode live-harness qualification correction — 2026-10-12
+
+Owner reaffirmed required plugins. Inspection found BOTH
+`scripts/e2e-extra-usage-opencode.mjs` on main and
+`scripts/e2e-tool-input-opencode.mjs` in draft #1344 configure only the client
+plugin. Neither loads server scrub in its isolated HOME. Withdraw the prior
+interpretation of their Extra Usage refusal as an account-quota blocker. Keep
+raw refusal/client-message evidence as an unqualified configuration observation.
+PR #1344/#1346 bodies are corrected. The merged error-text correction remains
+merged; correctly configured affected-flow acceptance is still unproven.
+
+Shared preflight resolves an independently installed official scrub entrypoint,
+records package version/hash, writes owned plugin configuration, verifies active
+loaded path/hook before inference, and requires successful real request-hook
+invocations afterward. No new live access, refresh, account change or paid usage
+occurred in this correction. The current #1338 delivery is draft #1347 with final
+local gates in progress; do not inherit the old quota-blocker assumption there.
+
+## Haiku release completed — 2026-10-12
+
+**1.81.0 is published and fresh-registry-install live verified.** Release merge
+`d4d60c406362750b8e96e3d1507f83b96a839125`, npm latest/integrity/gitHead,
+SLSA source/workflow, 109 registry signatures and 15 attestations verified.
+Fresh npm installation passed actual Pi 1.1.0 → SDK 0.2.141 / native 2.1.296 →
+Haiku 5.5 owned tool read on Darwin ARM64, with original processes/pipes joined.
+All Release Please jobs succeeded, signed macOS assets are attached, and GHCR
+1.81.0 includes amd64/arm64. npm's processing delay and failed early registry
+reads are preserved in [durable release evidence](evidence/release-1.81.0-20261012.json).
+Polytoken #1343 landed after this release and is not part of 1.81.0.
+
+## Polytoken final live and local gate — 2026-10-12
+
+Delivery #1343 product code is unchanged since `e5bac35d`; final harness head
+`ccb16eb9` passes actual Polytoken 0.8.21 / Haiku 4.5 on Darwin ARM64. Both
+parents and exactly four children complete; all six transcripts contain three
+successful fixture reads, all working conversations resume, distinct conversation
+SDK mappings remain disjoint, and original child processes/pipes join. The
+committed evidence retains prior authentication and ambiguous fixture failures.
+Full current-main local gates pass 5622 / 0 failures / 35 skips plus typecheck/build.
+Final-head CI, guarded merge, source-head recheck and contributor credit remain.
+
+## Core-fix delivery checkpoint — 2026-10-12
+
+Owner order remains core fixes, potential fixes, then features. Haiku delivery
+[#1337](https://github.com/rynfar/meridian/pull/1337) merged as
+`4dfdfe4e215de13ca71040dc3714d61ebeada384`; tested and merged trees match
+`075aabf0bbd333d83ae1241a5dcff19922c7015e`. The missing Darwin installed Nix
+qualification now passes all ten cases, six native execution witnesses, fifteen
+joined asynchronous actors and nine successful synchronous identity probes.
+[Durable CI artifact](https://github.com/rynfar/meridian/actions/runs/38274195603/artifacts/11758746098)
+contains the report (SHA256 `21029ed2bfb49894ad56b3aa2f022be9b5356aefae8ba92b54f5b7b81ac07ae4`).
+This scripted Nix qualification is distinct from actual Pi/Haiku inference.
+
+Release #1299 at `f907402b247b54f2773f979fad13ed71aa509b82` contains only
+1.81.0 version/changelog changes relative to current main. Local gates pass
+5615 tests, 35 skips, zero failures, typecheck and build. Independently installed
+1.81.0 npm-pack actual Pi 1.1.0 / Haiku 5.5 read-back passes on Darwin ARM64,
+Node 22.22.3, SDK 0.2.141 and native CLI 2.1.296; both requests are 200 and all
+original observed children/pipes join. Publication is not yet claimed; final
+Darwin Nix CI and release/publication/registry gates remain at this checkpoint.
+
+Polytoken source #1339 is accepted with correction in draft delivery
+[#1343](https://github.com/rynfar/meridian/pull/1343). Source authored commits
+`706de2c5` and `088e5c3c` map to `41cc0ca6` and `2f3e83d3`; contributor
+Author/AuthorDate are preserved. Separate maintainer correction `e5bac35d`
+isolates exact native title side calls from working conversation state.
+Two discriminating regressions fail contributor code; 41 focused tests pass
+with the correction. Before rebasing, full gates pass 5582/0/35, typecheck/build.
+Rebased final gates are running and acceptance remains draft until they finish.
+
+Actual Polytoken 0.8.21 / Haiku 4.5 / Darwin ARM64 completed two parents and
+four children, each with three read turns. Six independent conversations resume
+with disjoint SDK mappings. All 35 successful requests are 200; three other
+entries correlate to client-aborted native title requests. Title completion is
+not established. Durable sanitized [evidence](evidence/polytoken-1339/live-acceptance.json)
+and the committed Python/client + native-Node/server harness preserve the scope
+and earlier failures. Final harness assertions and current-main live run remain
+pending. Do not close source #1339 until delivery lands and its head is rechecked.
+
+## Core-fix completion checkpoint — 2026-10-12 16:40 UTC
+
+Haiku #1337 merged as `4dfdfe4e`; release #1299 merged exact verified candidate
+`f907402b` as `d4d60c406362750b8e96e3d1507f83b96a839125`. All final candidate
+checks passed; local 5615/0/35, typecheck/build and independent installed-package
+actual Pi/Haiku 5.5 read-back passed. Existing owner authorization for the bounded
+Haiku release is recorded in the October 11 entry below. Release workflow
+[38277901722](https://github.com/rynfar/meridian/actions/runs/38277901722) succeeded
+for npm, Docker and signed macOS assets. Tag `meridian-v1.81.0` points at the
+release merge. GHCR 1.81.0 has linux/amd64 and linux/arm64 manifests.
+**Registry reads still returned 404 at this checkpoint despite the successful
+publish log; registry integrity/provenance and fresh installed live validation
+remain open. Do not call the publication fully verified yet.**
+
+Polytoken delivery #1343 merged as `a48a84982453d3b4748ddbdf566455597e13c836`
+after final local 5622/0/35, typecheck/build, actual Polytoken 0.8.21 / Haiku 4.5
+Darwin ARM64 acceptance and all final-head CI. Merged tree
+`691f6ca554caa2b70edb90d410b85f0a4a00e9c5` equals the expected integration tree
+with release main. GitHub signature and David Bishop's explicit coauthor trailer
+verified. Source #1339 remained `088e5c3cdf0c3126d951eaf5883ef7f67d5b17c9` and
+was closed as incorporated without a comment. See delivery PR and committed
+`docs/maintenance/evidence/polytoken-1339/live-acceptance.json` for final proof.
+This fix is on main after 1.81.0; it is not part of that release.
+
+Antigravity #1340 at `ab836ac7` is deferred. Exact-source negative control shows
+legitimate status polling receives stale `running` from completedToolTail because
+name+arguments are treated as operation identity. Its PR body preserves the
+review and observable revisit gates: delivery identity, fresh identical reads,
+and affected Pi/macOS acceptance. No product correction or model call performed.
+
+Next core delivery #1344 cherry-picks #1294 into isolated branch
+`codex/stream-idle-1294-20261012`. Three regressions fail current release main and
+pass the correction; 107 focused checks pass. Full local checks are running;
+actual OpenCode/plugin + Opus 5.5 Linux and final CI remain acceptance gates.
+See `evidence/stream-idle-1294-20261012.md`. Preserve owner's dirty checkout.
+
+## Core-fix priority continuation — 2026-10-12
+
+The current owner order supersedes the older oldest-first instructions below:
+**core fixes, then potential fixes, then features**, with Haiku 5.5 explicitly
+prioritized. Fresh discovery finds the same six managed repositories. Preserve
+specific owner deferrals and contributor no-review requests.
+
+Haiku #1337 was not deployed because the delivery remained draft over missing
+macOS Nix installed-native/SDK proof; no release was started. npm latest is
+1.80.0. Contrary to the old PR checkpoint, final-head test and platform builds
+at `34156cfb` passed. The missing runtime proof can run in the existing macOS Nix
+CI runner without installing Nix on the owner's host. The added launcher runs
+the existing ten-case installed HTTP/SDK/native harness with isolated loopback API configuration, original SDK process/pipe joins,
+and Darwin executable observation.
+The negative external-network control returns EPERM locally. CI must still
+execute this exact installed tuple; no passing runtime result is claimed yet.
+The first CI attempt built the package but failed before cases: the Linux
+harness required `sleep` beside `/usr/bin/env`; macOS provides `/bin/sleep`.
+The corrected preflight resolves it through the actual sanitized PATH. Preserve
+[the original failed report](https://github.com/rynfar/meridian/actions/runs/38273029599/artifacts/11757534275);
+this was a harness prerequisite failure, not an SDK/model result.
+The second attempt reached the installed native/SDK versions but all HTTP
+cases returned 500 before SDK admission: macOS sandbox-exec refuses the setuid
+`/bin/ps` used by production incarnation checks. This is locally reproducible
+with sandbox-exec alone, independent of Meridian. The disposable macOS runner
+now uses cleared env, isolated config and dummy loopback API credentials without
+an OS-wide fence. Production synchronous identity probes are recorded with
+status/signal/error and output hashes; successful Node spawnSync completion is
+kept distinct from asynchronous SDK process/pipe joins. Unknown/failed sync
+probes still fail the gate. Neither change modifies production identity checks.
+Product code is unchanged. Existing real Pi/source and independent-pack evidence
+retains its original scope and failures. No release or community message has
+been sent. Current isolated worktree is
+`/Users/rynfar/repos/meridian-core-fixes-20261012`; owner's dirty checkout and
+other agents' worktrees remain untouched.
+
+## Owner-priority Haiku 5.5 release — 2026-10-11
+
+The owner subsequently requested Haiku 5.5 support ASAP and a release. That
+supersedes the earlier **no-release authorization** snapshot below for this
+bounded release only; it does not waive backlog holds, actual-model/client,
+physical custody, package or CI gates. Work is isolated on `codex/haiku-55-release`
+from main `e68b9bcadd`, without any unfinished preparations folded in.
+
+[Implementation, discriminating controls and remaining gates](evidence/haiku55-support.md)
+cover the new pin/discovery/native 1M replay capacity, tier-aware estimates,
+legacy-pin persistence and native CLI minimum. Independent review's disabled/
+omitted control and legacy-price findings were corrected. Credentialless native
+helper/SDK wire controls pass. The initial Pi attempt received a weekly
+rate-limit refusal; its Bun observer/private fixtures/grant remain unqualified
+and retained. After the reset, read-only default-store availability was weekly
+0%, five-hour 3%, Extra Usage disabled. No parent refresh/account/paid change
+occurred. A native-Node attempt exposed a missing documented Pi header; its
+negative receipt was preserved, the fixture corrected and independently reviewed.
+**Actual Pi and independently npm-pack-installed read-back now both pass**:
+Pi 1.1.0, Node 24.20.0, CLI 2.1.296, SDK 0.2.141, Darwin ARM64, exact owned read,
+200 Pi/pin metadata, public native Haiku 5.5 history, original gates/both pipes
+joined. [New actual-flow evidence and remaining gates](evidence/haiku55-live-20261011/README.md)
+qualify only these flows, not the original negative or registry/publication.
+
+Draft delivery #1337 remains held. At exact head `cb42827e`, `test` passed but
+Nix evaluation/package checks failed because the pinned nixpkgs/native fallback
+outpaced the raised CLI floor. The generated nixpkgs-only lock correction has
+actual before-fail/after-pass evaluation on three package targets and the Home
+Manager check; independent round 4 found no material lock defect. This is not
+build or model acceptance. Subsequently, exact head `34bcb028` passed latest
+`test`, Linux/macOS Nix builds, rendered Home Manager and other relevant checks.
+The cancelled same-head push Home Manager run was superseded by the successful
+PR run under declared concurrency; raw GitHub draft/UNSTABLE state is preserved.
+[Exact-head CI receipt](evidence/haiku55-final-head-ci-20261011.json) still needs
+rechecking after final evidence integration. [Actual installed Nix Linux ARM64](evidence/haiku55-nix-installed-20261011/README.md)
+built the exact archive and passed 10 credentialless cases with selected CLI
+2.1.295, Node 22.23.3, SDK 0.2.141, nine original close/both-pipe witnesses.
+Independent R5 found no material bounded evidence issue; full SSE conformance,
+universal subprocess faults, legacy snake-case budget preservation and Nix
+macOS installed-native execution remain explicitly unqualified.
+No floor reduction, broken-package bypass, paid usage, parent auth refresh or
+release has occurred. Final review/CI/guarded merge and release/registry gates remain.
+
+Preserved separately, never part of this release: #1310 at remote `b0884cd3`
+(no delivery PR yet), held #1334, scrub/#1214/Antigravity preparations, and SQLite
+custody WIP at `/Users/rynfar/repos/meridian-claude-sidecalls-stack-1292-20261008`
+(HEAD unchanged `964e2d18`). The custody child finished 34 native worker controls
+and 23 focused journal/custody tests, but its full suite had **52 failures**.
+Its `docs/maintenance/evidence/sqlite1219-native-custody-20261011/` records the
+original seven-file WIP escrow, new native changes and remaining gates; do not
+blindly commit, treat those failures as the former three, or approve the feature.
+Fresh independent custody review found two material admission gaps (ordinary
+preflight before atomic reservation, and memory ATTACH/backup disk lifetimes).
+A bounded immutable snapshot correction passes native getter controls, with
+further structural own-property correction and pure before/after coverage under
+review. Recovery diagnostics/corruption classification pass 72 focused controls;
+all three genuine recovery flows still fail. Nonmutating committed-WAL authority
+is a concrete native prerequisite, not permission for a writable fallback.
+Admission corrections are in progress in that separate preserved worktree;
+fixture setup corrections remain unexecuted pending its serialized native build.
+
+## Current oldest-first continuation — 2026-10-11 (earlier snapshot)
+
+Remaining newer-slice read-only triage refreshed 24 named items beyond #1261:
+20 open non-draft/non-release items and four excluded drafts. No item was
+already landing-ready; no repository changes, tests or auth/model calls were
+made by triage. Parent selected #1303's independently actionable, narrowly
+reported identical-locator no-op, **not** the held SQL redesign. The two-line
+transaction correction retains locked rollback/SDK-ID/expected-generation
+checks and successful existing-generation return, while skipping unchanged
+JSON publication. The identical escrow fails exact main `7e89f843` and passes
+candidate on actual Linux arm64/Bun 1.4.2/tmpfs, with network disabled and only
+owned synthetic metadata. For 900 sessions, five identical calls formerly
+replaced 42,668,775 payload bytes; candidate replaces zero. Twenty genuine
+mutations still publish; their full-store cost is unchanged. Sixty-three
+focused controls pass. [Runnable native proof and exact receipts](evidence/1303-transcript-locator-noop.md)
+record the narrower scope and required full local/review/final-head CI gates.
+**Keep #1303 open** for its broader storage work and preserve every existing
+hold below. No model quota retry or owner-policy exception is involved.
+
+Fresh discovery still finds six managed repositories, no additional accessible
+organization scrub candidates. Combined creation-date order and explicit owner
+holds remain in force; no releases or community comments are authorized. The
+older reporter-input/native/contract gates remain open. The latest 30 main CI
+runs succeeded, which supplies no new causal fix for #917/#933.
+
+Build source #1330 is **landed** via [delivery #1333](https://github.com/rynfar/meridian/pull/1333),
+squash `109cf9e45ca26f63e8d247e5356f64c9feca4558`. Independent Pi/Fable 5.1
+high-effort review approved production/escrow at `87286e62`, independently
+reproducing both HTTP arms and the entire suite. Parent explicitly skipped the
+POSIX-shebang fixture on Windows, reran all local gates, and waited for every
+relevant final-head check at `e2e96661`, including `test`, Windows smoke, smoke,
+build-push, both desktop builds and the current home-module run. The earlier
+cancelled duplicate was not used as evidence. `gh --required` reported no
+configured required contexts, so each mandated exact-head named check was
+verified explicitly; no check or branch rule was bypassed. Guarded squash used
+`--match-head-commit`, and the landed tree exactly equals the validated tree.
+GitHub verifies both final delivery and squash signatures; GraphQL authors
+register Nowaker's `spam@nowaker.net` co-author credit. Source `c040c19b` was
+rechecked unchanged, then #1330 closed without a community comment. No loaded-
+Linux reproduction or release is claimed; see its durable bounded evidence.
+
+OpenCode scrub #21/#22 is accepted with a scope correction but **not landed**.
+Mohamed Khalil source `50e9526a` → authored `fb7a6231`, with separate controls and
+escrow `6dcd6051` on remote `codex/primary-cwd-22` in that repository. Fifty tests,
+standalone typecheck/build and independent-package preparation pass. The actual
+OpenCode 1.18.34/Meridian-plugin/SDK path was witnessed, but the provider refused
+Opus and Haiku. A read-only usage check confirmed exhausted weekly quota; no
+login refresh, paid Extra Usage change or alternate account was attempted. The
+private access-only grant was removed. Source/issue stay open until successful
+identical client assertions pass; no draft delivery was created merely to clear
+it. [Durable scope, failed probes and runnable escrow](https://github.com/rynfar/meridian-plugin-opencode-scrub/blob/codex/primary-cwd-22/docs/primary-cwd-22-review.md).
+
+Read-only #1326 investigation does not reproduce the reported Linux/OpenCode/
+Claude refresh-error hang. It distinguished pending completion from intentional
+cleanup-failure fencing; no guessed timeout or early fence release is accepted.
+It independently exposed adjacent SDK process-gate join defects. Actual owned
+Node subprocesses reproduce exit-before-pipe-close false success and exhausted
+SIGKILL-observation false failure on Darwin and Linux arm64. A separate minimal
+correction and same-assertion headless escrow are preserved on remote
+`codex/sdk-close-join`, head `10f4132a`, in held [draft #1334](https://github.com/rynfar/meridian/pull/1334),
+rebased on landed main `109cf9e45`. [Durable native before/after receipts,
+runnable escrow, source hashes and qualification](https://github.com/rynfar/meridian/blob/10f4132ad55d65ae98c46f6a528ec222955656cf/docs/maintenance/evidence/sdk-process-close-join.md) distinguish
+actual original close/SIGKILL from signal attempts. Both new native tests fail
+baseline; ten new/adjacent controls and Darwin Bun/Node plus Linux arm64 Node
+harness pass candidate. Final local `npm test` is 5,576 pass / 0 fail / 35 skip
+in 21 isolated invocations; standalone typecheck/build pass at `ea868971`.
+Independent Pi/GPT-6.1-Sol high-effort review approves the precise implementation
+(no P1/P2) and reproduces baseline failures, candidate native arms, and zero/
+short/default/concurrent/cached-join controls. Its P3 historical baseline digest
+mismatch is answered by byte-for-byte artifact escrow and exact command/layout:
+parent reproduces the reviewer's alternate digest and verifies that only six
+Bun source-path comments differ, no runtime code. **Landing remains held for
+actual SDK/client/model acceptance or explicit owner scope determination**;
+controlled native processes and green CI cannot waive the product gate. No
+extra quota-exhausted generation, paid usage or account switch is attempted.
+Draft #1334 exists and stays held. All relevant final-head checks at `10f4132a`
+now succeed, including `test`, Windows smoke, smoke, build-push, both desktop
+builds and home-module; GitHub verifies the commit signature. Independent
+second-round evidence review confirms the exact baseline matches both receipts,
+the generic archive digest is reproduced, and only six source-path comments
+differ; no surviving provenance mismatch. Neither that approval nor green CI
+waives actual SDK/client acceptance. Keep #1326 open.
+
+Post-#1333 live pagination across all six repositories finds 52 remaining open
+items (before this new held SDK delivery); no older hold is discarded. Continue
+in combined creation-date order, exclude draft/release work and preserve current
+owner decisions. Newest error/profile contributions still need their own review
+and specific acceptance; this checkpoint does not claim the queue is exhausted.
+
+Fresh read-only oldest24 non-release/non-draft triage preserves every existing
+hold. Parent cross-check corrects its proposed #1214 follow-up: original source
+still has unbounded non-SSE buffering, but **main does not include that helper**,
+and preserved maintainer candidate `96ea3780` already fixes the byte cap,
+first-cancellation join and retirement fencing with discriminating controls.
+Closed administrative #1273's fresh body records that candidate and its archive;
+do not duplicate incorporation, create another draft, or repeat known controls
+merely because original #1214 is unchanged. [Scope/control matrix and remaining
+gates](evidence/1214-scope-crosscheck-20261011.md). Original #1214 stays open;
+reopen the same delivery only when actual Linux Fable5.1/Opus5.5 client/package
+failover, cancellation and continuation acceptance is available. Existing
+macOS credential-boundary-preload gates do not replace that evidence.
+
+[Immutable expanded #1231 ledger](evidence/1231-expanded-source-ledger-20261011.md)
+records fresh `3617ecac` against merge-base `f299fe06`: 60 commits,112 files,
+50 appended commits and **55 after #1211**, not the former five-child scope.
+Parent verified all60 SHA/parent/Author/AuthorDate identities: first10 Noah
+Passalacqua (`passabilities`), added50 =DEX (`eamonster27`). Preserve both authors
+and the existing #1211 authored mappings; no whole-stack or source closure is
+approved. Routing, ToolSearch/parity, private-format transcript copy, async
+process probing, stream/tool recovery, timeout and GC policy are separate
+partitions. In particular, source `c9c86cb1` only partially overlaps landed
+#1296 and omits narrower recovery/publication/cancellation guards; never mark it
+wholly covered by title or substitute it unchanged. Private-format cross-account
+transcript copying needs a separate product/ownership/API-format review, not
+acceptance under the session-key fix. Original native identity/background,
+model/limit/routing, cancellation/client/package/platform gates remain open.
+
+Current documentation-checkpoint branch is `codex/backlog-evidence-20261011` in
+`/Users/rynfar/.t3/worktrees/meridian/codex-backlog-oldest-first`; SDK draft's
+remote branch remains untouched. No generation/paid-usage/account switch,
+community comment or release is performed by this checkpoint.
+
+Original dirty checkout remains untouched. Existing #1324 and #1332 deliveries
+are already merged in live main; their older pending entries below are historical.
+
+## Build identity #1330 implementation handoff — 2026-10-11
+
+**Historical implementation snapshot, superseded by the current continuation
+above.** Its OPEN source state, `6e510dbcb` remote base and former worktree branch
+are facts at implementation handoff, not present delivery status. #1333 later
+landed and #1330 closed as verified above. Preserve the evidence and authored
+mappings below; do not resume its old pending delivery instructions.
+
+Selected bounded implementation only, base `6e510dbcb`. Source #1330 remains
+OPEN at `c040c19be` on read-only refresh; remote main still equals the specified
+base. Signed authored `-x` incorporation `c040c19be` → `d2c2a6463` preserves
+Nowaker's Author/AuthorDate. Separate correction/test commit `9b7fbda51` adds
+one aggregate recovery budget, hard-kill/error-aware direct Git custody, and
+coherent replacement of stale launcher identity. Source/artifact separation and
+unknown comparison without a fingerprint remain unchanged.
+
+Worktree `/Users/rynfar/.t3/worktrees/meridian/codex-backlog-oldest-first`, branch
+`codex/backlog-oldest-first`. Six same-assertion controls fail the uncorrected
+contribution; ten recovery controls pass corrected source. Actual credentialless
+SOURCE HTTP on Darwin fails unchanged main's SHA assertion and passes corrected
+source with an isolated empty named profile, no model calls and joined cleanup.
+This deterministic 65 MiB fingerprint file-cap trigger is **not** actual loaded
+Linux symptom evidence. [Runnable escrow, mappings, review findings, versions
+and durable sanitized proof](evidence/1330-source-build-identity.md).
+
+Final code-head local gates: 5,574 pass / zero fail / 35 skip in 21 isolated
+`npm test` invocations; standalone typecheck/build pass. Owner root checkout was
+not written. Implementation task did not push, open a PR, merge, close the
+source, post comments or release. Parent owns the final independent review,
+final-head CI and any authorized PR/merge/unchanged-source closure. This is not
+a cleared backlog or an authorization to resume other items concurrently.
+
+## Telemetry #1328 bounded correction — 2026-10-10
+
+The authored source `f1418967` is incorporated as `a996d282`; maintainer source/escrow checkpoint `52ebd351` preserves contributor credit and fixes fixture joins plus the per-write blocking description. The identical short-lock control fails current main; 26 focused tests pass. Full local gates pass 5,562 tests / zero failures / 35 skips, standalone typecheck and build with Bun 1.3.11 / Node 22.22.3. Real Linux x64 denial-path HTTP controls retain 1/6 contended rows before versus 6/6 after, with 2/2 ordinary rows on both sides. The same final escrow/source hashes were executed, all direct children/pipes joined, and final counts follow shutdown. Stronger stress and startup failures are preserved explicitly. [Evidence and root adversarial review](evidence/1328-telemetry-busy.md) qualify the remaining long-lock/drop/latency limits; no actual OpenCode-client or successful-model claim is made.
+
+Current delivery branch `codex/telemetry-busy-1328-20261010`, worktree `/Users/rynfar/repos/meridian-telemetry-busy-1328-20261010`, base `85db81fee`. Final-head CI, merge, contributor credit on the landed commit and unchanged source closure remain required. No release is authorized.
+
+Logout #1331 is delivered as `85db81fee`: its landed tree exactly matches reviewed `19420c341`, all seven executed final-head CI checks succeeded, GitHub recognizes Nowaker's human credit, and unchanged source #1323 was closed. The clean auth worktree was removed and validated head archived. Extra Usage #1327's separate corrected checkpoint `15dc930e` passes 5,572 local tests plus typecheck/build but retains real-provider/final-CI holds; its clean worktree was removed while its branch and `refs/archive/extra-usage1327/checkpoint-20261010` retain every commit. #1211/#1322 remain owner-deferred. The unfinished #1219 native WIP stays preserved in its existing worktree. Owner checkout/index/dirty bytes remain unchanged. The latest managed snapshot before this integration has 32 PRs and 22 issues across six discovered repositories; this is not a cleared queue.
+
+## Active credentialless logout integration — 2026-10-10
+
+Selected #1323 after current oldest-item revalidation: #917/#933 have no new
+attributable failure (latest 30 main CI runs succeeded), the older Antigravity
+#1073/#1317 retains a real repeated-write failure, and #1261 retains rejected
+root-wide deletion/ownership/admission semantics. #1219's unfinished native
+changes are preserved in their existing branch and external patch; stopping
+scope expansion is a prioritization correction, not a claim it needs login.
+#1211/#1322 remain owner-deferred. The oldest-first queue remains the policy;
+this item has a complete auth-only verification path without an owner login.
+
+Source #1323 `5163d998` is incorporated from fresh main `11dc1556` with both
+Nowaker authors/dates/full messages preserved (`bd3aa844`→`c9c31091`,
+`5163d998`→`77d0fa76`). Isolated branch
+`codex/auth-logout-1323-20261010`, worktree
+`/Users/rynfar/repos/meridian-auth-logout-1323-20261010`.
+Four unchanged regression assertions fail main and pass corrected source.
+Real official Claude CLI 2.1.284 empty-directory native checks fail before and
+pass after in default and named-profile contexts, with exit/close/both pipes
+joined, no token, absent credential files and zero SDK generations. Root's
+whole-diff adversarial review also corrected PowerShell's string-false coercion;
+six actual PowerShell acceptance controls pass. See
+[evidence and review](evidence/1323-auth-logout.md).
+
+Full local npm test passes 5,560 / 0 fail / 35 skip across 21 invocations;
+standalone typecheck/build pass (Bun 1.3.11 / Node 22.22.3). Certified independent
+package default/profile native controls both pass, all 428 dist files match,
+zero model calls. Final-head CI remains pending. No merge, source closure or
+release is claimed. Owner checkout/index/dirty bytes are unchanged.
+
 # Upstream review handoff
+
+## Current queue reduction and ordering (2026-10-09 UTC)
+
+The owner's order is **PRs and issues combined by original creation date,
+oldest first** across the managed repositories. This overrides the backlog
+skill's default. Preserve explicit owner deferrals, drafts and no-review
+requests; record an older item's concrete blocker before advancing to the next
+oldest actionable item. Existing correction deliveries inherit their source
+item's age. Finish existing deliveries before creating further review drafts.
+
+[Executable-selection #1321](https://github.com/rynfar/meridian/pull/1321)
+merged exact reviewed head `05d49566c6a4cfefb8d997008aa5b38cc187c9b6` as
+`0d86379b42cf6ad26979d146c755eb858553d1f0` after all executed final-head CI
+checks passed, including [test](https://github.com/rynfar/meridian/actions/runs/37861198992/job/113597062501).
+The landed tree `af3b3e29afc54f576151e03c0b079f4993ba796c` exactly matches
+the reviewed candidate. GitHub verified the signature and Nowaker's explicit
+human coauthor trailer. Source #1293 was rechecked unchanged at
+`1a201f37ab49261ce9d463d2f43e1182ab66202a` and closed as incorporated without
+a comment. [The committed adversarial review and live before/after proof](evidence/claude-executable-selection-review-20261008.md)
+retain the bounded Linux arm64/OpenCode V1/Haiku acceptance and broader limits.
+
+[Home Manager #1320](https://github.com/rynfar/meridian/pull/1320) merged reviewed
+head `94ab30b11ba78eb1993f95273ac5f87be16e5dfe` as
+`aee79ae3966b8b1d32f8d2a7fde3ec01f7ec2686`, with exact landed tree and Can H.
+Tartanoglu's human coauthor trailer verified. Fresh combined local gates passed
+5,502 tests / 35 skips / zero failures, typecheck and build. Final-head
+[test](https://github.com/rynfar/meridian/actions/runs/37882257433/job/113664326961)
+and [native Nix](https://github.com/rynfar/meridian/actions/runs/37882257435/job/113664342289)
+passed alongside the other relevant checks. The cancelled same-head push Nix
+run was superseded by that successful PR run under declared concurrency.
+Unchanged source #1305 was closed. [Its native proof and authorship receipt](evidence/home-manager-isolation-1305.md)
+retain their scope. The implemented bounded contract #1319 is closed.
+
+The integrations reduced the managed queue from 32 to 28 open PRs. A fresh
+refresh now has 29 PRs and 21 issues: contributor Nowaker opened
+[#1323](https://github.com/rynfar/meridian/pull/1323) at 2026-10-09 05:03:52 UTC.
+No new PR was created by this #769 continuation; #1323 remains in its original
+creation-date position. #650 remains owner-deferred.
+The oldest actionable item is [#769](https://github.com/rynfar/meridian/issues/769).
+Its archived core correction `f09cd586` was applied cleanly to current main as
+`7960fd62`, with Author/AuthorDate preserved. Fresh root adversarial source review
+found no material production blocker; local gates passed 5,552 tests / 35 skips /
+zero failures, typecheck and build. The separately reviewed scrub correction
+remains unlanded. Exact OpenClaw 2026.6.11 client/config/loopback preparation is
+qualified separately in [the current review](evidence/openclaw769-current-main-20261009.md).
+The independently installed native baseline completed a real read/result/reply
+on Linux arm64 / SDK 0.2.141 / Claude Code 2.1.284 / `claude-opus-5-5[1m]`.
+Its fixture failed by requiring the intentionally unchanged headerless tool
+checkpoint mapping to advance; public SDK diagnosis and E54 explain the
+answering branch. That first failure is retained. The committed native escrow
+now qualifies the terminal-verified serving branch separately from durable
+publication and explicitly joins owned Bun socket wrappers. Fresh R4 baseline
+reproduces the ignored edit; candidate consumes it, preserves the real tool pair,
+withholds then restores SDK-prefix proof and resumes normally. Both four-stage
+arms exit zero with original process/query/HTTP custody joined. Read-only
+access input and stopped owned containers are removed after audit. This is
+bounded contract acceptance; no classifier/billing resolution is claimed and
+no new PR was created.
+All four adjacent E41 modes pass with exact chain/parallel batches, immutable
+parents, one real answer per call, previous-fork continuation and full prior
+cache reads. The fresh source-archive package is byte-identical to all 452
+installed/live-tested candidate members. Required final-head CI remains a
+delivery gate. The original historical Kubernetes/native tuple remains separate.
+Keep #769 open: its new classifier trigger is undisclosed and its
+current same-window off/on/off evidence is incomplete.
+[Core delivery #1324](https://github.com/rynfar/meridian/pull/1324) is open for
+the existing plugin-message execution contract, with committed native before/after,
+four-mode E41 and exact package proof. Required final-head CI must pass before
+integration; the broader issue remains open. This is the only new delivery in
+this continuation, created after those acceptance prerequisites completed.
+
+Draft #1322 and the older native/product/client/package holds remain separate.
+No release or community comments are authorized by this checkpoint. The
+owner's checkout is preserved; no new review PR is created by this reconciliation.
+
+## Executable-selection pre-merge checkpoint (2026-10-08; historical)
+
+The owner approved the bounded executable-selection contract in
+[#1319](https://github.com/rynfar/meridian/issues/1319). Corrected delivery
+[#1321](https://github.com/rynfar/meridian/pull/1321) is open for final-head CI;
+source #1293 remains at
+`1a201f37ab49261ce9d463d2f43e1182ab66202a`. Its two actual Nowaker commits
+are preserved as `0de23574` and `32f64d54` on current main `74ee5515`, with
+separate correction `bc695a99` and committed headless client harness through
+`6fdd002a` in `codex/claude-executable-1293-20261008`. Root full-diff
+adversarial review corrected unowned/missing-join probes, stale writes/mixed
+snapshots and unbounded/bare-PID harness cleanup; no material source finding
+remains. This was root review, not a delegated independent review.
+
+Local gates passed 5,502 tests / 35 skips / zero failures, pretest, typecheck
+and build. Actual Linux arm64 / Node 22.22.3 / SDK 0.2.141 / Haiku 4.5 proof
+passed both HTTP and OpenCode V1 1.18.32 arms: five turns, all three selections,
+in-flight retention, next-turn change and no server restart. The actual client
+uses the tested `setup --v1` plugin, valid signed outbound session/agent headers,
+independently installed scrub 0.2.3 and a single saved session. Unchanged main
+completed a real control turn, then failed the settings route with 404. Actual
+leader/pipe/client/relay joins, zero residuals and credential isolation are
+retained in [the corrected review and portable receipt](evidence/claude-executable-selection-review-20261008.md).
+UI selection/error/Retry and desktop/phone card fit passed; inherited 320px SDK
+row overflow is qualified against unchanged main. Final delivery-head CI remains
+held. No Windows/macOS model, Opus remedy, installed-package or release claim.
+Recheck main, delivery head, source head and CI before integrating; preserve
+Nowaker coauthor credit and close source #1293 only if unchanged.
+
+Profiles delivery #1318 has merged as `74ee5515`, with tested/landed tree and
+Nowaker credit verified; unchanged source #1316 was closed without a comment.
+Home Manager delivery [#1320](https://github.com/rynfar/meridian/pull/1320),
+head `0f75be7c`, remains monitored for final-head CI. Its authored source #1305
+and separate Darwin check-registration correction have local and locked native
+Nix proof recorded in that delivery; do not infer merge readiness from this
+dated checkpoint. SQLite #1219, AGY #1314/#1073, #769, transcript #1261 and
+existing owner defer/no-review/release holds remain unchanged. The combined
+oldest-first queue is active and is not claimed cleared. The owner's checkout
+is preserved at `446a0f16`; all work remains isolated.
+
+## Current recovered continuation (2026-10-08)
+
+The owner resumed the combined oldest-first PR/issue queue. The dirty checkout
+remains at `446a0f1633be3a0cf36d8f1e9f222e914d2f7c83`: head, index, status and
+all twelve dirty items match the saved before record. Work uses isolated feature
+branches from fetched main `458cf15c59dc5ff99f50bf4dea4a002ff44b947f`.
+No community comments, new release, tags or publishing occurred.
+
+- **SQLite #1219:** the interrupted R7 native fixture run had already completed.
+  Joined receipts establish all sixteen cases pass under both Bun 1.3.11 and
+  Node 22.0.0, with exit-zero joined outer commands. The native artifact SHA256 is
+  `6caf1e117be0cf83cb7ad392d0e1b6a5826a96f8d4e4f7a2dd5e86c3e0b9e128`.
+  It was not rerun or rebuilt. Delivery preparation stays at `d4dce40f` in
+  `codex/sqlite-inspection-1219-20261008`. This is bounded native fixture proof;
+  physical guard xWrite, natural close/projection faults, complete controller and
+  migration ownership, Linux/client/model/package and final CI gates remain open.
+- **AGY #1314 / issue #1073:** [draft #1317](https://github.com/rynfar/meridian/pull/1317)
+  preserves source `d1a13085` by Cd1s as authored cherry-pick `80d4b966`, with
+  separate corrections. The real Pi 1.1.0 / agy 1.2.7 / Gemini 3.8 Flash Low /
+  Darwin import-and-replacement gate fails unchanged on baseline `458cf15c`,
+  `dedf4096` and corrected code head `0e7c1df1`: two identical successful writes
+  instead of one. Actual joins/pipes are qualified separately. Code-head local
+  gates pass 5,521 tests / 35 skip / zero fail, typecheck and build; `cd6b31a7`
+  adds only the failed-evidence record. [The committed proof](https://github.com/rynfar/meridian/blob/cd6b31a752e2f2d20240fee1e63ea46a39830dd9/docs/maintenance/antigravity-history-1314-proof.md)
+  retains the reproducible escrow and product hold. No blind prompt retry,
+  installation or green CI resolves that live failure. Exact reporter ACP/OS,
+  installed package, broader platform/model and final-head CI remain separate.
+  Keep source #1314 and issue #1073 open; investigate deterministic result-tail
+  semantics before another actual arm.
+- **Profiles #1316 / [delivery #1318](https://github.com/rynfar/meridian/pull/1318):** root source/browser review accepts the scoped display fix,
+  with completed local gates and final-head CI still required. Nowaker <spam@nowaker.net> source
+  `67c78683696712f7db714cbc5bb529bde8f5dfc3` is preserved with Author/AuthorDate
+  as `b4d8095e2fb998396d4e3a217547888477b23199` in
+  `codex/profiles-needs-login-1316-20261008`. Actual baseline/candidate Profiles
+  templates execute in the T3 browser with owned synthetic HTTP data. The
+  baseline lacks both badges/red borders; the candidate shows them, preserves
+  the active blue ring, avoids healthy/API false flags, clears on recovery and
+  handles unavailable quota conservatively. Paired 1280/375px and a 320px control
+  fit. E2E.md qualifies this display gate without model/OAuth generation.
+  [The scoped proof](evidence/profiles-needs-login-1316.md) records review,
+  reproducible fixture, validation and media limits. Broader login/expiry issues
+  stay open. Preserve Nowaker credit when squashing and recheck source head before
+  closing it as incorporated.
+
+All supplemental receipts, failed traces and before/after media remain under
+`/Users/rynfar/repos/meridian-review-evidence-20261006/resumption-20261008-round1`.
+Older dated statuses below do not supersede this checkpoint. Existing owner holds
+on #650, #1193 and #1011, no-review/draft holds, and prior missing affected-flow
+acceptance gates remain in force. The queue is not claimed cleared.
+
+## Current CI diagnostics continuation (2026-10-08)
+
+[#1312](https://github.com/rynfar/meridian/pull/1312) merged as
+`048c5e195d237508d71a2723c1249081eb9b4d91`: npm test explicitly discovers
+source tests and runs priority-session-store in its own final stage. Older
+missing-file counts below are dated observations.
+
+The usage-zero integration assertion now retains a cloned error body before
+JSON parsing on unexpected status. Known JSON/plain 500 controls still fail;
+only corrected Received diffs retain their full bodies. The existing guarded
+integration file passed 13 tests / 135 assertions and typecheck passed before
+rebase; the identical diagnostic is retained on current main. See
+[the durable diagnostic evidence](evidence/ci-usage-zero-diagnostics-20261008/README.md)
+for exact fixtures, commands, first logs and native-auth qualifications.
+
+Keep #917 and #933 open. #990 addresses the two recorded timing mechanisms;
+#935 covers the original eleven-victim ownership-backlog cluster. Five of seven
+original fast #917 receipts are matched, two remain missing, and fast 500/marker
+causes remain unknown. The absolute-path plugin change was dropped because its
+original failure had HTTP 200 and a missing marker. #1306's held-writer diagnostics and existing
+MCP/limiter diagnostics remain separate evidence. No timeout, expected status,
+product code or API contract changes are included. Final delivery-head local
+and CI gates remain required; a green suite does not diagnose the older causes.
+
+## Oldest-first continuation (2026-10-07)
+
+The owner requested oldest PRs and issues first. Use creation date ascending
+across Meridian and managed scrub repositories, while respecting drafts,
+explicit no-review requests and existing owner holds. This supersedes older
+queue-order suggestions below. The paginated refresh at **2026-10-07 22:18:35
+UTC**, after #1176 closed, contained 18 Meridian issues and 23 Meridian PRs,
+plus three managed scrub PRs and no scrub issues across six managed repositories.
+These are dated observations; refresh before selecting another item.
+
+- **Issue [650](https://github.com/rynfar/meridian/issues/650), July 17:**
+  receiver and sender workflows are delivered. Fresh secret-name metadata shows
+  `MERIDIAN_DISPATCH_TOKEN` absent from Hermes, OpenCode and Pi scrub repositories.
+  The owner explicitly kept this deferred on October 7. Do not provision a
+  token or run a dispatch while that hold stands. Revisit only on owner steering;
+  acceptance still requires the narrowly scoped credential and a witnessed
+  sender-to-receiver dispatch. Do not export a broad CLI credential as a substitute.
+- **Issue [769](https://github.com/rynfar/meridian/issues/769), August 7:**
+  the published OpenClaw scrub does not establish that the reporter's newer,
+  undisclosed trigger is handled. The latest owner hold requires a minimized
+  failing input or private, version-matched off/on/off verification. Do not add
+  speculative rules or close the report because the plugin exists.
+- **Issues [917](https://github.com/rynfar/meridian/issues/917) and
+  [933](https://github.com/rynfar/meridian/issues/933), August 31/September 4:**
+  the two last cited examples have concrete time-budget explanations. The
+  [tool-cache failure](https://github.com/rynfar/meridian/actions/runs/34315620193/job/102351097458)
+  explicitly expired at 5,003 ms under Bun's implicit five-second timeout;
+  the older claim that it had no timing bound was incorrect. The
+  [extra-usage failure](https://github.com/rynfar/meridian/actions/runs/34315145910/job/102349683150)
+  received 1,992 ms against the obsolete 500 ms assertion. Merged #990
+  (`92698147221c02afe89496906617f963b392bea6`), an ancestor of current main,
+  supplies the 30-second suite bound and a ten-second amplified-backoff control
+  with a five-second observation bound. These corrections do not explain the
+  [remaining fast concurrent failure](https://github.com/rynfar/meridian/actions/runs/33907044767/job/101134309533):
+  at #935 head `0d863bcf62a31317e202e668f0c22bb291b445d4`, one of three
+  headerless requests returned 500 at 132 ms after all three logged usage. Its
+  response body was not captured. The same head's later success cannot establish
+  a fix. Both issues remain open for that cause and the original unclassified
+  fast failures. Current main `6636c0da` passed the focused original HTTP test;
+  this is current mocked behavior, not a retrospective diagnosis.
+  The corrected `src/__tests__/integration.test.ts` fixture holds three SDK
+  writers, verifies distinct targets and durable mappings, and checks both
+  simultaneous and reverse-order completion plus released ownership. A
+  synthetic SDK-error control makes both versions reject HTTP 500: the old
+  fixture omits its error body, while the corrected fixture retains the body,
+  target, request index and cleanup facts. This demonstrates diagnostic capture,
+  not reproduction of the historical cause. The shared ten-second main-work
+  budget leaves three bounded five-second cleanup phases within the explicit
+  thirty-second test limit; unfinished work is recorded without claiming a join.
+  [Delivery #1306](https://github.com/rynfar/meridian/pull/1306) is now merged as
+  `eb88f9894229f70be453ca2d83ab36643b1a142b`, after six successful checks on
+  `486240609e2e1d9f5672656e62acb84fcfb28463`. The merged tree
+  `fb95ec3dc59506d2d1b009f61af14063471ca63c` matches the tested tree and human
+  authorship is verified. It improves diagnostic evidence; neither CI issue is
+  closed by that test delivery.
+- **Issue [1011](https://github.com/rynfar/meridian/issues/1011), September 10:**
+  the remaining authored `c5804275` commit is still owner-deferred. It changes
+  empty capped-output guarantees and stream/nonstream parity; oldest-first
+  ordering does not supply the missing contract decision.
+- **Issue [1068](https://github.com/rynfar/meridian/issues/1068), September 19:**
+  the owner chose the shipped append-only approach on October 7. The request
+  for a new context API was declined and closed as not planned at **22:40:55 UTC**.
+  [#1163](https://github.com/rynfar/meridian/pull/1163) remains the delivered
+  guidance: earlier advisory text stays in the resumed SDK session. This closure
+  does not claim replacement/removal semantics or a live Pydantic AI cache
+  benchmark. The older open-design statements below are historical.
+- **Issue [1073](https://github.com/rynfar/meridian/issues/1073), September 19:**
+  the official-CLI macOS implementation and its recorded expansions already
+  landed. A bounded internal correction now requires boolean `useG1Credits`;
+  only explicit false passes the existing subscription-only checks. Sixteen
+  unchanged-runtime fixture cases reproduce missing/falsy acceptance. Corrected
+  probe/backend suites pass 39/72 tests. Final local gates on rebased delivery
+  `a6d15a2f970edabe0fc323bbcb8506597008f356` pass **5,452 / 35 skip / 0 fail**,
+  typecheck and build; the earlier 5,451 result remains pre-rebase evidence.
+  Official agy 1.2.7 / Gemini 3.8 Flash Low / actual Pi 0.72.1 on macOS arm64
+  passes text, client-tool roundtrip, completed-history replay and exact-file
+  streaming client read/write. The native executable remains hash/version
+  identical before/after. The committed account-settings probe disables
+  auto-update and checks executable hashes around both read-only commands;
+  only whitelisted setting types/flags are retained. First self-update and
+  local API-key fixture failures remain qualified in
+  [the durable proof](evidence/1073-subscription-settings.md).
+  [Delivery #1307](https://github.com/rynfar/meridian/pull/1307) merged as
+  `ff260ea217072cf842f319c64d563e122f4d6964` after six successful final-head checks
+  and the expected changelog skip, including
+  [required test](https://github.com/rynfar/meridian/actions/runs/37689253024/job/113024913360).
+  Merged tree `2d4112bcae9c1900016b225e2f5ea07679341f6b` exactly matches the tested
+  tree; human credit is verified. Broader Linux/Windows and reliability acceptance
+  keeps #1073 open. No new owner approval is needed for this internal enforcement
+  of its already approved subscription boundary.
+- **Oldest nondraft scrub PR
+  [OpenCode 18](https://github.com/rynfar/meridian-plugin-opencode-scrub/pull/18),
+  September 27:** source `03d2f561` remains conflicted and held for the recorded
+  Claude-only correction and affected-client proof. Scrub release PRs Pi 15 and
+  OpenCode 20 still need separate release authorization.
+- **PR [1176](https://github.com/rynfar/meridian/pull/1176), September 28:**
+  declined and closed unmerged at **2026-10-07 22:16:36 UTC**, with unchanged head
+  `f552804e061a9aaca8ef371779f1c9e093e2ec5f`. This supersedes the reviewer hold:
+  Meridian has no supported OpenAI-serving producer for the proposed built-in
+  GPT valuation. GPT request IDs are served by Claude; synthetic GPT metrics,
+  override convenience and 25 unused catalog entries do not establish that feature.
+  The authored [Nowaker source](https://github.com/Nowaker/meridian/tree/f552804e061a9aaca8ef371779f1c9e093e2ec5f)
+  and `feat/openai-pricing` branch are preserved. Reconsider only if a separately
+  approved supported OpenAI backend lands with observed served-model/normalized
+  usage and actual-client proof, then refresh valuation, overrides, partial-cost
+  display and authoritative prices. No backend work is inferred from this decline.
+- **PR [1193](https://github.com/rynfar/meridian/pull/1193), September 29:**
+  the owner explicitly kept `7c9308968f760119e1b9f3ba8d74497af39d4a85` deferred on
+  October 7. Do not run warming queries. Revisit on owner steering; the tracked
+  background-call contract, real idle cache-loss/benefit proof and lifecycle gates
+  remain required. The universal five-minute TTL rationale is unproven for Meridian.
+  Static review retains missing normal process/hook fences, private source pinning
+  and release-before-join, plus stale admission after the semaphore wait: expiry,
+  opt-out and mapping replacement are not revalidated. Preserve foreground priority,
+  revocation, tool denial and joined cleanup before acceptance. The
+  [prior disposition](BACKLOG_DISPOSITIONS_2026-10-01.md) records the original
+  gates; this pass adds the stale-admission finding. The owner deferral supplies
+  no implementation approval.
+- **PR [1201](https://github.com/rynfar/meridian/pull/1201), October 1:**
+  unchanged source `30e01969c4511cc21e3a46c76d35c615a5ac6466` remains held for the
+  original worker/deployment, SDK, exact model and cache/resume acceptance evidence.
+  Two reconstruction cases using the public production producer passed with explicit
+  in-memory shell/database/event/interruption doubles: Meowbert
+  [historical `b5a83ea8`](https://github.com/XInTheDark/meowbert-ai-agent/commit/b5a83ea81fa7314256d90bb0ad378536923cd65a)
+  produces call A / output A / call B / output B; its
+  [caller fix `08e771a9`](https://github.com/XInTheDark/meowbert-ai-agent/commit/08e771a948d6d9db1fe96fee93c9ed7d54068cf4)
+  produces call A / call B / output A / output B. Both exercised the production
+  dispatcher, shell handler, persistence/reconstruction and Claude normalizer,
+  preserving correlated receipts and each revision's ordering. This confirms the
+  public producer shape, not an end-to-end Meridian fix. The original live
+  parallel-call/resume and unrelated/duplicate/missing-call controls remain open.
+- **PR [1211](https://github.com/rynfar/meridian/pull/1211), October 1:**
+  unchanged source `22566e8ac0b9e079bb0d28c0eb4aa05207c56070` retains the
+  **accept with maintainer corrections** disposition; actual affected-client
+  acceptance stays held. Recover the corrected `e731a2dfae4931d0c7718e99098cc4ab4a3355a2`
+  delivery from `codex/claude-auxiliary-1211-20261004`; do not duplicate it or land
+  the original unchanged. The [retained proof](https://github.com/rynfar/meridian/blob/e731a2dfae4931d0c7718e99098cc4ab4a3355a2/docs/maintenance/evidence/1211-claude-auxiliary-20261004/README.md)
+  supersedes the obsolete API-approval hold: the hook is internal. Revisit with a
+  ready owned Linux x64 environment and original main/classifier model evidence.
+  Native E71 before/after, separately observed requested/served model identities,
+  E55 gateway parity and all four E41 modes remain gates; the historical `sonnet`
+  alias does not supply exact served IDs or the missing native CLI identity.
+  Current-main reconciliation then needs fresh local gates and final-head CI.
+- **Issue [1212](https://github.com/rynfar/meridian/issues/1212) / PR
+  [1213](https://github.com/rynfar/meridian/pull/1213), October 1:**
+  the preserved correction from administratively closed
+  [draft #1267](https://github.com/rynfar/meridian/pull/1267),
+  `fe93ce447bd277a45157fcaad957cd37e4eba2e6`, remains held for native evidence.
+  It was not merged; source #1213 remains open. Its
+  [qualified proof](https://github.com/rynfar/meridian/blob/fe93ce447bd277a45157fcaad957cd37e4eba2e6/docs/maintenance/evidence/1213-native-sonnet-context.md)
+  establishes local controls and actual package-installed Meridian V2 plugin
+  execution, but no valid Sonnet 5.5 completion. Actual Linux/OpenCode/Sonnet 5.5
+  large-history baseline/fixed/resume evidence remains missing; preparation and
+  historical green gates do not replace it.
+
+Every future actual OpenCode/Claude verification or access diagnostic requires
+the generation-matching Meridian OpenCode plugin and retained configuration/load/
+route witnesses under the [mandatory preflight](../../E2E.md#required-meridian-opencode-plugin-preflight).
+Check that path before interpreting a refusal or requesting another owner login.
+
+This pass does not authorize a release or close the remaining CI issues.
+
+## Current continuation — 2026-10-07
+
+Pi continuation #1290/#1289 was delivered by [#1296](https://github.com/rynfar/meridian/pull/1296),
+merged `133bb918e02c7cf3a3a2ed4fb212df47a1c6895b` with the exact validated tree,
+verified contributor credit, and unchanged source/issue closure.
+[Meridian 1.80.0](https://github.com/rynfar/meridian/releases/tag/meridian-v1.80.0)
+is published from `c2052aac759c74d8ab0910809009b478ddfce243` through the normal
+Release Please workflow. npm integrity/provenance, versioned Docker platforms,
+mac-arm64 desktop assets and fresh registry-installed actual Pi/Opus behavior
+are verified; complete receipts and runnable harness are in
+[release PR #1202](https://github.com/rynfar/meridian/pull/1202).
+
+[Source #1295](https://github.com/rynfar/meridian/pull/1295) was delivered by
+[#1298](https://github.com/rynfar/meridian/pull/1298), normally squash-merged as
+`097530c824c7c2096c82b89de85fd6550479b603`. Landed tree
+`b5c452be66706875bc848b9887e29ca6f403cb38` equals the validated tree;
+Nowaker credit is verified and unchanged source `9d932c846afbb19b92d1a8f516772b3cd2552491`
+was closed. [Qualified local and live proof](evidence/1295-live.md) covers actual
+Linux JSON/SSE before/after, all four E41 modes, concurrent publication lifetime,
+real/recurrent timer controls and built native OpenCode with both plugins.
+Required final-head CI passed; the closed PR's final body retains the receipt.
+
+Auth-status [source #1285](https://github.com/rynfar/meridian/pull/1285),
+unchanged `08ddd8b061a2d271f8af397b83baf2a33f4deb4c`, was delivered by
+[#1300](https://github.com/rynfar/meridian/pull/1300), merged as
+`30c738d77d5e7839577ebc5d144b74da4590e319`. The landed tree
+`0fef592183db00ce0bc81c988d51124b76bd374a` equals the validated delivery tree;
+contributor credit and unchanged-source closure are verified. The authored incorporation
+is `b67c2f8a6e20aaa3e0ee0b7aa0ea792f1d09351b`, with separate maintainer
+ownership/resolver/diagnostic corrections. Tested executable `065e7c7f620f871774a4fe0caa2497950818fd6e`
+passes npm **5,433 / 35 skip / 0 fail**, standalone typecheck/build, both same-native
+baseline REDs, eight actual source controls and seven independently installed
+package controls. [Durable proof and limitations](evidence/1285-auth-status.md)
+include the committed auth-only harness, Darwin arm64 CLI 2.1.284/SDK 0.2.141
+identity, joined cleanup and retained first failures. Independent scoped review
+accepts the production, source/package proof, final local checks and documents
+with no remaining material finding. All six executed checks passed on delivery
+head `ae470d511f1f170168c7b95140ba0bb56d99d179`, including required `test`,
+with the expected changelog skip. This auth-only flow makes no model/client claim;
+older whole-OS/controller holds are separate.
+
+[Transcript source #1261](https://github.com/rynfar/meridian/pull/1261) remains
+open at new head `b999654d0b5562c067dbc376b4d578ff9168be68` on the October 7
+refresh. Its prior head `7475d08c652332aa1b9b23cbc525024bef83ab28` was deferred:
+[the concrete review](evidence/1261-transcript-sweep-review.md) retains pin/lease,
+admission-race and destructive-child join findings. That old review does not
+validate the new head. Revisit the full current ownership, pin/admission/join
+design with real affected-flow proof when its place in the oldest-first queue
+is reached. Its watcher is removed.
+Other historical Sonnet/MCP/SQLite/backlog holds retain their own scopes;
+preparation completion does not grant their outstanding live acceptance.
+
+## Current continuation — 2026-10-06 (delivery)
+
+[The current delivery record](BACKLOG_DELIVERY_2026-10-06.md) records #1223's
+unchanged-head closure and #1286's authored integration with startup/profile
+timing corrections. It supersedes earlier recommendations to retain #1223's
+excluded recovery as an open PR; the underlying crash problem remains unresolved.
+#1286's actual native timing proof and independent review pass; typecheck/build
+pass. Its full local run retains an unchanged store benchmark failure, with
+byte-identical baseline/current checks and the remaining stages completed.
+Delivery [PR #1287](https://github.com/rynfar/meridian/pull/1287) passed all
+executed final-head checks, including `test`, and merged as
+`ca6a5c0a4eddb87da52d83993f8f9e105712f0f6`. Its tree matches the validated
+head exactly, human contributor credit is present, and unchanged source #1286
+was closed as incorporated. The current focused delivery is #1290/#1289;
+its production review corrections, actual Pi/Opus and four-mode E41 evidence
+are complete. Final evidence review and final-head CI remain before merge;
+#1295 is being corrected in parallel. See the linked delivery record and
+its durable evidence receipts.
+Other historical dispositions below remain qualified by
+their own recorded scopes and dates.
+
+## Current continuation — 2026-10-04 (complete SQLite review)
+
+The [new review checkpoint](BACKLOG_SQLITE_REVIEW_2026-10-04.md) records #1274's
+verified merge, Sonnet #1267's fresh passing local gates and pushed `fe93ce44`,
+and the bounded post-merge paginated queue refresh. Earlier Sonnet local-suite
+running/push-pending statements are historical; its real Linux/OpenCode/Sonnet
+baseline/fixed/resume gate remains open despite actual Meridian V2 plugin proof.
+
+[Complete SQLite review and durable probes](evidence/sqlite-semantic-review-20261004/README.md)
+cover all 176 #1219 paths and all 38 #1243 SQL-delta paths. Whole semantic review
+is complete for the recorded immutable scopes; both submitted heads are deferred
+for material corrections, native-engine/topology compatibility and actual
+accepted-flow evidence. Review completion is not implementation acceptance.
+
+The owner approved the SQL public/operator contract on **2026-10-04** in
+[#1277](https://github.com/rynfar/meridian/issues/1277): explicit opt-in, JSON
+default, opaque embedding ownership, truthful joined close and guarded offline
+migration/latest-state export/rollback. Approval authorizes a corrected opt-in
+implementation; both submitted heads remain held for corrections and native
+engine/platform/actual-flow proof. #1244's async cleanup remains already
+approved. Source PRs/issues remain open; release and
+community-comment authorization remain absent. Earlier extraction-only and
+no-contract-issue or approval-pending statements are superseded only by this
+exact review/approved issue.
+
+[Review delivery #1278](https://github.com/rynfar/meridian/pull/1278) at former
+head `4477a61245c146e4231d4d9ade510cc93fef476c` passed all six executed CI
+checks, including [required test](https://github.com/rynfar/meridian/actions/runs/37249439495),
+plus the expected changelog skip. Those checks cover that former head only;
+this status correction requires new final-head CI and independent review.
+
+
+## Current continuation — 2026-10-04 (after #1269)
+
+The [current continuation record](BACKLOG_CONTINUATION_2026-10-04.md) supersedes
+specific earlier October 4 statuses while preserving the logs below. Root remains
+the sole queue owner; no release or community-comment authority is inferred.
+
+[Checkpoint #1269](https://github.com/rynfar/meridian/pull/1269) merged as
+`0369441786b082aadeb31689dcbce41d7e8574d9`, validated head
+`65b7793001e9982296459a7e33b85813bc2e8509`, matching tree
+`e6ea7edcea9a81aeba9dd7b13cfed32f60eef4a2`; required
+[test run 37238890010](https://github.com/rynfar/meridian/actions/runs/37238890010)
+passed. #1228 closed at unchanged `cee10174` at 22:45 UTC because its private
+SDK transcript mutation is declined; the original symptom remains unresolved.
+
+The owner approved #1270's four current-expiry fields and shared UI; #1260
+remains open with its five history fields/storage/listeners/auth logs excluded.
+The [bounded #1219 record](evidence/1219-sqlite-scope-review.md) resolves complete
+extraction, not whole-stack semantic review or SQL contract approval. #1244's
+async cleanup approval already exists; its implementation evidence stays open.
+
+Draft #1271 (`7de8cf5f`) retains safe fsync/publication durability, separate
+maintainer corrections and Nowaker credit; historical full suite is
+5,349 pass / 35 skips / 0 failures. Independent review passes, but live/native
+proof remains required; submitted-head CI passes. #1223's excluded recovery stays open.
+Draft [SSE #1273](https://github.com/rynfar/meridian/pull/1273), final `8e1bf53b`,
+retains fully tested product `bb33d26d`: 5,406 / 35 skips / 0 failures across
+19 stages. Test-only synchronization at `dabb2165` has discriminating controls
+and typecheck/build; final evidence-only commit preserves product/harness blobs.
+Native flow evidence remains open; submitted-head CI passes.
+
+E41 [#1272](https://github.com/rynfar/meridian/pull/1272) merged as `d3be0c62`
+from exact reviewed `8a08d3d4` after all six executed CI checks passed, including
+test, plus the expected changelog skip. Merge tree `56d1b172` exactly matches
+reviewed content; human authorship and blank squash body were verified. Local
+proof: 5,354 / 35 skips / 0 failures, typecheck/build and independent review.
+Original #1245/#1220 causality stays open. Approved expiry draft
+[#1275](https://github.com/rynfar/meridian/pull/1275), final `1856ee65`, retains
+fully tested executable `b386b148`: 5,374 / 35 skips / 0 failures and actual
+inactive-browser DOM retention/blur/in-flight success/failure controls on both
+pages. Visible keyboard and screen-reader proof remain unavailable; current
+native screenshot coverage is limited. Positive native/provider login and
+client/package acceptance remains open; submitted-head CI passes.
+
+Transcript enrollment's corrected harness observes the exact target-installed
+SDK and cleans setup failures. Its first full run at `ab9bb9ae` failed an
+existing third-replacement test that would discard an unfenced predecessor.
+The fixture now obtains modern locators through actual metadata registration,
+retaining every original assertion and the production guard. The necessary full
+rerun at frozen `b20a0e66` passes 5,392 / 35 skips / 0 failures across
+19 batches. Draft [#1276](https://github.com/rynfar/meridian/pull/1276) is now
+delivered at `e47fbb28` on current main `d3be0c62`, with all eight replayed
+patches and product/harness/test blobs preserved. Focused checks, typecheck and
+build pass; native/client/Windows and final-head CI remain open. The source
+stays open; this does not collect the untracked backlog.
+
+The exact submitted heads of drafts #1271 (`7de8cf5f`), #1273 (`8e1bf53b`)
+and #1275 (`1856ee65`) now have all six executed CI checks passing, including
+test, plus the expected changelog skip. Earlier CI-pending wording is superseded
+for those heads; refresh after any head/base change. Their actual affected-flow
+evidence remains open, so CI alone does not permit landing them.
+
+Sonnet draft #1267's verified local terminal head is `5a8097c3`. Default-native
+401/zero-query and round-two personal 200 followed by one `<synthetic>` query
+with zero input and normalized subscription refusal remain retained separately.
+Round three's distinct work snapshot returned usage 200, but its tiny actual
+Linux/V2/SDK/Sonnet control made one SDK query: `<synthetic>`, zero input,
+`is_error=true`, provider HTTP 400/API Error mentioning extra usage, no receipt.
+The precise entitlement cause remains unproven. Large baseline/fixed/resume
+were NOT RUN; retained rounds total two SDK query attempts and zero valid
+required-model completions. Package/client identities and each arm's 409
+installed dist files match; credentialless/syntax/privacy/content checks pass. Root verified
+terminal completion, zero owned children and removal of owned runtime/container
+with source unchanged. Native acceptance and fresh local/base/head/CI remain
+open; controller owns the requested working-login follow-up. Independent review
+approved the production/harness; local evidence head `73b2d122` clarifies actual
+package-installed Meridian V2 plugin execution through setup/config assertions,
+catalog discovery and the plugin-generated attested primary request. It records
+later controller snapshot cleanup without claiming successful inference. The
+fresh Sonnet full suite is running at frozen `73b2d122` after GC released
+the slot. Refresh active
+source/delivery evidence before integration; this checkpoint does not itself
+establish whole-stack acceptance. A single paginated post-E41 queue/discovery
+refresh at 23:38:04 UTC found the same six managed repositories and permissions,
+27 open PRs / 12 issues, unchanged contributor heads, and no coverage gaps or
+unexpected source work. Held Release Please #1202 is now `ebbc22e7`; separate
+release authorization remains absent. The continuation records exact counts
+and scope.
+
+## Current continuation — 2026-10-04
+
+The owner authorized a managed PR/issue backlog pass after reviewing repository
+rules. The [current queue and exact source dispositions](BACKLOG_REVIEW_2026-10-04.md)
+cover Meridian and the five managed scrub repositories. Paginated account and
+organization discovery found no additional managed scrub candidates. The dirty
+user checkout is preserved; implementation uses isolated branches/worktrees.
+No release or community-comment authorization is inferred.
+
+The October 3 sections below are historical records. Their delivery- or
+approval-pending statements are superseded by this continuation and the current
+standalone backlog record wherever a later disposition is supplied. In
+particular, #1258 merged as `f299fe06e72411b786380b5212edea79cd13966a` and
+#1257 closed; #1259 now has owner approval. Older records remain intact for
+traceability, and outstanding deferrals still apply as recorded in the current
+queue. Refresh live status before relying on any checkpoint.
+
+[Header delivery #1264](https://github.com/rynfar/meridian/pull/1264) is merged as
+`9d77d8e282cb9c58d99b8962b900777e9f4b0803`, from validated head
+`72ebaad447ee769aaac390833d5c4d8a1d1fc132`. Exact tree
+`93c72e883b0e43043a3e31e0e0844892a8218c37` and Nowaker co-author credit were
+verified. All six executed final-head CI checks passed, including
+[test run 37234609333/job 111531118342](https://github.com/rynfar/meridian/actions/runs/37234609333/job/111531118342).
+Source #1262 was refreshed unchanged at
+`b7bea911ecf41cdeeed34d5cc6d7f08c9936fe5f` and closed after verified delivery.
+Local gates: 5,304 pass / 35 platform skips / 0 failures, standalone
+typecheck/build and actual native-browser hover, negative and width controls.
+[Durable header proof](evidence/1262-header-separator.md) is delivered on main.
+
+Bounded reviews of new sources remain explicit deferrals:
+
+- [#1260 login lifetime](evidence/1260-login-lifetime-review.md), source
+  `99b8f0c46fbf8ce0b7f28cb14d2bdce4929948ef`: nine new profile response fields
+  require new tracked owner approval. Concurrent history loss, false logout,
+  unknown-store/replacement state errors and contradictory UI are reproduced.
+  Corrections plus native/browser/client proof remain gates.
+- [#1261 transcript sweep](evidence/1261-transcript-sweep-review.md), source
+  `7475d08c652332aa1b9b23cbc525024bef83ab28`: disk-growth purpose fits, but
+  root-wide deletion bypasses pins and reproduces a busy-root admission race; unjoined-child hazards are supported
+  by inspection, with that shutdown proof still open. Require durable ownership/admission/join authority
+  through supported APIs and actual affected-client proof.
+
+[Test scratch cleanup #1265](https://github.com/rynfar/meridian/pull/1265) is
+accepted with corrections, rebased delivery head
+`904eba426c571974503a31268ae805ce93018bcd` on header merge `9d77d8e2`.
+Authored incorporation `19334b24e762249628821a76ddc0b3bec83c3c9f` preserves
+source `3a959e12569d72db44be9f868ea25fdf54fde49a`; separate correction
+`c169e46d80cd20689990e5276900f14f6655f215` addresses ownership/deletion and
+harness safety. Historical full suite at `fb795476ef9be300c9be4960c639e003ea3e366c`:
+5,316 pass / 35 skips / 0 failures. Rebased focused checks: 71 pass; standalone
+typecheck/build pass, with zero per-process scratch residue. Delivery #1265
+merged as `5bd6b765fc7507780e1e9238b6d48a99f3d44810`; exact merged tree
+`e416d35b5b291f11da09f1b8c66d1803381dcac5` matches the validated head. All
+six executed final-head checks passed, including
+[test run 37235880525/job 111534755311](https://github.com/rynfar/meridian/actions/runs/37235880525/job/111534755311).
+Nowaker co-author credit verified; source #1263 refreshed unchanged and closed.
+
+[Process diagnostics #1266](https://github.com/rynfar/meridian/pull/1266) is a
+**diagnostics-only draft** at `9a1793729fa1f09ee643f646ca3221c738d5ab00` on
+`9d77d8e2`. Known probe path and bounded errno/exit metadata now reach the proxy
+log while admission stays fail closed and the HTTP body stays generic 500.
+Historical full suite at original product head
+`3a5291e345532cae895bd93127171d4ff4e064fa`: 5,305 pass / 35 skips / 0 failures.
+After rebase/harness loader correction: 16 focused checks and all five headless
+matrix arms pass, as do standalone typecheck/build. All six executed CI checks
+passed at `9a179372`, including
+[test](https://github.com/rynfar/meridian/actions/runs/37235975680/job/111535029225).
+A fresh base/head/check review remains necessary before any future integration. Exact
+macOS 27.0.1 / nono 0.79.0 / OpenCode 2.0.21 / plugin 1.11.1 native/client/model/
+installed-package proof remain open. #1229 stays open; synthetic denial does
+not establish that the native sandbox operation is fixed.
+
+The owner-approved hostname contract under
+[issue #1259](https://github.com/rynfar/meridian/issues/1259) is delivered through
+[#1268](https://github.com/rynfar/meridian/pull/1268). Validated head
+`78ba26a88cff1885c1c3876970543289a0d2278a` merged as
+`3afca1f5a0d51d74f8c7437b90f43d5686cf4163`; exact tree
+`852b4e66d06f93d62b8a32f80f2ded364859a6d6` and Nowaker co-author verified.
+All ten executed final-head checks passed, including
+[test](https://github.com/rynfar/meridian/actions/runs/37237523641/job/111539518710);
+two workflow-conditional checks skipped as expected. Source #1233 was refreshed
+unchanged at `322d3af68691eb41552b53c010d1996e9474c130` and closed;
+approval issue #1259 closed through the validated merge. Authored incorporation
+`3055d6b3` preserves Author/AuthorDate; correction `6fb37564` remains separate.
+Default-off settings/health/shared header behavior has independent final review,
+10/10 actual Settings/standalone browser controls and local proof: 5,333 tests /
+35 skips / 0 failures at `f33f93a1` on `9d77d8e2`, across 19 stages. After
+rebase, identical product/harness blobs, 100 focused checks and standalone
+typecheck/build pass. [Durable proof](evidence/1233-hostname-contract.md).
+The October 3 approval-pending note is superseded. The owned fixture stopped;
+consent was confirmed off before removing its exact private configuration.
+
+Sonnet source `553fd5c386de5e18e531a1d0101d64ef3a3b1792` is prepared in
+[draft delivery #1267](https://github.com/rynfar/meridian/pull/1267), head
+`259b152609269386e8494b8fc277230b0638ad64`. Supported Sonnet 5/5.5 native 1M
+context and inherited SDK opt-out have focused coverage and independent review.
+Full suite at `74e50774`: 5,321 pass / 35 skips / 0 failures. Typecheck and
+macOS/Linux builds pass. All six executed final-head CI checks passed, including
+[test](https://github.com/rynfar/meridian/actions/runs/37236867721/job/111537621268).
+Actual installed Linux/OpenCode 2.0.16 catalog/import rehearsal retains all
+15 messages with zero generations. Native readiness remains expired/401;
+the specifically owned macOS credential fixture is absent. Exact affected-model
+before/after generation and resume proof remain open; source #1213/#1212 stay
+open. Recheck base/head/CI before any future integration.
+
+The post-hostname paginated queue refresh at 22:00 UTC found 25 open PRs /
+11 issues, including [checkpoint #1269](https://github.com/rynfar/meridian/pull/1269).
+No new issue, unexpected PR or contributor head change appeared. Prepared drafts
+#1266/#1267 remain unchanged; held release #1202 now leads at
+`0b50bedabb1887297c63e562f425374c1dcd5030`. All six API coverages succeeded.
+Separate release authorization remains absent. The checkpoint is rebased onto
+`3afca1f5`; fresh final-head CI remains its own integration gate.
 
 ## Current continuation — 2026-10-03
 

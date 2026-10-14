@@ -1,0 +1,131 @@
+{
+  "pr": 1243,
+  "head": "6558c209f8bddf8e59b554d16c9834381c7817c2",
+  "base": "c159bf9befc49c823a94f48c8d554236115e827e",
+  "currentMain": "8e1c8bf738d7372ded01f28e99d6ec167acaf76f",
+  "recommendation": "defer; acceptance with corrections only after owner operator contract and final evidence",
+  "approvedInheritedContract": {
+    "issue": 1244,
+    "action": "do not ask for async cleanup approval again"
+  },
+  "findings": [
+    {
+      "id": "R1",
+      "priority": "P1",
+      "title": "Mutable cached priority authority bypasses blocked trusted-turn floor",
+      "locations": [
+        {
+          "path": "src/proxy/sessionStore.ts",
+          "line": 740
+        },
+        {
+          "path": "src/proxy/sessionStore.ts",
+          "line": 961
+        },
+        {
+          "path": "src/proxy/sessionStore.ts",
+          "line": 1223
+        }
+      ],
+      "status": "reproduced",
+      "probe": "immutable-priority-authority",
+      "sqlInvariant": "FAIL",
+      "asyncJsonControl": "PASS"
+    },
+    {
+      "id": "R2",
+      "priority": "P1",
+      "title": "Digest/rename retirement races an old JSON writer and archives unimported update",
+      "locations": [
+        {
+          "path": "src/proxy/session/storeDatabase.ts",
+          "line": 465
+        },
+        {
+          "path": "src/proxy/sessionStore.ts",
+          "line": 1159
+        }
+      ],
+      "status": "reproduced deterministic helper interleaving",
+      "probe": "retirement-digest-rename-race",
+      "sqlInvariant": "FAIL"
+    },
+    {
+      "id": "R3",
+      "priority": "P1",
+      "title": "Legacy lifecycle merge erases live publication lease and admits protected target to GC",
+      "locations": [
+        {
+          "path": "src/proxy/sessionLifecycle.ts",
+          "line": 1892
+        },
+        {
+          "path": "src/proxy/sessionLifecycle.ts",
+          "line": 1920
+        }
+      ],
+      "status": "reproduced actual lifecycle and GC with synthetic deleter",
+      "probe": "legacy-journal-preserves-publication-owner",
+      "sqlInvariant": "FAIL",
+      "publicationLeasesBefore": 1,
+      "publicationLeasesAfter": 0,
+      "targetDeletions": 1
+    },
+    {
+      "id": "R4",
+      "priority": "P2",
+      "title": "Retained arrival-eviction FileHandle gate no longer holds native SQL writes",
+      "locations": [
+        {
+          "path": "src/__tests__/proxy-request-cancellation.test.ts",
+          "line": 270
+        },
+        {
+          "path": "src/__tests__/proxy-request-cancellation.test.ts",
+          "line": 322
+        }
+      ],
+      "status": "reproduced test hold defect; does not prove request ordering broken",
+      "probe": "retained-arrival-eviction-hold",
+      "sqlInvariant": "FAIL",
+      "asyncJsonControl": "PASS"
+    },
+    {
+      "id": "R5",
+      "priority": "P2/operator approval gate",
+      "title": "Default authority, local filesystem topology, mixed-version migration and rollback need tracked operator contract",
+      "locations": [
+        {
+          "path": "src/proxy/session/storeDatabase.ts",
+          "line": 200
+        },
+        {
+          "path": "docs/configuration.md",
+          "line": 65
+        }
+      ],
+      "status": "source/documentation finding; approval absent"
+    }
+  ],
+  "engineGate": {
+    "package": "libsql0.5.29",
+    "actualSqliteVersion": "3.45.1",
+    "sourceId": "2024-01-30 16:01:20 e876e51a0ed5c5b3126f52e532044363a014bc594cfefa87ffb5b82257ccalt1",
+    "status": "published source lacks upstream WAL-reset live-salt guard; no corruption reproduction or Meridian corruption claim",
+    "provenanceDirectory": "libsql-provenance"
+  },
+  "missingEvidence": [
+    "corrected-head full local gates and required CI",
+    "direct priority store test included in required CI",
+    "supported Node22 installed relocated package",
+    "enforced offline/online migration and rollback chosen by owner",
+    "real-process old-writer and live publication/deletion/executor merge protection",
+    "uncertain COMMIT across another writer",
+    "cold startup/recovery/native event-loop and supported platforms",
+    "actual affected model/SDK/client/platform live E2E with Meridian OpenCode plugin when OpenCode implicated",
+    "durable evidence escrow beyond /tmp"
+  ],
+  "coverage": "file-coverage.json",
+  "report": "review-report.md",
+  "probeHarness": "sqlite-safety-probes.mjs"
+}

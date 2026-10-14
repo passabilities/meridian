@@ -1,0 +1,277 @@
+{
+  "result": "FAIL",
+  "root": "/private/var/folders/ks/xnz659y11jl44j80b_lfws6r0000gn/T/meridian-opencode-instruction-update-0B1qcG",
+  "expected": "baseline",
+  "model": "claude-haiku-5-5",
+  "idleMs": 15000,
+  "platform": "darwin/arm64",
+  "node": "v22.22.3",
+  "environment": "unspecified",
+  "actors": [
+    {
+      "command": "/tmp/meridian-1301-opencode-20261012/node_modules/.bin/opencode",
+      "pid": 45853,
+      "close": true,
+      "stdoutClose": true,
+      "stderrClose": true,
+      "code": 0,
+      "signal": null
+    },
+    {
+      "command": "/tmp/meridian-1301-opencode-20261012/node_modules/.bin/opencode",
+      "pid": 45857,
+      "close": true,
+      "stdoutClose": true,
+      "stderrClose": true,
+      "code": 0,
+      "signal": null
+    },
+    {
+      "command": "/bin/sh",
+      "pid": 45863,
+      "close": true,
+      "stdoutClose": true,
+      "stderrClose": true,
+      "code": 143,
+      "signal": null
+    },
+    {
+      "command": "/bin/sh",
+      "pid": 45866,
+      "close": true,
+      "stdoutClose": true,
+      "stderrClose": true,
+      "code": 1,
+      "signal": null
+    },
+    {
+      "command": "/bin/sh",
+      "pid": 45972,
+      "close": true,
+      "stdoutClose": true,
+      "stderrClose": true,
+      "code": 1,
+      "signal": null
+    },
+    {
+      "command": "/bin/sh",
+      "pid": 46516,
+      "close": true,
+      "stdoutClose": true,
+      "stderrClose": true,
+      "code": 0,
+      "signal": null
+    }
+  ],
+  "requests": [
+    {
+      "requestId": "instruction-b1bac4ce-540c-4420-aee1-3628295db8fe",
+      "attested": false,
+      "agent": "title",
+      "source": "subagent-title",
+      "toolChars": 0,
+      "toolDeltas": 0,
+      "maxGapMs": 0,
+      "toolDurationMs": 0,
+      "clientProjectPresent": false,
+      "model": "claude-haiku-4-5",
+      "hasToolResult": false,
+      "roles": [
+        {
+          "role": "user",
+          "types": [
+            "text"
+          ]
+        }
+      ],
+      "trailingSystem": false,
+      "hasInstructionMarker": true,
+      "status": 200
+    },
+    {
+      "requestId": "instruction-755f0d31-f4da-4dcd-970b-955ecc143c1e",
+      "attested": false,
+      "session": "ses_ece141c3cffelmmMQtPfizDfQL",
+      "agent": "build",
+      "toolChars": 244,
+      "toolDeltas": 18,
+      "maxGapMs": 62.48766700000033,
+      "toolDurationMs": 450.4739160000004,
+      "clientProjectPresent": true,
+      "model": "claude-haiku-5-5",
+      "hasToolResult": false,
+      "roles": [
+        {
+          "role": "user",
+          "types": [
+            "text"
+          ]
+        }
+      ],
+      "trailingSystem": false,
+      "hasInstructionMarker": true,
+      "tool": "write",
+      "status": 200
+    },
+    {
+      "requestId": "instruction-198f468c-3447-4f41-8b25-1520d797a31a",
+      "attested": false,
+      "session": "ses_ece141c3cffelmmMQtPfizDfQL",
+      "agent": "build",
+      "toolChars": 131,
+      "toolDeltas": 1,
+      "maxGapMs": 286.424583,
+      "toolDurationMs": 286.4577499999996,
+      "clientProjectPresent": true,
+      "model": "claude-haiku-5-5",
+      "hasToolResult": true,
+      "roles": [
+        {
+          "role": "user",
+          "types": [
+            "text"
+          ]
+        },
+        {
+          "role": "assistant",
+          "types": [
+            "thinking",
+            "tool_use"
+          ]
+        },
+        {
+          "role": "user",
+          "types": [
+            "tool_result"
+          ]
+        },
+        {
+          "role": "system",
+          "types": [
+            "text"
+          ]
+        }
+      ],
+      "trailingSystem": true,
+      "hasInstructionMarker": true,
+      "tool": "read",
+      "status": 200
+    },
+    {
+      "requestId": "instruction-a24a1cdd-3bd3-48a6-b843-8aa62244cb78",
+      "attested": false,
+      "session": "ses_ece141c3cffelmmMQtPfizDfQL",
+      "agent": "build",
+      "toolChars": 0,
+      "toolDeltas": 0,
+      "maxGapMs": 0,
+      "toolDurationMs": 0,
+      "clientProjectPresent": true,
+      "model": "claude-haiku-5-5",
+      "hasToolResult": true,
+      "roles": [
+        {
+          "role": "user",
+          "types": [
+            "text"
+          ]
+        },
+        {
+          "role": "assistant",
+          "types": [
+            "thinking",
+            "tool_use"
+          ]
+        },
+        {
+          "role": "user",
+          "types": [
+            "tool_result"
+          ]
+        },
+        {
+          "role": "system",
+          "types": [
+            "text"
+          ]
+        },
+        {
+          "role": "assistant",
+          "types": [
+            "thinking",
+            "tool_use"
+          ]
+        },
+        {
+          "role": "user",
+          "types": [
+            "tool_result"
+          ]
+        }
+      ],
+      "trailingSystem": false,
+      "hasInstructionMarker": true,
+      "status": 200
+    }
+  ],
+  "harnessSha256": "cc12fcea07efd6de209a0978f017c3ad6c91a6031bf80927a36141edc87eb3ad",
+  "client": "opencode v2.0.21",
+  "scrubPreflight": {
+    "path": "/private/tmp/meridian-scrub-preflight-package-20261012/node_modules/@rynfar/meridian-plugin-opencode-scrub/dist/index.js",
+    "packageName": "@rynfar/meridian-plugin-opencode-scrub",
+    "packageVersion": "0.2.3",
+    "sha256": "4ab89412e6a59fad812a3f6e5500c84f3bdfc41863320bc794f5274a251da656",
+    "runtimeVersion": "0.2.3",
+    "invocations": 0,
+    "errors": 0
+  },
+  "setupQualification": "manual-owned-fixture; setup does not qualify 2.0.21",
+  "plugin": "/private/tmp/meridian-1301-baseline-installed-20261012/node_modules/@rynfar/meridian/dist/meridian-v2",
+  "clientExit": 0,
+  "scrubRequest": {
+    "path": "/private/tmp/meridian-scrub-preflight-package-20261012/node_modules/@rynfar/meridian-plugin-opencode-scrub/dist/index.js",
+    "packageName": "@rynfar/meridian-plugin-opencode-scrub",
+    "packageVersion": "0.2.3",
+    "sha256": "4ab89412e6a59fad812a3f6e5500c84f3bdfc41863320bc794f5274a251da656",
+    "runtimeVersion": "0.2.3",
+    "invocations": 4,
+    "errors": 0
+  },
+  "instructionsChanged": true,
+  "updates": [
+    {
+      "requestId": "instruction-198f468c-3447-4f41-8b25-1520d797a31a",
+      "attested": false,
+      "roles": [
+        {
+          "role": "user",
+          "types": [
+            "text"
+          ]
+        },
+        {
+          "role": "assistant",
+          "types": [
+            "thinking",
+            "tool_use"
+          ]
+        },
+        {
+          "role": "user",
+          "types": [
+            "tool_result"
+          ]
+        },
+        {
+          "role": "system",
+          "types": [
+            "text"
+          ]
+        }
+      ],
+      "metric": []
+    }
+  ],
+  "failure": "AssertionError [ERR_ASSERTION]: Wrong model, missing installed-plugin attestation or unsuccessful primary request",
+  "joined": true
+}

@@ -8,11 +8,11 @@
  * aliasing, Task-tool routing, file-change tracking).
  *
  * Identity contract:
- *   - Session identity comes ONLY from X-Polytoken-Session, trimmed. No
- *     parent identity, no agent-mode scoping, no attestation, no OpenCode
- *     lineage normalization. A missing/blank header means "no identity": the
- *     request runs fingerprint-less and independent (never resumed) rather
- *     than being given an invented key.
+ *   - Prefer the trimmed X-Polytoken-Conversation for resume and coordination.
+ *     X-Polytoken-Session correlates the entire client session, including its
+ *     independent subagents; use it only as a legacy fallback when the
+ *     conversation header is missing or blank. Neither header is parsed or
+ *     scoped by agent mode. Native title-only requests get a distinct derived key. If both are missing/blank, return no identity.
  *   - The header is a session key, not an authentication credential — same
  *     trust model as every other adapter's headers.
  *
@@ -24,6 +24,7 @@
  */
 
 import type { Context } from "hono"
+import { createHash } from "node:crypto"
 import type { AgentAdapter } from "../adapter"
 import { normalizeContent } from "../messages"
 
@@ -40,6 +41,21 @@ export function normalizePolytokenSessionId(value: string | undefined): string |
   return trimmed ? trimmed : undefined
 }
 
+/** NOTE: Polytoken 0.8.21 sends native title inference under the working
+ * conversation header. Match its dedicated tool and system contract together;
+ * a general request merely mentioning titles or exposing that tool stays put.
+ * This separates side-call state without relaxing ordinary same-key guards. */
+function isNativeTitleRequest(body: unknown): boolean {
+  if (!body || typeof body !== "object") return false
+  const request = body as { tools?: unknown; system?: unknown }
+  if (!Array.isArray(request.tools) || request.tools.length !== 1) return false
+  const tool: unknown = request.tools[0]
+  if (!tool || typeof tool !== "object" || !("name" in tool) || tool.name !== "_infer_title") return false
+  return typeof request.system === "string" && request.system.startsWith(
+    "You summarize the conversation so far into a short session title. Respond ONLY by calling the provided tool with a single `title` string.",
+  )
+}
+
 export const polytokenAdapter: AgentAdapter = {
   name: "polytoken",
 
@@ -50,8 +66,11 @@ export const polytokenAdapter: AgentAdapter = {
    */
   clientEnvironmentMayDifferFromProxy: true,
 
-  getSessionId(c: Context): string | undefined {
-    return normalizePolytokenSessionId(c.req.header(POLYTOKEN_SESSION_HEADER))
+  getSessionId(c: Context, body?: unknown): string | undefined {
+    const session = normalizePolytokenSessionId(c.req.header("x-polytoken-conversation"))
+      ?? normalizePolytokenSessionId(c.req.header(POLYTOKEN_SESSION_HEADER))
+    if (!session || !isNativeTitleRequest(body)) return session
+    return `polytoken-title:${createHash("sha256").update(session).digest("hex")}`
   },
 
   /**

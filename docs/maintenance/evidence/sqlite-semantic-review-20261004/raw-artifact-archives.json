@@ -1,0 +1,201 @@
+{
+  "reason": "Preserve exact raw evidence bytes, including original whitespace and ignored log streams, in deterministic gzip archives. Original temporary filenames in records refer to decompressed bytes.",
+  "files": [
+    {
+      "originalPath": "1219/P1-P2-codec-order.stderr.log",
+      "archivePath": "1219/P1-P2-codec-order.stderr.log.gz",
+      "originalBytes": 0,
+      "originalSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "archiveSha256": "9ceffb7310338057cfe71a4ae1e2c98d2c485d81cdef906532a801f457a38d64"
+    },
+    {
+      "originalPath": "1219/P1-P2-failed-open.stderr.log",
+      "archivePath": "1219/P1-P2-failed-open.stderr.log.gz",
+      "originalBytes": 0,
+      "originalSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "archiveSha256": "9ceffb7310338057cfe71a4ae1e2c98d2c485d81cdef906532a801f457a38d64"
+    },
+    {
+      "originalPath": "1219/P1-P2-profile-prune.stderr.log",
+      "archivePath": "1219/P1-P2-profile-prune.stderr.log.gz",
+      "originalBytes": 0,
+      "originalSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "archiveSha256": "9ceffb7310338057cfe71a4ae1e2c98d2c485d81cdef906532a801f457a38d64"
+    },
+    {
+      "originalPath": "1219/P1-P2-runtime-truncate-corrected.stderr.log",
+      "archivePath": "1219/P1-P2-runtime-truncate-corrected.stderr.log.gz",
+      "originalBytes": 0,
+      "originalSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "archiveSha256": "9ceffb7310338057cfe71a4ae1e2c98d2c485d81cdef906532a801f457a38d64"
+    },
+    {
+      "originalPath": "1219/P1-P2-runtime-truncate.stderr.log",
+      "archivePath": "1219/P1-P2-runtime-truncate.stderr.log.gz",
+      "originalBytes": 812,
+      "originalSha256": "0812f2d967e1f25b1c8cbc4ca2a2019df9b097d60eb2d3a4438c2bdb26254932",
+      "archiveSha256": "6be6a1a112092408345789e918a2834a36bb1a3bf7d4c5ad203ba5362286d5e5"
+    },
+    {
+      "originalPath": "1219/P4-shutdown-probe/initial-identity-failure/probe.stderr.log",
+      "archivePath": "1219/P4-shutdown-probe/initial-identity-failure/probe.stderr.log.gz",
+      "originalBytes": 305,
+      "originalSha256": "585541f56de5c2356f289ddbda85e69e13382a18a1846dbbaf1d7994589776a9",
+      "archiveSha256": "f97c3f0f718c90da1db3ac073beee411953a01bd3b4d94f6306b3c8cfff13682"
+    },
+    {
+      "originalPath": "1219/P4-shutdown-probe/initial-identity-failure/probe.stdout.log",
+      "archivePath": "1219/P4-shutdown-probe/initial-identity-failure/probe.stdout.log.gz",
+      "originalBytes": 0,
+      "originalSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "archiveSha256": "9ceffb7310338057cfe71a4ae1e2c98d2c485d81cdef906532a801f457a38d64"
+    },
+    {
+      "originalPath": "1219/P4-shutdown-probe/maintenance-after-exit.stderr.log",
+      "archivePath": "1219/P4-shutdown-probe/maintenance-after-exit.stderr.log.gz",
+      "originalBytes": 0,
+      "originalSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "archiveSha256": "9ceffb7310338057cfe71a4ae1e2c98d2c485d81cdef906532a801f457a38d64"
+    },
+    {
+      "originalPath": "1219/P4-shutdown-probe/maintenance-after-exit.stdout.log",
+      "archivePath": "1219/P4-shutdown-probe/maintenance-after-exit.stdout.log.gz",
+      "originalBytes": 50,
+      "originalSha256": "202a9e6b7c122fc27ee13ae1ecf88e0d3d861217e5417f02e389645d370d122e",
+      "archiveSha256": "685f75df4d23a429a3ba6a32f10720aed1cf9bca41e129ddad1034e418bc68a5"
+    },
+    {
+      "originalPath": "1219/P4-shutdown-probe/probe.stderr.log",
+      "archivePath": "1219/P4-shutdown-probe/probe.stderr.log.gz",
+      "originalBytes": 204,
+      "originalSha256": "b7e5a9de8188a923afb9b14609a243918d9e17ce7fe51be9a565435a4c126a72",
+      "archiveSha256": "43ceb5ef6fc204d591d334e84b4eccce5bad54b0442cfe26ddb4369767654707"
+    },
+    {
+      "originalPath": "1219/P4-shutdown-probe/probe.stdout.log",
+      "archivePath": "1219/P4-shutdown-probe/probe.stdout.log.gz",
+      "originalBytes": 143,
+      "originalSha256": "9322b45527a91565c7f3cbded2b91bbe00e5abdf8662020e8f0fb45936985330",
+      "archiveSha256": "ea27c7a217f85e22e7390b2cb9a7e1efca32ba50d15a951c237659f71172b3a1"
+    },
+    {
+      "originalPath": "1219/gc-backlog-probe.log",
+      "archivePath": "1219/gc-backlog-probe.log.gz",
+      "originalBytes": 2853,
+      "originalSha256": "48ebbaee35d1e8d88569abc7297e7512cd78b20e062ff527d91c98c5ac6261b2",
+      "archiveSha256": "22ec430f8308d1dd56a0624a76514ab2f146c0628bddd2872734f54d0b441dab"
+    },
+    {
+      "originalPath": "1219/gc-pinned-backlog-probe.log",
+      "archivePath": "1219/gc-pinned-backlog-probe.log.gz",
+      "originalBytes": 2150,
+      "originalSha256": "001cfb8514ca374229dc4a2c75f7578f8484e31df8a09ec332a0d4e24c65edb4",
+      "archiveSha256": "e81ac8592bedbc534e0f7885e4d886e01dba19c7961845baf759cb8f3612a51e"
+    },
+    {
+      "originalPath": "1219/npm-ci.log",
+      "archivePath": "1219/npm-ci.log.gz",
+      "originalBytes": 396,
+      "originalSha256": "ca99a866242ccf6d015d7efe2c90f68bb218c8dba97d7cda878cd549aac0a3f2",
+      "archiveSha256": "469a57381060e7ba774bcd2a4f8ca69e2f678b2f5cdf38625d80f01df6300b68"
+    },
+    {
+      "originalPath": "1243/libsql-provenance/js-Cargo.toml",
+      "archivePath": "1243/libsql-provenance/js-Cargo.toml.gz",
+      "originalBytes": 614,
+      "originalSha256": "cf729f40413e3131258e98579ab760b2e75238255cd56729ebb65b4f410ea953",
+      "archiveSha256": "d0f8d7cfc77e14b7b842cad0e9cce0e5aec764ce431ed346dd25a5aa7045af50"
+    },
+    {
+      "originalPath": "1243/libsql-provenance/sqlite-wal-reset-fix.patch",
+      "archivePath": "1243/libsql-provenance/sqlite-wal-reset-fix.patch.gz",
+      "originalBytes": 6771,
+      "originalSha256": "370b26f605c1497e47288cfe0b731f0d3e55e3ed153ceff79e034d6501ac5d2a",
+      "archiveSha256": "1ccd28174ca486525c1521bda8fbfeaffe11eeaea0c66947d6ffa2ab65642a8a"
+    },
+    {
+      "originalPath": "1243/npm-ci.log",
+      "archivePath": "1243/npm-ci.log.gz",
+      "originalBytes": 396,
+      "originalSha256": "ca99a866242ccf6d015d7efe2c90f68bb218c8dba97d7cda878cd549aac0a3f2",
+      "archiveSha256": "469a57381060e7ba774bcd2a4f8ca69e2f678b2f5cdf38625d80f01df6300b68"
+    },
+    {
+      "originalPath": "1243/probe-async-json.stderr.log",
+      "archivePath": "1243/probe-async-json.stderr.log.gz",
+      "originalBytes": 0,
+      "originalSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "archiveSha256": "9ceffb7310338057cfe71a4ae1e2c98d2c485d81cdef906532a801f457a38d64"
+    },
+    {
+      "originalPath": "1243/probe-sql.initial.stderr.log",
+      "archivePath": "1243/probe-sql.initial.stderr.log.gz",
+      "originalBytes": 216,
+      "originalSha256": "3fbd3b4fa8a77013ef6dfaf9852ec49d8a041b54bfba6f1151cd500fe73b60d4",
+      "archiveSha256": "eb37e9639f2005ebdb4df2b827554dd8d75b8dc2b0801681a96e6b2360c1c181"
+    },
+    {
+      "originalPath": "1243/probe-sql.stderr.log",
+      "archivePath": "1243/probe-sql.stderr.log.gz",
+      "originalBytes": 216,
+      "originalSha256": "bfb8f47dba42d6f25258b013c7eb9550b279f2d8f74c5deaec1a26a9e2edec5c",
+      "archiveSha256": "c00d5bfd82a8b63d10ca08707651ddbf8859d94bd25faa2455a3409126e9a4a2"
+    },
+    {
+      "originalPath": "1243/authored-commits.txt",
+      "archivePath": "1243/authored-commits.txt.gz",
+      "originalBytes": 8907,
+      "originalSha256": "8ad2a97a57905757cb29a3544e94340b8c96a1bd31b6a4a5bbbf4cd0bc97ff79",
+      "archiveSha256": "c0ecc730c53505c4dfe5ca8b3b4b70b193d40dde64a22071f904e3138cea2520"
+    },
+    {
+      "originalPath": "1243/pr-1219-comparison-live.json",
+      "archivePath": "1243/pr-1219-comparison-live.json.gz",
+      "originalBytes": 4307,
+      "originalSha256": "a9ad66f77ae65b4d45c50776ac7969bd5fef0c3e0ec7c32a76edb399f0d66e0c",
+      "archiveSha256": "094ec576a8a803806d9748c37a5d85dab36cd65079fd5ab12a43449d1adb8c1f"
+    },
+    {
+      "originalPath": "1243/source-vs-current-main.stat",
+      "archivePath": "1243/source-vs-current-main.stat.gz",
+      "originalBytes": 15391,
+      "originalSha256": "ccef8cc5e177e9da8a44719c7c3e0fda54b18f2c38e3fa5a0ffa8bc857d97e15",
+      "archiveSha256": "5a36dc84e2d7cf665b9eae0c9b8c873e192e9a23ea2270b9c260342251ad1df6"
+    },
+    {
+      "originalPath": "1243/pr-1243-live.json",
+      "archivePath": "1243/pr-1243-live.json.gz",
+      "originalBytes": 23563,
+      "originalSha256": "108e17e17189348b92fa075e2004bec4cfe47e32f03bb5a2787fd4b914095799",
+      "archiveSha256": "1c4de3fdb63a79278310638ef8405028ce9893027bb9f5d35817aabcadcd6a9b"
+    },
+    {
+      "originalPath": "1243/stack-base-remaining-changes.txt",
+      "archivePath": "1243/stack-base-remaining-changes.txt.gz",
+      "originalBytes": 66269,
+      "originalSha256": "f2ac5d1f06680b7a04fdfe04988e664d8578ef9bde81aad9db8658ab126985e8",
+      "archiveSha256": "324b064c5ef8c1f14e959e9c4ca034dc7c2c9e7af4e8363a4a47837e7a34226d"
+    },
+    {
+      "originalPath": "1243/source-status-final.txt",
+      "archivePath": "1243/source-status-final.txt.gz",
+      "originalBytes": 67,
+      "originalSha256": "63bae6e9486c8297bc931e6a8528b8a7dccae6103fc8f6aa1b693cbc6f14f17e",
+      "archiveSha256": "2c44b0f8bc872f7e54e1eb639180f5957c58133b0daf763e4f7001eb51cfc116"
+    },
+    {
+      "originalPath": "1243/stack-base-async.diff",
+      "archivePath": "1243/stack-base-async.diff.gz",
+      "originalBytes": 302117,
+      "originalSha256": "2bdd6cafa837840448d2cada46fee64ad4b93a039b24eb2bb6118215c521a724",
+      "archiveSha256": "a597759f6b5de5442841c753ab8282f04697e1fbeda3b7fe0fccc263548178bd"
+    },
+    {
+      "originalPath": "1243/sql-complete.diff",
+      "archivePath": "1243/sql-complete.diff.gz",
+      "originalBytes": 269238,
+      "originalSha256": "d2be6d38fad1f849b5712bf685c35b5e0bf0e83d7b61c6a9c9683633f0cca9a7",
+      "archiveSha256": "4574e652bca3959a9a7188040d4549d14940511406efc7c23dadc3c6e34a174b"
+    }
+  ]
+}

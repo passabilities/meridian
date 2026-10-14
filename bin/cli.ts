@@ -66,8 +66,8 @@ Environment variables:
   MERIDIAN_PASSTHROUGH              Enable passthrough mode (tools forwarded to client)
   MERIDIAN_IDLE_TIMEOUT_SECONDS     Idle timeout in seconds (default: 120)
   MERIDIAN_IDLE_EXIT_SECONDS        Exit after this many seconds without a model request (opt-in)
-  MERIDIAN_PLUGIN_DIR               Plugin auto-discovery directory (default: ~/.config/meridian/plugins)
-  MERIDIAN_PLUGIN_CONFIG            Plugin manifest path (default: ~/.config/meridian/plugins.json)
+  MERIDIAN_PLUGIN_DIR               Plugin auto-discovery directory (default: <config dir>/plugins)
+  MERIDIAN_PLUGIN_CONFIG            Plugin manifest path (default: <config dir>/plugins.json)
   MERIDIAN_ERROR_REPORTING_DSN      Report Meridian's own crashes to this GlitchTip/Sentry DSN (off when unset)
 
 See https://github.com/rynfar/meridian for full documentation.`)

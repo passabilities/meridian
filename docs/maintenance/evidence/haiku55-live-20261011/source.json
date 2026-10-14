@@ -1,0 +1,81 @@
+{
+  "result": "PASS",
+  "acceptance": true,
+  "model": "claude-haiku-5-5",
+  "clientModel": "haiku",
+  "platform": "darwin/arm64",
+  "node": "v24.20.0",
+  "source": "1.80.0",
+  "harnessSha256": "38b43a6b17b35442dff065b18239a24390c1fb1d7dcaa490856a75d8f11c476d",
+  "actors": [
+    {
+      "pid": 19566,
+      "command": "claude.exe",
+      "sdkGate": false,
+      "close": true,
+      "stdoutClose": true,
+      "stderrClose": true,
+      "code": 0,
+      "signal": null
+    },
+    {
+      "pid": 19627,
+      "command": "sh",
+      "sdkGate": true,
+      "close": true,
+      "stdoutClose": true,
+      "stderrClose": true,
+      "code": 1,
+      "signal": null
+    },
+    {
+      "pid": 19655,
+      "command": "sh",
+      "sdkGate": true,
+      "close": true,
+      "stdoutClose": true,
+      "stderrClose": true,
+      "code": 0,
+      "signal": null
+    }
+  ],
+  "credentials": {
+    "accessOnly": true,
+    "refreshAuthorized": false,
+    "extraUsageAuthorized": false,
+    "accountSwitchAuthorized": false
+  },
+  "nativeVersion": "2.1.296 (Claude Code)",
+  "pi": "1.1.0",
+  "clientTerminal": {
+    "stopReason": "stop"
+  },
+  "actualReadBack": true,
+  "ownedReadCount": 1,
+  "requests": [
+    {
+      "adapter": "pi",
+      "model": "haiku",
+      "requestModel": "haiku",
+      "resolvedModel": "claude-haiku-5-5",
+      "sdkSessionId": "28efb3d1-c0dd-49de-8a2f-54049ee2dd62",
+      "status": 200,
+      "error": null
+    },
+    {
+      "adapter": "pi",
+      "model": "haiku",
+      "requestModel": "haiku",
+      "resolvedModel": "claude-haiku-5-5",
+      "sdkSessionId": "d7d80260-d5de-41e0-87e0-adc7c54bcd40",
+      "status": 200,
+      "error": null
+    }
+  ],
+  "sdk": "0.2.141",
+  "observedNativeModels": [
+    "claude-haiku-5-5"
+  ],
+  "cleanupJoined": true,
+  "fixtureRetained": true
+}

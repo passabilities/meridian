@@ -1,0 +1,27 @@
+{
+  "baselineSource": "0d12f6a11f52f78bdb8760a5b16f29acea4bb8a7",
+  "candidateSource": "0b080b02fdb46a132413ba2d84a2996a8ff12137",
+  "package": {
+    "id": "@rynfar/meridian@1.81.0",
+    "filename": "rynfar-meridian-1.81.0.tgz",
+    "shasum": "d4e0257e6afff90da3605e6904d2e31babb13841",
+    "integrity": "sha512-WsHgwcuk7UbdackmTWixQNwNUkC+sgSKkFLjf8H8X125gW8zhvMfxL5HQjTWFT14F09tQ9OznomMnvcqJbJ9Tg==",
+    "size": 1630020
+  },
+  "client": {
+    "name": "@earendil-works/pi-coding-agent",
+    "version": "1.1.0",
+    "cliSha256": "e79626f2dd6f94aa45d30f3fa63cd84319a6eefcd150b353cfaf274366926774"
+  },
+  "fullLocal": {
+    "originalProcess": 59007,
+    "exitCode": 0,
+    "pass": 5752,
+    "skip": 35,
+    "fail": 0,
+    "isolatedGroups": 23,
+    "typecheck": true,
+    "build": true
+  },
+  "harnessSha256": "adc0e1ed34e05f1ecd99dd979ec8a34a33879329ca9584b054147665041abd53"
+}

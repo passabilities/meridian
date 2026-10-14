@@ -1,0 +1,484 @@
+{
+  "packet": "P6 offline migration/export/barrier/recovery",
+  "reviewerTask": "/root/sqlite_recovery_review",
+  "completedAt": "2026-10-05T00:30:51.673794+00:00",
+  "disposition": "defer P6 acceptance pending qualified F01 disposition/correction, SQL contract approval and actual native/install/affected-flow proof",
+  "sourceSha": "0bf16b0d83f2fcc8c9b55df06bf20f97d763a23f",
+  "githubBase": "f443faee0b135c5d4bfe1e6fe771c6a262ae5f33",
+  "currentMainComparison": "8e1c8bf738d7372ded01f28e99d6ec167acaf76f",
+  "fullFileCoverage": [
+    {
+      "path": "src/proxy/session/bookkeeping/abortMigration.ts",
+      "sourceLines": 65,
+      "fullNewFileHunkRead": true,
+      "sourceBlobSha256": "d5d006c6dfabd9b800c1975482246255f197e22aedc18527cbd06fa9684b98fb",
+      "immutableGitBlobMatch": true,
+      "probeSourceBlobMatch": true,
+      "absentBase": true,
+      "absentCurrentMain": true,
+      "semanticChecks": "BARRIERS-only start, exact empty PREPARED database proof, fence/history/provenance counts, orphan sidecars, ABORTING restart, captured identity retirement before barrier release, terminal journal update",
+      "patch": "diffs-github-base/098-src__proxy__session__bookkeeping__abortMigration.ts.patch"
+    },
+    {
+      "path": "src/proxy/session/bookkeeping/barrier.ts",
+      "sourceLines": 59,
+      "fullNewFileHunkRead": true,
+      "sourceBlobSha256": "c7566179557953934355b493d7181f0e1c15f48cd1f66f8fcfae4894fb1cc62b",
+      "immutableGitBlobMatch": true,
+      "probeSourceBlobMatch": true,
+      "absentBase": true,
+      "absentCurrentMain": true,
+      "semanticChecks": "Own bytes/migration identity, durable release intent, private-name collision, fd/inode validation, capture restoration without public overwrite, retained capture on foreign public replacement, per-file release cut",
+      "patch": "diffs-github-base/099-src__proxy__session__bookkeeping__barrier.ts.patch"
+    },
+    {
+      "path": "src/proxy/session/bookkeeping/bootstrapRecovery.ts",
+      "sourceLines": 21,
+      "fullNewFileHunkRead": true,
+      "sourceBlobSha256": "4704dd928918fa9b35a6faedb350432be547e7f8e792f3f7099610c572eaa2b4",
+      "immutableGitBlobMatch": true,
+      "probeSourceBlobMatch": true,
+      "absentBase": true,
+      "absentCurrentMain": true,
+      "semanticChecks": "Mandatory stopped attestation plus independent exact dead-owner proof, same-process owner refusal, guard exclusivity before alias cleanup, no public main/guard unlink",
+      "patch": "diffs-github-base/101-src__proxy__session__bookkeeping__bootstrapRecovery.ts.patch"
+    },
+    {
+      "path": "src/proxy/session/bookkeeping/cli.ts",
+      "sourceLines": 175,
+      "fullNewFileHunkRead": true,
+      "sourceBlobSha256": "3221369f7a8296722dafd3cc9420971404611649cd399c36f5e28dfb2aa2ff74",
+      "immutableGitBlobMatch": true,
+      "probeSourceBlobMatch": true,
+      "absentBase": true,
+      "absentCurrentMain": true,
+      "semanticChecks": "All seven commands, flag restrictions, source preflight and phase admission, live/unknown residues, bootstrap handling, READY idempotency exception, corruption/unsafe exit classification and timing observer cleanup",
+      "patch": "diffs-github-base/102-src__proxy__session__bookkeeping__cli.ts.patch"
+    },
+    {
+      "path": "src/proxy/session/bookkeeping/cycles.ts",
+      "sourceLines": 105,
+      "fullNewFileHunkRead": true,
+      "sourceBlobSha256": "dd161c2b8deb38de0472e32820892fad4082b1aa3558b774521a3ab2f84f5a35",
+      "immutableGitBlobMatch": true,
+      "probeSourceBlobMatch": true,
+      "absentBase": true,
+      "absentCurrentMain": true,
+      "semanticChecks": "Terminal-cycle eligibility, source presence, identity matching, complete durable move intent, last-journal ordering, no-clobber hardlinks and inode checks, interrupted archive resume",
+      "patch": "diffs-github-base/104-src__proxy__session__bookkeeping__cycles.ts.patch"
+    },
+    {
+      "path": "src/proxy/session/bookkeeping/exportJournal.ts",
+      "sourceLines": 90,
+      "fullNewFileHunkRead": true,
+      "sourceBlobSha256": "cea0d721cebb2c3ddfda35b340d839f4a3de79a9bac2b06c1e6f99513b9a7e3c",
+      "immutableGitBlobMatch": true,
+      "probeSourceBlobMatch": true,
+      "absentBase": true,
+      "absentCurrentMain": true,
+      "semanticChecks": "Owned private bytes, digest/size proof, all six phases, exact source names and archive shape, unique names/counts/UUIDs, existing-target inode equality, durable capture-based retirement",
+      "patch": "diffs-github-base/106-src__proxy__session__bookkeeping__exportJournal.ts.patch"
+    },
+    {
+      "path": "src/proxy/session/bookkeeping/exportJson.ts",
+      "sourceLines": 136,
+      "fullNewFileHunkRead": true,
+      "sourceBlobSha256": "a70ff5d4a2108a3e4ef4275022e4723ea90bb2e4445dea5a3f49d7352c55b91e",
+      "immutableGitBlobMatch": true,
+      "probeSourceBlobMatch": true,
+      "absentBase": true,
+      "absentCurrentMain": true,
+      "semanticChecks": "Exclusive maintenance guard, READY provenance, non-dead ledger refusal before new gate archival, coherent read snapshot, latest SQL export, free-space preflight, staged/install/checkpoint/archive transitions, final barrier release and idempotent EXPORTED behavior",
+      "patch": "diffs-github-base/107-src__proxy__session__bookkeeping__exportJson.ts.patch"
+    },
+    {
+      "path": "src/proxy/session/bookkeeping/exportSnapshot.ts",
+      "sourceLines": 79,
+      "fullNewFileHunkRead": true,
+      "sourceBlobSha256": "b355ab5c64146552f459b9e9bc56b196204439c2a50a9183ee036849b25beb9a",
+      "immutableGitBlobMatch": true,
+      "probeSourceBlobMatch": true,
+      "absentBase": true,
+      "absentCurrentMain": true,
+      "semanticChecks": "Current rows/fences/leases, store v1/v3 and priority data, mapping enumeration order, exact legacy entry preservation when projection unchanged, strict reparsing/count/digest controls",
+      "patch": "diffs-github-base/108-src__proxy__session__bookkeeping__exportSnapshot.ts.patch"
+    },
+    {
+      "path": "src/proxy/session/bookkeeping/guardRecovery.ts",
+      "sourceLines": 64,
+      "fullNewFileHunkRead": true,
+      "sourceBlobSha256": "c06e16e06082d5bd2fa56930d0968d2f4b5df5793cca8fac62efaa31e3d37901",
+      "immutableGitBlobMatch": true,
+      "probeSourceBlobMatch": true,
+      "absentBase": true,
+      "absentCurrentMain": true,
+      "semanticChecks": "Original inode restoration only, conflicting identity refusal, foreign public/capture refusal, pending intent retention until original guard locked, aliases removed before native open to satisfy hardlink policy",
+      "patch": "diffs-github-base/112-src__proxy__session__bookkeeping__guardRecovery.ts.patch"
+    },
+    {
+      "path": "src/proxy/session/bookkeeping/importValidation.ts",
+      "sourceLines": 30,
+      "fullNewFileHunkRead": true,
+      "sourceBlobSha256": "5e47da1f88aaad462c2ca845692dd80eb3d9cffda8f045bb0e5701f9e7c86bec",
+      "immutableGitBlobMatch": true,
+      "probeSourceBlobMatch": true,
+      "absentBase": true,
+      "absentCurrentMain": true,
+      "semanticChecks": "Exact codecs/bindings/schema/triggers in rollback-only memory transaction, foreign keys, no commit hooks, eventual rollback and database close",
+      "patch": "diffs-github-base/113-src__proxy__session__bookkeeping__importValidation.ts.patch"
+    },
+    {
+      "path": "src/proxy/session/bookkeeping/inspect.ts",
+      "sourceLines": 124,
+      "fullNewFileHunkRead": true,
+      "sourceBlobSha256": "7c6f88bd26ed1292db7b389f809a990823b3e11aea69f1365f491a93db0ce9df",
+      "immutableGitBlobMatch": true,
+      "probeSourceBlobMatch": true,
+      "absentBase": true,
+      "absentCurrentMain": true,
+      "semanticChecks": "Read-only permissions/UID and SQLite URI, process-wide local-owner refusal, bootstrap diagnostic path, migration/export/cycle identity, WAL/SHM constraints, explicit end of reader snapshot, phase/count/barrier/residue output",
+      "patch": "diffs-github-base/114-src__proxy__session__bookkeeping__inspect.ts.patch"
+    },
+    {
+      "path": "src/proxy/session/bookkeeping/legacyExport.ts",
+      "sourceLines": 34,
+      "fullNewFileHunkRead": true,
+      "sourceBlobSha256": "21d601de00f3d2341b096c63f7149291ae70beb5bf2c30f989d700b37bc0f628",
+      "immutableGitBlobMatch": true,
+      "probeSourceBlobMatch": true,
+      "absentBase": true,
+      "absentCurrentMain": true,
+      "semanticChecks": "Resource row-version plus projection digest, mapping projection digest, raw bytes used only for matching imported projection, fresh runtime projection otherwise",
+      "patch": "diffs-github-base/117-src__proxy__session__bookkeeping__legacyExport.ts.patch"
+    },
+    {
+      "path": "src/proxy/session/bookkeeping/maintenance.ts",
+      "sourceLines": 9,
+      "fullNewFileHunkRead": true,
+      "sourceBlobSha256": "a3e606d3a0679cdd7a4ce6f61eafed437cf86f989eef90bceea24dff0f4d12ca",
+      "immutableGitBlobMatch": true,
+      "probeSourceBlobMatch": true,
+      "absentBase": true,
+      "absentCurrentMain": true,
+      "semanticChecks": "Internal expected-phase exclusive opening, shared lower-level connection checks, no runtime-facade export",
+      "patch": "diffs-github-base/130-src__proxy__session__bookkeeping__maintenance.ts.patch"
+    },
+    {
+      "path": "src/proxy/session/bookkeeping/maintenanceJournal.ts",
+      "sourceLines": 162,
+      "fullNewFileHunkRead": true,
+      "sourceBlobSha256": "9d117a537e4f49e90bb404e860b210e62d0f9a1f4df9d1fc15e9a60dba844b30",
+      "immutableGitBlobMatch": true,
+      "probeSourceBlobMatch": true,
+      "absentBase": true,
+      "absentCurrentMain": true,
+      "semanticChecks": "Atomic fsynced private file publication and directory flush, source identities/digests, strict phase/UUID/source/release/residue/abort identities, exact barrier format, explicit SIGKILL seam",
+      "patch": "diffs-github-base/131-src__proxy__session__bookkeeping__maintenanceJournal.ts.patch"
+    },
+    {
+      "path": "src/proxy/session/bookkeeping/maintenancePreflight.ts",
+      "sourceLines": 33,
+      "fullNewFileHunkRead": true,
+      "sourceBlobSha256": "4997923a58dfec6a9ef8d42a21b384112314a6477248fc459a1dc50fcd1d60a8",
+      "immutableGitBlobMatch": true,
+      "probeSourceBlobMatch": true,
+      "absentBase": true,
+      "absentCurrentMain": true,
+      "semanticChecks": "Refuse unjournaled authority before bootstrap, readable/owned source bytes, non-dead owners, SQL representability and space without changing authority",
+      "patch": "diffs-github-base/132-src__proxy__session__bookkeeping__maintenancePreflight.ts.patch"
+    },
+    {
+      "path": "src/proxy/session/bookkeeping/migration.ts",
+      "sourceLines": 216,
+      "fullNewFileHunkRead": true,
+      "sourceBlobSha256": "bbd6e2f9f5e3b5e82f9c8af58ecdfaed5623f35d6d030181cd7cc2d7b9ab5e4b",
+      "immutableGitBlobMatch": true,
+      "probeSourceBlobMatch": true,
+      "absentBase": true,
+      "absentCurrentMain": true,
+      "semanticChecks": "Required attestation, exclusive guard, source observation/final protection, exact READY database identity, single import commit, no committed-source reimport, archive/close/READY ordering, legacy lifecycle/store lock substitution, F01 resumed residue ordering",
+      "patch": "diffs-github-base/135-src__proxy__session__bookkeeping__migration.ts.patch"
+    },
+    {
+      "path": "src/proxy/session/bookkeeping/migrationImport.ts",
+      "sourceLines": 123,
+      "fullNewFileHunkRead": true,
+      "sourceBlobSha256": "de675b424a3ecf3025de8277c27f65f334702a4834c64db629421c8836cb027b",
+      "immutableGitBlobMatch": true,
+      "probeSourceBlobMatch": true,
+      "absentBase": true,
+      "absentCurrentMain": true,
+      "semanticChecks": "Actual incarnation refusal, canonical resource keys and locators, full source plan, scalar representability, lease hydration/version preservation, all fence namespaces, legacy CAS/raw history, priority rows and READY provenance",
+      "patch": "diffs-github-base/136-src__proxy__session__bookkeeping__migrationImport.ts.patch"
+    },
+    {
+      "path": "src/proxy/session/bookkeeping/offlineCheckpoint.ts",
+      "sourceLines": 25,
+      "fullNewFileHunkRead": true,
+      "sourceBlobSha256": "97c8d41b5c71b4a7d6cd660cc65c5ebff8f11b543626e66df55fa8adc57d540b",
+      "immutableGitBlobMatch": true,
+      "probeSourceBlobMatch": true,
+      "absentBase": true,
+      "absentCurrentMain": true,
+      "semanticChecks": "Explicit idle offline TRUNCATE, bound and holder diagnostics, no automatic abandonment/authority transition while checkpoint is busy",
+      "patch": "diffs-github-base/137-src__proxy__session__bookkeeping__offlineCheckpoint.ts.patch"
+    },
+    {
+      "path": "src/proxy/session/bookkeeping/privateNames.ts",
+      "sourceLines": 36,
+      "fullNewFileHunkRead": true,
+      "sourceBlobSha256": "bb72fb13a67f37a0b3b884e3de2fe6aebf3d9dcebce44ef4acdf020aa1cf0f85",
+      "immutableGitBlobMatch": true,
+      "probeSourceBlobMatch": true,
+      "absentBase": true,
+      "absentCurrentMain": true,
+      "semanticChecks": "UUID capabilities, long UTF-8 NAME_MAX fallback, private capture versus intent namespaces, validated recorded paths and explicit POSIX private-name concurrency assumption",
+      "patch": "diffs-github-base/138-src__proxy__session__bookkeeping__privateNames.ts.patch"
+    },
+    {
+      "path": "src/proxy/session/bookkeeping/privateRetirement.ts",
+      "sourceLines": 156,
+      "fullNewFileHunkRead": true,
+      "sourceBlobSha256": "6e2f6b6f8d4f7db77a776b400d285f81763b4559050411958eb6752b51878635",
+      "immutableGitBlobMatch": true,
+      "probeSourceBlobMatch": true,
+      "absentBase": true,
+      "absentCurrentMain": true,
+      "semanticChecks": "Durable private intents, descriptor/inode checks and no-clobber restore, resume-before-new-delete, captured/public replacement refusal, bootstrap alias no-extra-fd path, permanent guard prohibition, directory-constrained short intent recovery",
+      "patch": "diffs-github-base/139-src__proxy__session__bookkeeping__privateRetirement.ts.patch"
+    },
+    {
+      "path": "src/proxy/session/bookkeeping/recanonicalize.ts",
+      "sourceLines": 78,
+      "fullNewFileHunkRead": true,
+      "sourceBlobSha256": "b34aa51852cda7f7a9f7c2c01af5f911c70915415ecd2731f5bce958edf080ba",
+      "immutableGitBlobMatch": true,
+      "probeSourceBlobMatch": true,
+      "absentBase": true,
+      "absentCurrentMain": true,
+      "semanticChecks": "READY/no-export exclusive ownership, matching provenance, resource rekey refusal, page-only planning, pre-transaction filesystem observations, atomic mapping/pin update, preserved raw legacy history/generation/fences",
+      "patch": "diffs-github-base/141-src__proxy__session__bookkeeping__recanonicalize.ts.patch"
+    },
+    {
+      "path": "src/proxy/session/bookkeeping/residueArchive.ts",
+      "sourceLines": 101,
+      "fullNewFileHunkRead": true,
+      "sourceBlobSha256": "59adbbf4912caf2b49e5ac2726d6668202e19d3dfd7dfdb2a8e230e00e94976b",
+      "immutableGitBlobMatch": true,
+      "probeSourceBlobMatch": true,
+      "absentBase": true,
+      "absentCurrentMain": true,
+      "semanticChecks": "Live candidate/temporary refusal, unknown/dead archive intent, private archive directories, digest/inode/hardlink controls, path reuse refusal, incomplete-directory handling, pending gate retirement and F01 ordering",
+      "patch": "diffs-github-base/142-src__proxy__session__bookkeeping__residueArchive.ts.patch"
+    },
+    {
+      "path": "src/proxy/session/bookkeeping/residueDirectory.ts",
+      "sourceLines": 66,
+      "fullNewFileHunkRead": true,
+      "sourceBlobSha256": "af08b4761c0ea95d65d370032d516ad4d8837008d72c59bbe077e0e64395055e",
+      "immutableGitBlobMatch": true,
+      "probeSourceBlobMatch": true,
+      "absentBase": true,
+      "absentCurrentMain": true,
+      "semanticChecks": "Empty owned candidate only, journaled private capture before rename, inode/nonempty mismatch evidence, retain foreign capture and public replacement, private manifest and no implicit destructive salvage",
+      "patch": "diffs-github-base/143-src__proxy__session__bookkeeping__residueDirectory.ts.patch"
+    },
+    {
+      "path": "src/proxy/session/bookkeeping/residueInventory.ts",
+      "sourceLines": 66,
+      "fullNewFileHunkRead": true,
+      "sourceBlobSha256": "182469bc4dd79484225ecff928d17681e0c16a2f1fd5a64d8e84af502e74055d",
+      "immutableGitBlobMatch": true,
+      "probeSourceBlobMatch": true,
+      "absentBase": true,
+      "absentCurrentMain": true,
+      "semanticChecks": "Exact-incarnation candidate observations, live PID temporary refusal without invented death proof, gate unknown classification, bytes/digests and owned directories",
+      "patch": "diffs-github-base/144-src__proxy__session__bookkeeping__residueInventory.ts.patch"
+    },
+    {
+      "path": "src/proxy/session/bookkeeping/residueTypes.ts",
+      "sourceLines": 39,
+      "fullNewFileHunkRead": true,
+      "sourceBlobSha256": "dc2bd49dc4f2c2d29b0348d8c3d0a6dfc521fd057f7fdc92b51131810690145a",
+      "immutableGitBlobMatch": true,
+      "probeSourceBlobMatch": true,
+      "absentBase": true,
+      "absentCurrentMain": true,
+      "semanticChecks": "Source-relative allowed residue names, traversal refusal, temporary UUIDs, distinct incomplete candidate shape, unique paths, bounded identities/digests and archive capability validation",
+      "patch": "diffs-github-base/145-src__proxy__session__bookkeeping__residueTypes.ts.patch"
+    }
+  ],
+  "findings": [
+    {
+      "id": "P6-F01",
+      "severity": "moderate",
+      "status": "reproduced bounded internal entry-point ordering defect",
+      "primaryLocation": "src/proxy/session/bookkeeping/migration.ts:177",
+      "relatedLocations": [
+        "src/proxy/session/bookkeeping/migration.ts:180",
+        "src/proxy/session/bookkeeping/migrationImport.ts:49",
+        "src/proxy/session/bookkeeping/residueArchive.ts:98",
+        "src/proxy/session/bookkeeping/cli.ts:135",
+        "src/proxy/session/bookkeeping/maintenancePreflight.ts:26"
+      ],
+      "summary": "Direct PREPARED resume archives journaled gate before refusing a newly observable non-dead owner; source CLI preflight preserves the gate.",
+      "causalEvidence": "P6-probe/result.json",
+      "harness": "P6-probe/probe.ts",
+      "limits": [
+        "Darwin owner verdict is indeterminate; no claimed exact Linux alive observation",
+        "Source CLI under Bun, not packaged/independently installed Node",
+        "No SDK child/inference, gate is synthetic",
+        "No gate byte loss: exact archive retained",
+        "No actual source CLI race demonstrated",
+        "No product correction made"
+      ]
+    }
+  ],
+  "confirmedExposedCliRace": false,
+  "otherConfirmedIdentityOrRekeyBypasses": [],
+  "fullyReadTests": [
+    {
+      "path": "src/__tests__/bookkeeping-migration.test.ts",
+      "lines": 218,
+      "executed": false
+    },
+    {
+      "path": "src/__tests__/bookkeeping-export.test.ts",
+      "lines": 270,
+      "executed": false
+    },
+    {
+      "path": "src/__tests__/bookkeeping-recanonicalize.test.ts",
+      "lines": 155,
+      "executed": false
+    },
+    {
+      "path": "src/__tests__/bookkeeping-barrier.test.ts",
+      "lines": 89,
+      "executed": false
+    },
+    {
+      "path": "src/__tests__/bookkeeping-private-retirement.test.ts",
+      "lines": 88,
+      "executed": false
+    },
+    {
+      "path": "src/__tests__/bookkeeping-old-artifacts.test.ts",
+      "lines": 199,
+      "executed": false
+    },
+    {
+      "path": "src/__tests__/bookkeeping-cold-maintenance.test.ts",
+      "lines": 266,
+      "executed": false
+    },
+    {
+      "path": "src/__tests__/bookkeeping-cli.test.ts",
+      "lines": 354,
+      "executed": false
+    },
+    {
+      "path": "src/__tests__/bookkeeping-bootstrap-recovery.test.ts",
+      "lines": 139,
+      "executed": false
+    },
+    {
+      "path": "src/__tests__/bookkeeping-maintenance.test.ts",
+      "lines": 248,
+      "executed": false
+    },
+    {
+      "path": "src/__tests__/bookkeeping-crash-process.test.ts",
+      "lines": 201,
+      "executed": false
+    }
+  ],
+  "fullyReadFixtures": [
+    "src/__tests__/fixtures/bookkeeping-transition.ts",
+    "src/__tests__/fixtures/bookkeeping-migrate.ts",
+    "src/__tests__/fixtures/bookkeeping-cold-guard.ts",
+    "src/__tests__/fixtures/bookkeeping-bootstrap-window.ts",
+    "src/__tests__/fixtures/bookkeeping-cli-cycles.ts",
+    "src/__tests__/fixtures/bookkeeping-export-oracle.ts",
+    "src/__tests__/fixtures/bookkeeping-rich-fixture.ts"
+  ],
+  "testExecution": "Only isolated P6-probe/probe.ts, exit 0; source suites not run",
+  "probe": {
+    "cliControl": {
+      "status": 3,
+      "signal": null,
+      "error": "indeterminate process at 204524a3ad166f20948b54e2739257c86a71e2d88fb429c46815c914fd8b2855/lease/90438be3-163d-4a6c-8ae5-d804942c650b/owner; pid=12638 startId=\"Mon Oct  5 00:26:16 2026\"; stop all writers",
+      "gateRetained": true,
+      "allFilesUnchanged": true,
+      "phase": "PREPARED"
+    },
+    "directCall": {
+      "errorClass": "BookkeepingMaintenanceRequiredError",
+      "error": "indeterminate process at 204524a3ad166f20948b54e2739257c86a71e2d88fb429c46815c914fd8b2855/lease/90438be3-163d-4a6c-8ae5-d804942c650b/owner; pid=12638 startId=\"Mon Oct  5 00:26:16 2026\"; stop all writers",
+      "gateRetained": false,
+      "archiveRetainsExactBytes": true,
+      "ledgerBytesUnchanged": true,
+      "phase": "PREPARED",
+      "databaseCreated": false
+    },
+    "owner": {
+      "probeVerdict": "indeterminate",
+      "pid": 12638,
+      "startIdKind": "darwin-ps-lstart",
+      "meaning": "Disposable probe process; Darwin equality is indeterminate, never death proof"
+    },
+    "positiveControl": {
+      "status": 0,
+      "phase": "ready",
+      "gateArchived": true,
+      "resources": 0,
+      "mappings": 0,
+      "archivedResidues": 1
+    },
+    "runtime": {
+      "execPath": "/Users/rynfar/.bun/bin/bun",
+      "bun": "1.3.14",
+      "nodeCompatibility": "v24.3.0",
+      "platform": "darwin",
+      "arch": "arm64",
+      "filesystemType": 26,
+      "sourceSha": "0bf16b0d83f2fcc8c9b55df06bf20f97d763a23f",
+      "sdkQueries": 0,
+      "actualCli": "bin/session-bookkeeping.ts under Bun; no compiled or independently installed package claim"
+    },
+    "cleanup": {
+      "syntheticRootRemoved": true,
+      "liveOwnedChildren": 0,
+      "ownership": "Synchronous child invocations are terminal before cleanup; no long-lived children started"
+    },
+    "started": "2026-10-05T00:26:16.847Z",
+    "finished": "2026-10-05T00:26:17.330Z",
+    "result": "PASS causal characterization; direct call mutation reproduced, CLI preflight protected"
+  },
+  "approvalGates": [
+    "Tracked owner SQL operator contract decision remains absent",
+    "Exported initialization/lifecycle approval remains absent",
+    "Issue #1244 async cleanup already approved; no repeat approval requested"
+  ],
+  "proofGaps": [
+    "Exact final independently installed baseline and candidate package migration/two writers/publication/restart/latest export/rollback",
+    "Actual implicated model, SDK, client and history flows through migration and rollback",
+    "Supported native Linux/macOS filesystems and explicit Windows behavior/policy",
+    "Native crash/power-loss and journal fsync/rename/checkpoint/unknown COMMIT/close failure cuts",
+    "Supported old-writer versions and unavailable optional compatibility artifacts",
+    "Concurrent filesystem-alias change during recanonicalization",
+    "PREPARED malformed/missing-source abort/recovery operator limitation"
+  ],
+  "mutations": [
+    "Owned P6-probe script/result/manifests and synthetic temporary fixture only",
+    "Owned P6-review.md and P6-review.json only"
+  ],
+  "sourceEdits": false,
+  "installs": false,
+  "githubMutations": false,
+  "modelCalls": 0,
+  "authOperations": 0,
+  "goalOwnership": "Root remains sole queue owner",
+  "report": "P6-review.md",
+  "artifactDurability": "Temporary controller files; root must escrow accepted evidence before incorporation"
+}

@@ -1,0 +1,28 @@
+{
+  "capturedDate": "2026-10-04",
+  "nativeIndexSha256": "3fd9e58190311b5ee027c3e5452a6a410b31a5d610fd55853d797bb3c9f5db0c",
+  "wrapperGitHead": "55bee86d1c284f1ddf2b9e280e870d2b6cef884a",
+  "ffiVcsHead": "0653c5788d77ef16a97c56ff3e9fdc11717a72d9",
+  "ffiCrateChecksum": "0be1da6f123ceb2cd23f469883415cab9ee963286a85d61e22afb8b12e15e681",
+  "installedNativeMatchesPublishedBytes": true,
+  "nativeTarballMatchesRegistrySha512": true,
+  "attestationSignaturesIndependentlyValidated": false,
+  "conclusion": "published pinned checkpoint source lacks upstream live-salt repair; no corruption reproduction or Meridian corruption event claimed",
+  "files": {
+    "npm-libsql-0.5.29.json": "c821330486ca30c6c453ab9507ec38a9a0497ad9bca7747876bdc8b1f508c4bc",
+    "npm-native-darwin-arm64-0.5.29.json": "dd78c107a1f322f45235fc6daca930646322482ca57a154397c993e28b05580f",
+    "npm-js-attestation": "3604c4a91ea8b100952e387c9455768d0cec21316bd07578e16edf3982df6f6a",
+    "npm-native-attestation": "3497268016b4958298a3f3abb13f83cf08fed610280d6c54dae6f9ea9118b51c",
+    "js-Cargo.toml": "cf729f40413e3131258e98579ab760b2e75238255cd56729ebb65b4f410ea953",
+    "js-Cargo.lock": "897f93398893ce805b389b482ddf7555b75365a5f48a2e345703f21c1c58d74e",
+    "js-CI.yml": "91cc674f65fbda17d2d6b3d0872a6e30bb6705273ce2fd6d89a50fc3f21d7b83",
+    "libsql-ffi-0.9.30.crate": "0be1da6f123ceb2cd23f469883415cab9ee963286a85d61e22afb8b12e15e681",
+    "ffi-bundled-sqlite3.c": "d9791dc493f043172d75c4fe6ef48307db6534c98f2106c843551ca5cbfa2912",
+    "ffi-walCheckpoint-excerpt.c": "dbaa9229d6d1174184d81b086a571f8a6f5b13591414768df11d35ecdf839992",
+    "ffi-libsql-ffi-0.9.30--build.rs": "452e349bbcfcc4367565352650341eea33a0a2492d90f4709ca4ce3a843cd2ed",
+    "ffi-libsql-ffi-0.9.30--.cargo_vcs_info.json": "cf48a893f10eb872ff85a81632be926ad5b71f2be0f04e17205b1530263b8fde",
+    "native-darwin-arm64-0.5.29.tgz": "c2f451572527ed9980485a427201a1d2bf95716d7c6d90a18a0dee00c72d925a",
+    "sqlite-wal-reset-fix-commit.json": "d6f223be56edb054ae45821a2103f1392d7f5dcd5ebdf1b0dbaa58a4298d1cf5",
+    "sqlite-wal-reset-fix.patch": "370b26f605c1497e47288cfe0b731f0d3e55e3ed153ceff79e034d6501ac5d2a"
+  }
+}

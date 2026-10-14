@@ -1,0 +1,31 @@
+{
+  "source": {
+    "source": "local",
+    "kind": "artifact",
+    "version": "1.81.0",
+    "releaseVersion": "1.81.0",
+    "sha": "a9fece93ba9e0170ca611094f111c0fee464f05f",
+    "branch": "codex/sse-failover-1214-20261012",
+    "dirty": false,
+    "sourceHash": "49a7aa277360126dd308f61a6a993e1921fa258da23663133a58eb829701cba2",
+    "branchUrl": "https://github.com/rynfar/meridian/tree/codex%2Fsse-failover-1214-20261012",
+    "commitUrl": "https://github.com/rynfar/meridian/commit/a9fece93ba9e0170ca611094f111c0fee464f05f",
+    "counter": 1,
+    "counterScope": "e1779015-5245-470f-aec6-6fdc52defbc5",
+    "attemptId": "a7056afe-607a-4384-a4d9-5311b2a93c83",
+    "builtAt": "2026-10-12T19:46:35.318Z",
+    "displayVersion": "v1.81.0-1-codex/sse-failover-1214-20261012-a9fece93",
+    "certification": "verified"
+  },
+  "commands": [
+    "npm test",
+    "npm run typecheck",
+    "npm run build"
+  ],
+  "exit": 0,
+  "pass": 5707,
+  "skip": 35,
+  "fail": 0,
+  "session": 54534,
+  "bun": "1.3.11"
+}

@@ -1,0 +1,638 @@
+{
+  "schema": 1,
+  "result": "FAIL",
+  "acceptance": false,
+  "scope": "Exact-archive built/installed Nix Linux ARM64 wrapper-selected native CLI + actual installed public SDK + production HTTP/process gate; credentialless scripted loopback, NOT real provider/Pi/model/macOS or registry acceptance",
+  "outPath": "/nix/store/hqps475ckwynap87p9g62ij784qq9d8d-meridian-1.80.0",
+  "platform": "linux/arm64",
+  "node": "v22.23.3",
+  "nodeExecutable": "/nix/store/nzb2gysid9hh6xcl9ac0iv6g3p9b570b-nodejs-slim-22.23.3/bin/node",
+  "harnessSha256": "f67367a69d896f5d9ba8c12598672e336de6e50541c1094708691e7e2295d87e",
+  "network": {
+    "fence": "Docker owned container disconnected from all networks before execution",
+    "interfaces": [
+      {
+        "name": "lo",
+        "address": "127.0.0.1",
+        "internal": true
+      },
+      {
+        "name": "lo",
+        "address": "::1",
+        "internal": true
+      }
+    ],
+    "routeTable": "Iface\tDestination\tGateway \tFlags\tRefCnt\tUse\tMetric\tMask\t\tMTU\tWindow\tIRTT                                                       \n",
+    "generation": "owned 127.0.0.1 fake Anthropic only",
+    "sandboxExec": false
+  },
+  "versions": {
+    "meridian": "1.80.0",
+    "wrapper": "1.80.0",
+    "native": "2.1.295 (Claude Code)",
+    "sdk": "0.2.141"
+  },
+  "identities": {
+    "ownedMachineIdSha256": "59f7b2da87d58724e2e0f780f7b6b2839dc53efcf6eeb421aaa850f6bc4de9a7",
+    "coreutilsBin": "/nix/store/k3spppdnjvj3cp9fg2904ylm7gf68hls-coreutils-full-9.11/bin",
+    "packageSha256": "52d46f7561d74d3377042c9e279b97e705b0ada273a8c7f807567dde83186621",
+    "serverSha256": "de8c2974ea71cd71b0e77c23005f6716fe6b75865414bf789cae972d5bc87ac9",
+    "wrapperSha256": "3da72c9c7d0999f90f4996d9e6eaa390e95fa8622315ce8b911708360afcd661",
+    "wrapperText": "#! /nix/store/mwhkh9l5j5z6mkk83k22rjhx6lxgqh85-bash-5.3p15/bin/bash -e\nexport MERIDIAN_CLAUDE_PATH=${MERIDIAN_CLAUDE_PATH-'/nix/store/s1jz9vfr84mwya1mkr70dib6j89zml32-claude-code-2.1.295/bin/claude'}\nexec \"/nix/store/1nzpiv2idya913acb1wd1ydxvd2dw0pz-nodejs-22.23.3/bin/node\"  /nix/store/hqps475ckwynap87p9g62ij784qq9d8d-meridian-1.80.0/lib/meridian/dist/cli.js \"$@\" \n",
+    "removedBundledNativePackages": [],
+    "selectedNative": "/nix/store/s1jz9vfr84mwya1mkr70dib6j89zml32-claude-code-2.1.295/bin/claude",
+    "selectedNativeRealpath": "/nix/store/s1jz9vfr84mwya1mkr70dib6j89zml32-claude-code-2.1.295/bin/claude",
+    "selectedNativeSha256": "3e32e7c8bd2529933c428b642274364eb687e9935be2d1a599a4d283a64ed982",
+    "sdkEntry": "/nix/store/hqps475ckwynap87p9g62ij784qq9d8d-meridian-1.80.0/lib/meridian/node_modules/@anthropic-ai/claude-agent-sdk/sdk.mjs",
+    "sdkEntrySha256": "0c7a10e370441e9d7c7c90f7b32592dcc10e76f387bbe6ba25e6ce8a7d8de2e8"
+  },
+  "wrapperWitness": {
+    "selected": "/nix/store/s1jz9vfr84mwya1mkr70dib6j89zml32-claude-code-2.1.295/bin/claude",
+    "node": "v22.23.3",
+    "execPath": "/nix/store/nzb2gysid9hh6xcl9ac0iv6g3p9b570b-nodejs-slim-22.23.3/bin/node"
+  },
+  "cases": [
+    {
+      "name": "alias-default-json",
+      "model": "haiku",
+      "expected": "claude-haiku-5-5",
+      "result": "PASS",
+      "httpStatus": 200,
+      "responseSha256": "3b66a7863efccc264cefb8aee068f2328158df61815b8c28b1f086e712c1083b",
+      "telemetry": {
+        "model": "haiku",
+        "resolvedModel": "claude-haiku-5-5",
+        "sdkSessionId": "e2ade7c9-b327-4edc-915e-f784b369bbfc",
+        "status": 200,
+        "adapter": "opencode"
+      },
+      "history": {
+        "materialized": true,
+        "observedModels": [
+          "claude-haiku-5-5"
+        ],
+        "sha256": "5f3e688176a4204422c03cd4d5909c5d1c833d3d922143e22b4675477d008992"
+      }
+    },
+    {
+      "name": "alias-default-sse",
+      "model": "haiku",
+      "expected": "claude-haiku-5-5",
+      "stream": true,
+      "result": "PASS",
+      "httpStatus": 200,
+      "responseSha256": "9de055d1df7780104060a63836746354cf1fde5b858f80572dde051e034cddfa",
+      "telemetry": {
+        "model": "haiku",
+        "resolvedModel": "claude-haiku-5-5",
+        "sdkSessionId": "01c6dc84-a6aa-4873-8e66-0b72bfc2978b",
+        "status": 200,
+        "adapter": "opencode"
+      },
+      "history": {
+        "materialized": true,
+        "observedModels": [
+          "claude-haiku-5-5"
+        ],
+        "sha256": "4ab732009d52ed321d745c1011225d7a11da6f98d909633477ce40898e3d167d"
+      }
+    },
+    {
+      "name": "explicit55-enabled-budget",
+      "model": "claude-haiku-5-5",
+      "expected": "claude-haiku-5-5",
+      "thinking": {
+        "type": "enabled",
+        "budget_tokens": 2048
+      },
+      "result": "PASS",
+      "httpStatus": 200,
+      "responseSha256": "ddf8e5df988656fb58843c74995eb8a45b3d483349b130ffec870e7c4cecdaac",
+      "telemetry": {
+        "model": "haiku",
+        "resolvedModel": "claude-haiku-5-5",
+        "sdkSessionId": "248ba7a2-557f-4b9c-83dc-02f1c40e3ba1",
+        "status": 200,
+        "adapter": "opencode"
+      },
+      "history": {
+        "materialized": true,
+        "observedModels": [
+          "claude-haiku-5-5"
+        ],
+        "sha256": "5352560ea49f144ef818a6601b9470077e181f92c9ce4ca6399a300be8e38317"
+      }
+    },
+    {
+      "name": "alias-enabled-budget-summarized",
+      "model": "haiku",
+      "expected": "claude-haiku-5-5",
+      "stream": true,
+      "thinking": {
+        "type": "enabled",
+        "budget_tokens": 2048,
+        "display": "summarized"
+      },
+      "effort": "medium",
+      "result": "PASS",
+      "httpStatus": 200,
+      "responseSha256": "fef1ec29edb830205bbd662f36f47ad2a11e51563850321428ecc8d78cf11ea4",
+      "telemetry": {
+        "model": "haiku",
+        "resolvedModel": "claude-haiku-5-5",
+        "sdkSessionId": "f049cd4f-dd0e-4515-8599-bddadae4135a",
+        "status": 200,
+        "adapter": "opencode"
+      },
+      "history": {
+        "materialized": true,
+        "observedModels": [
+          "claude-haiku-5-5"
+        ],
+        "sha256": "e624131cea9bec4f15e77df3be68403b1636ccd4ac5fc2241aaaef44356138c9"
+      }
+    },
+    {
+      "name": "explicit55-adaptive-summarized",
+      "model": "claude-haiku-5-5",
+      "expected": "claude-haiku-5-5",
+      "thinking": {
+        "type": "adaptive",
+        "display": "summarized"
+      },
+      "effort": "high",
+      "result": "PASS",
+      "httpStatus": 200,
+      "responseSha256": "46d4e7090b0dfe98769cdca944e66e33bc48a9623ebae25f88571cc50fc3778c",
+      "telemetry": {
+        "model": "haiku",
+        "resolvedModel": "claude-haiku-5-5",
+        "sdkSessionId": "e9640318-fe04-45a7-b4b8-5cfa0f1661e6",
+        "status": 200,
+        "adapter": "opencode"
+      },
+      "history": {
+        "materialized": true,
+        "observedModels": [
+          "claude-haiku-5-5"
+        ],
+        "sha256": "eda5986626c10da961a1a63d7aec10f7e5999fde0b93c2a6ca27d076ed2c87ae"
+      }
+    },
+    {
+      "name": "explicit45-enabled-control",
+      "model": "claude-haiku-4-5-20251001",
+      "expected": "claude-haiku-4-5-20251001",
+      "thinking": {
+        "type": "enabled",
+        "budget_tokens": 2048
+      },
+      "result": "FAIL",
+      "httpStatus": 200,
+      "responseSha256": "3cbf197c444e50c995a4d8c076577308e7f1a48bfea47c2cf8a9d4700122660c",
+      "failure": "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n\n31999 !== 2048\n"
+    },
+    {
+      "name": "explicit55-disabled-json",
+      "model": "claude-haiku-5-5",
+      "stream": false,
+      "thinking": {
+        "type": "disabled"
+      },
+      "reject": true,
+      "result": "PASS",
+      "httpStatus": 400,
+      "responseSha256": "ac1b0c0a6a46717a70e8777a15b28add6542a415cb0b7b13f0bbac0c1ad4c6b9",
+      "rejectedBeforeQuery": true,
+      "error": {
+        "type": "invalid_request_error",
+        "message": "Claude Haiku 5.5 through the Claude Code SDK cannot reliably honor thinking: disabled. Use adaptive thinking with effort, or explicitly select claude-haiku-4-5."
+      }
+    },
+    {
+      "name": "alias-adaptive-omitted-json",
+      "model": "haiku",
+      "stream": false,
+      "thinking": {
+        "type": "adaptive",
+        "display": "omitted"
+      },
+      "reject": true,
+      "result": "PASS",
+      "httpStatus": 400,
+      "responseSha256": "1ad8f09358109a8233e449abdc2eaf733539d20da280144a66eb8f2e5f4b2437",
+      "rejectedBeforeQuery": true,
+      "error": {
+        "type": "invalid_request_error",
+        "message": "Claude Haiku 5.5 through the Claude Code SDK cannot reliably honor thinking.display: omitted. Omit display or use summarized, or explicitly select claude-haiku-4-5."
+      }
+    },
+    {
+      "name": "explicit55-disabled-sse",
+      "model": "claude-haiku-5-5",
+      "stream": true,
+      "thinking": {
+        "type": "disabled"
+      },
+      "reject": true,
+      "result": "PASS",
+      "httpStatus": 400,
+      "responseSha256": "ac1b0c0a6a46717a70e8777a15b28add6542a415cb0b7b13f0bbac0c1ad4c6b9",
+      "rejectedBeforeQuery": true,
+      "error": {
+        "type": "invalid_request_error",
+        "message": "Claude Haiku 5.5 through the Claude Code SDK cannot reliably honor thinking: disabled. Use adaptive thinking with effort, or explicitly select claude-haiku-4-5."
+      }
+    },
+    {
+      "name": "alias-adaptive-omitted-sse",
+      "model": "haiku",
+      "stream": true,
+      "thinking": {
+        "type": "adaptive",
+        "display": "omitted"
+      },
+      "reject": true,
+      "result": "PASS",
+      "httpStatus": 400,
+      "responseSha256": "1ad8f09358109a8233e449abdc2eaf733539d20da280144a66eb8f2e5f4b2437",
+      "rejectedBeforeQuery": true,
+      "error": {
+        "type": "invalid_request_error",
+        "message": "Claude Haiku 5.5 through the Claude Code SDK cannot reliably honor thinking.display: omitted. Omit display or use summarized, or explicitly select claude-haiku-4-5."
+      }
+    }
+  ],
+  "requests": [
+    {
+      "case": "setup",
+      "path": "/v1/messages",
+      "bodySha256": "25efa16aa6fe5cec361498b893db3f7f8eacfbbab354136fc8e369d9783fc075",
+      "bodyBytes": 79,
+      "model": "claude-haiku-5-5",
+      "thinking": {
+        "type": "enabled",
+        "budget_tokens": 2048
+      },
+      "outputConfig": null,
+      "stream": false,
+      "rejected": true,
+      "headers": {
+        "user-agent": "node"
+      }
+    },
+    {
+      "case": "alias-default-json",
+      "path": "/v1/messages?beta=true",
+      "bodySha256": "8c9708845f531412075ca4ac85af7801cf3c0966f00d1873596dd89b3a007fb2",
+      "bodyBytes": 10688,
+      "model": "claude-haiku-5-5",
+      "thinking": {
+        "type": "adaptive",
+        "display": "updates"
+      },
+      "outputConfig": {
+        "effort": "medium"
+      },
+      "stream": true,
+      "rejected": false,
+      "headers": {
+        "anthropic-version": "2023-06-01",
+        "anthropic-beta": "interleaved-thinking-2025-05-14,thinking-token-count-2026-05-13,context-management-2025-06-27,prompt-caching-scope-2026-01-05,mid-conversation-system-2026-04-07,claude-code-20250219,per-turn-control-2026-07-01,effort-2025-11-24,thinking-display-updates-2026-08-18",
+        "user-agent": "claude-cli/2.1.295 (external, sdk-ts)"
+      }
+    },
+    {
+      "case": "alias-default-sse",
+      "path": "/v1/messages?beta=true",
+      "bodySha256": "53892390dca001759ec96f89db180a064f867fc8cfe61b0a98c9f90ec97bfac5",
+      "bodyBytes": 10687,
+      "model": "claude-haiku-5-5",
+      "thinking": {
+        "type": "adaptive",
+        "display": "updates"
+      },
+      "outputConfig": {
+        "effort": "medium"
+      },
+      "stream": true,
+      "rejected": false,
+      "headers": {
+        "anthropic-version": "2023-06-01",
+        "anthropic-beta": "interleaved-thinking-2025-05-14,thinking-token-count-2026-05-13,context-management-2025-06-27,prompt-caching-scope-2026-01-05,mid-conversation-system-2026-04-07,claude-code-20250219,per-turn-control-2026-07-01,effort-2025-11-24,thinking-display-updates-2026-08-18",
+        "user-agent": "claude-cli/2.1.295 (external, sdk-ts, agent-sdk/0.2.141)"
+      }
+    },
+    {
+      "case": "explicit55-enabled-budget",
+      "path": "/v1/messages?beta=true",
+      "bodySha256": "d26a1db2ca2af4bb2dcbb1c8bd9b59f8ad2d5a642d04aab0ae6ba3c344ccf331",
+      "bodyBytes": 10695,
+      "model": "claude-haiku-5-5",
+      "thinking": {
+        "type": "adaptive",
+        "display": "updates"
+      },
+      "outputConfig": {
+        "effort": "medium"
+      },
+      "stream": true,
+      "rejected": false,
+      "headers": {
+        "anthropic-version": "2023-06-01",
+        "anthropic-beta": "interleaved-thinking-2025-05-14,thinking-token-count-2026-05-13,context-management-2025-06-27,prompt-caching-scope-2026-01-05,mid-conversation-system-2026-04-07,claude-code-20250219,per-turn-control-2026-07-01,effort-2025-11-24,thinking-display-updates-2026-08-18",
+        "user-agent": "claude-cli/2.1.295 (external, sdk-ts, agent-sdk/0.2.141)"
+      }
+    },
+    {
+      "case": "alias-enabled-budget-summarized",
+      "path": "/v1/messages?beta=true",
+      "bodySha256": "d6afb7fcbe049e56815aa1dcb845c871021a44f23a78374f569109c01e3f7038",
+      "bodyBytes": 10704,
+      "model": "claude-haiku-5-5",
+      "thinking": {
+        "type": "adaptive",
+        "display": "summarized"
+      },
+      "outputConfig": {
+        "effort": "medium"
+      },
+      "stream": true,
+      "rejected": false,
+      "headers": {
+        "anthropic-version": "2023-06-01",
+        "anthropic-beta": "interleaved-thinking-2025-05-14,thinking-token-count-2026-05-13,context-management-2025-06-27,prompt-caching-scope-2026-01-05,mid-conversation-system-2026-04-07,claude-code-20250219,per-turn-control-2026-07-01,effort-2025-11-24",
+        "user-agent": "claude-cli/2.1.295 (external, sdk-ts, agent-sdk/0.2.141)"
+      }
+    },
+    {
+      "case": "explicit55-adaptive-summarized",
+      "path": "/v1/messages?beta=true",
+      "bodySha256": "1597efaea584276ed7bb5387ffdb2b5d5dd4b6389dc4374f0922a86253bb9eb0",
+      "bodyBytes": 10699,
+      "model": "claude-haiku-5-5",
+      "thinking": {
+        "type": "adaptive",
+        "display": "summarized"
+      },
+      "outputConfig": {
+        "effort": "high"
+      },
+      "stream": true,
+      "rejected": false,
+      "headers": {
+        "anthropic-version": "2023-06-01",
+        "anthropic-beta": "interleaved-thinking-2025-05-14,thinking-token-count-2026-05-13,context-management-2025-06-27,prompt-caching-scope-2026-01-05,mid-conversation-system-2026-04-07,claude-code-20250219,per-turn-control-2026-07-01,effort-2025-11-24",
+        "user-agent": "claude-cli/2.1.295 (external, sdk-ts, agent-sdk/0.2.141)"
+      }
+    },
+    {
+      "case": "explicit45-enabled-control",
+      "path": "/v1/messages?beta=true",
+      "bodySha256": "9992772da8b8124c444c9706eab7b13666a4c08220d6f551e20d7fba7b8b6825",
+      "bodyBytes": 18188,
+      "model": "claude-haiku-4-5-20251001",
+      "thinking": {
+        "budget_tokens": 31999,
+        "type": "enabled",
+        "display": "updates"
+      },
+      "outputConfig": null,
+      "stream": true,
+      "rejected": false,
+      "headers": {
+        "anthropic-version": "2023-06-01",
+        "anthropic-beta": "interleaved-thinking-2025-05-14,thinking-token-count-2026-05-13,context-management-2025-06-27,prompt-caching-scope-2026-01-05,claude-code-20250219,thinking-display-updates-2026-08-18",
+        "user-agent": "claude-cli/2.1.295 (external, sdk-ts, agent-sdk/0.2.141)"
+      }
+    }
+  ],
+  "actors": [
+    {
+      "label": "setup",
+      "command": "/nix/store/hqps475ckwynap87p9g62ij784qq9d8d-meridian-1.80.0/bin/meridian",
+      "pid": 17034,
+      "sdkGate": false,
+      "gatePublished": false,
+      "nativeExecObserved": false,
+      "exit": true,
+      "close": true,
+      "stdoutClose": true,
+      "stderrClose": true,
+      "code": 0,
+      "signal": null,
+      "errors": [],
+      "stderr": "",
+      "escalations": []
+    },
+    {
+      "label": "setup",
+      "command": "/nix/store/s1jz9vfr84mwya1mkr70dib6j89zml32-claude-code-2.1.295/bin/claude",
+      "pid": 17041,
+      "sdkGate": false,
+      "gatePublished": false,
+      "nativeExecObserved": false,
+      "exit": true,
+      "close": true,
+      "stdoutClose": true,
+      "stderrClose": true,
+      "code": 0,
+      "signal": null,
+      "errors": [],
+      "stderr": "",
+      "escalations": []
+    },
+    {
+      "label": "setup",
+      "command": "/nix/store/s1jz9vfr84mwya1mkr70dib6j89zml32-claude-code-2.1.295/bin/claude",
+      "pid": 17065,
+      "sdkGate": false,
+      "gatePublished": false,
+      "nativeExecObserved": false,
+      "exit": true,
+      "close": true,
+      "stdoutClose": true,
+      "stderrClose": true,
+      "code": 0,
+      "signal": null,
+      "errors": [],
+      "stderr": "",
+      "escalations": []
+    },
+    {
+      "label": "alias-default-json",
+      "command": "/bin/sh",
+      "pid": 17071,
+      "sdkGate": true,
+      "gatePublished": true,
+      "nativeExecObserved": true,
+      "exit": true,
+      "close": true,
+      "stdoutClose": true,
+      "stderrClose": true,
+      "code": 0,
+      "signal": null,
+      "errors": [],
+      "stderr": "",
+      "escalations": [],
+      "gateSha256": "aac35cdea562457a1bf7fd05d3e37d865c41bac4df3afc65ecaaa189850ad459",
+      "actualExecutable": "/nix/store/s1jz9vfr84mwya1mkr70dib6j89zml32-claude-code-2.1.295/bin/.claude-wrapped",
+      "actualExecutableSha256": "8d3953900b354f7d4e990d2ce23dee16e91b71c9349def592d916f9e118223df"
+    },
+    {
+      "label": "alias-default-sse",
+      "command": "/bin/sh",
+      "pid": 17086,
+      "sdkGate": true,
+      "gatePublished": true,
+      "nativeExecObserved": true,
+      "exit": true,
+      "close": true,
+      "stdoutClose": true,
+      "stderrClose": true,
+      "code": 0,
+      "signal": null,
+      "errors": [],
+      "stderr": "",
+      "escalations": [],
+      "gateSha256": "6a8f1171d5d0f621108ca102e5448b95e7032f4cbd2ebd47dc90f668f928a838",
+      "actualExecutable": "/nix/store/s1jz9vfr84mwya1mkr70dib6j89zml32-claude-code-2.1.295/bin/.claude-wrapped",
+      "actualExecutableSha256": "8d3953900b354f7d4e990d2ce23dee16e91b71c9349def592d916f9e118223df"
+    },
+    {
+      "label": "explicit55-enabled-budget",
+      "command": "/bin/sh",
+      "pid": 17101,
+      "sdkGate": true,
+      "gatePublished": true,
+      "nativeExecObserved": true,
+      "exit": true,
+      "close": true,
+      "stdoutClose": true,
+      "stderrClose": true,
+      "code": 0,
+      "signal": null,
+      "errors": [],
+      "stderr": "",
+      "escalations": [],
+      "gateSha256": "676871e316679eaac6411a63d666a060210e078ca03b3b6831d7e134c0f3376a",
+      "actualExecutable": "/nix/store/s1jz9vfr84mwya1mkr70dib6j89zml32-claude-code-2.1.295/bin/.claude-wrapped",
+      "actualExecutableSha256": "8d3953900b354f7d4e990d2ce23dee16e91b71c9349def592d916f9e118223df"
+    },
+    {
+      "label": "alias-enabled-budget-summarized",
+      "command": "/bin/sh",
+      "pid": 17116,
+      "sdkGate": true,
+      "gatePublished": true,
+      "nativeExecObserved": true,
+      "exit": true,
+      "close": true,
+      "stdoutClose": true,
+      "stderrClose": true,
+      "code": 0,
+      "signal": null,
+      "errors": [],
+      "stderr": "",
+      "escalations": [],
+      "gateSha256": "f668707fa0d44d7b231b69b43f8c0c4a89573f6a451d139728d6b7bdfe9ec753",
+      "actualExecutable": "/nix/store/s1jz9vfr84mwya1mkr70dib6j89zml32-claude-code-2.1.295/bin/.claude-wrapped",
+      "actualExecutableSha256": "8d3953900b354f7d4e990d2ce23dee16e91b71c9349def592d916f9e118223df"
+    },
+    {
+      "label": "explicit55-adaptive-summarized",
+      "command": "/bin/sh",
+      "pid": 17131,
+      "sdkGate": true,
+      "gatePublished": true,
+      "nativeExecObserved": true,
+      "exit": true,
+      "close": true,
+      "stdoutClose": true,
+      "stderrClose": true,
+      "code": 0,
+      "signal": null,
+      "errors": [],
+      "stderr": "",
+      "escalations": [],
+      "gateSha256": "f51dcda96747479c0ce774671fe43728651439185bae9f42442313cd6f2dd53a",
+      "actualExecutable": "/nix/store/s1jz9vfr84mwya1mkr70dib6j89zml32-claude-code-2.1.295/bin/.claude-wrapped",
+      "actualExecutableSha256": "8d3953900b354f7d4e990d2ce23dee16e91b71c9349def592d916f9e118223df"
+    },
+    {
+      "label": "explicit45-enabled-control",
+      "command": "/bin/sh",
+      "pid": 17146,
+      "sdkGate": true,
+      "gatePublished": true,
+      "nativeExecObserved": true,
+      "exit": true,
+      "close": true,
+      "stdoutClose": true,
+      "stderrClose": true,
+      "code": 0,
+      "signal": null,
+      "errors": [],
+      "stderr": "",
+      "escalations": [],
+      "gateSha256": "46ade63ff3a08e1483928b679b178a564c388d2f49c85de59131c55c400934cb",
+      "actualExecutable": "/nix/store/s1jz9vfr84mwya1mkr70dib6j89zml32-claude-code-2.1.295/bin/.claude-wrapped",
+      "actualExecutableSha256": "8d3953900b354f7d4e990d2ce23dee16e91b71c9349def592d916f9e118223df"
+    }
+  ],
+  "failures": [
+    "explicit45-enabled-control: AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n\n31999 !== 2048\n"
+  ],
+  "cleanup": {
+    "fixtureRetained": true,
+    "joined": true,
+    "nativeActorCount": 9,
+    "productionGateCount": 6,
+    "proxyListenerClose": true,
+    "fixtureListenerClose": true,
+    "activeHandlers": 0,
+    "sockets": [
+      {
+        "label": "fixture",
+        "close": true
+      },
+      {
+        "label": "proxy",
+        "close": true
+      },
+      {
+        "label": "proxy",
+        "close": true
+      },
+      {
+        "label": "fixture",
+        "close": true
+      },
+      {
+        "label": "fixture",
+        "close": true
+      },
+      {
+        "label": "fixture",
+        "close": true
+      },
+      {
+        "label": "fixture",
+        "close": true
+      },
+      {
+        "label": "fixture",
+        "close": true
+      },
+      {
+        "label": "fixture",
+        "close": true
+      }
+    ]
+  },
+  "fixtureNegativeControl": {
+    "status": 400,
+    "manual55Rejected": true
+  },
+  "catalogQualified": true
+}

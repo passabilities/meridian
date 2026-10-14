@@ -1,0 +1,582 @@
+{
+  "base": "c159bf9befc49c823a94f48c8d554236115e827e",
+  "head": "6558c209f8bddf8e59b554d16c9834381c7817c2",
+  "currentMainReviewed": "8e1c8bf738d7372ded01f28e99d6ec167acaf76f",
+  "fileCount": 38,
+  "files": [
+    {
+      "file": "ARCHITECTURE.md",
+      "hunks": [
+        "@@ -218,8 +218,9 @@ src/",
+        "@@ -507,7 +508,7 @@ remain synchronous; same-context recursive acquisition is rejected explicitly."
+      ],
+      "sourceBlob": "564cbd296bf3998aadca507b4dcbee2c9399ac6d",
+      "sourceLines": 565,
+      "diffSha256": "49b35c17f0e3317ebbe8501e3c09dbb7bba62acead5a0e9f4bac484287a095fb",
+      "coverage": "all changed hunks reviewed; source context and affected invariants inspected",
+      "reviewFocus": "Database module placement and updated persistence/publication wording; architectural boundaries and inherited async contract."
+    },
+    {
+      "file": "E2E.md",
+      "hunks": [
+        "@@ -10,7 +10,7 @@ Live tests against the real proxy + Claude Max SDK. These verify the full reques",
+        "@@ -1032,7 +1032,7 @@ cat /tmp/proxy-e2e.log | strings | grep \"\\[PROXY\\]\" | tail -5",
+        "@@ -1292,7 +1292,7 @@ curl -s http://127.0.0.1:3456/v1/messages \\",
+        "@@ -1307,8 +1307,8 @@ curl -s http://127.0.0.1:3456/v1/messages \\",
+        "@@ -1757,12 +1757,12 @@ ANTHROPIC_API_KEY=should-be-stripped ANTHROPIC_BASE_URL=http://should-be-strippe",
+        "@@ -1779,15 +1779,11 @@ for i in 1 2 3 4 5; do",
+        "@@ -2197,7 +2193,7 @@ echo \"$CLAUDE_SESSION_ID\""
+      ],
+      "sourceBlob": "909069f211388b03f6939830bc3b9b2f3ce60ad4",
+      "sourceLines": 7123,
+      "diffSha256": "0f92a4249f86c94a82da79c70d7ed80a1be6f76e9b57a66332ae66e088818f05",
+      "coverage": "all changed hunks reviewed; source context and affected invariants inspected",
+      "reviewFocus": "Every changed fixture/diagnostic path switched to SQL snapshot readers; affected real-client evidence remains missing."
+    },
+    {
+      "file": "docs/agents.md",
+      "hunks": [
+        "@@ -64,7 +64,7 @@ for the betas; `scripts/e2e-opencode-v2-stable-live.mjs` for 2.0.16)."
+      ],
+      "sourceBlob": "546a0e5ef930ec2dea7042087e175566c10a4095",
+      "sourceLines": 873,
+      "diffSha256": "2c7e462ee6a78256d607785e7587293d5195df720b214b2bbfef4dd0b6c3d7bc",
+      "coverage": "all changed hunks reviewed; source context and affected invariants inspected",
+      "reviewFocus": "Session path documentation update and client verification implications."
+    },
+    {
+      "file": "docs/configuration.md",
+      "hunks": [
+        "@@ -19,7 +19,7 @@ Environment variables, endpoints, authentication, SDK feature toggles, passthrou",
+        "@@ -62,7 +62,7 @@ Environment variables, endpoints, authentication, SDK feature toggles, passthrou",
+        "@@ -1077,11 +1077,11 @@ Coverage: `E38` in [E2E.md](../E2E.md), with `MERIDIAN_DEBUG_FORCE_SILENT_TURN=1"
+      ],
+      "sourceBlob": "5b99184fdbd0670bf31021e459285b1399e924a7",
+      "sourceLines": 1126,
+      "diffSha256": "c27892d05f7a74dae8e13abf182bb519b6f3ad4ed407aa2cce7c3ece51c28fd3",
+      "coverage": "all changed hunks reviewed; source context and affected invariants inspected",
+      "reviewFocus": "Default SQL migration/shared-directory claims and crash/cancellation limitations; R5 operator decision."
+    },
+    {
+      "file": "docs/development.md",
+      "hunks": [
+        "@@ -43,7 +43,7 @@ Every incoming request is classified:"
+      ],
+      "sourceBlob": "24c9c0a42cc6c92bcc108ec3a792e2d43c50693a",
+      "sourceLines": 108,
+      "diffSha256": "179b5af72a7079be1f85dd3bc42d06c99b93bc5e96c7a6615180c6f3db17e2dd",
+      "coverage": "all changed hunks reviewed; source context and affected invariants inspected",
+      "reviewFocus": "Storage description updated; consistency with actual row authority."
+    },
+    {
+      "file": "scripts/e2e-capped-turns.mjs",
+      "hunks": [
+        "@@ -2,7 +2,7 @@",
+        "@@ -144,6 +144,7 @@ const observer = spyOn(sdk, \"query\").mockImplementation(input => {",
+        "@@ -178,7 +179,7 @@ function success(response, stop) {"
+      ],
+      "sourceBlob": "5c2871eda42862783992e1b0b528f57a6e72cbb9",
+      "sourceLines": 267,
+      "diffSha256": "feff1ff0c0cf29026304795afd8c4204df69694bce82b5ab68e8e995cf3034c9",
+      "coverage": "all changed hunks reviewed; source context and affected invariants inspected",
+      "reviewFocus": "Fixture database writes, awaited settlement, journal snapshots; no live execution in this review."
+    },
+    {
+      "file": "scripts/e2e-profile-copy-prune-client.mjs",
+      "hunks": [
+        "@@ -4,11 +4,12 @@",
+        "@@ -97,10 +98,22 @@ try {"
+      ],
+      "sourceBlob": "51f25c6b45d58be4b65444fb26d76dad9216a4a5",
+      "sourceLines": 138,
+      "diffSha256": "ae2550a6b22ec683c93240f0734959bf72db9a1bff7bab2e31ff39201898438b",
+      "coverage": "all changed hunks reviewed; source context and affected invariants inspected",
+      "reviewFocus": "Aging SQL rows and keeping sequences consistent; affected profile/prune live gate."
+    },
+    {
+      "file": "scripts/e2e-publication-lifetime.mjs",
+      "hunks": [
+        "@@ -2,7 +2,7 @@",
+        "@@ -30,7 +30,7 @@ const release = lifecycle.releaseActiveTranscriptLease"
+      ],
+      "sourceBlob": "ed553b9d223f95496bf86ad87fe6273c6720300b",
+      "sourceLines": 106,
+      "diffSha256": "d52e5f70d27e6fc37849e64263d31ed605fbd06f0f6af88c20d5b0c03def01e3",
+      "coverage": "all changed hunks reviewed; source context and affected invariants inspected",
+      "reviewFocus": "Diagnostic snapshot substitution; publication lifetime semantics retained."
+    },
+    {
+      "file": "scripts/e2e-retirement-admission.mjs",
+      "hunks": [
+        "@@ -2,7 +2,7 @@",
+        "@@ -22,6 +22,7 @@ Object.assign(process.env, {",
+        "@@ -30,7 +31,7 @@ const server = Bun.serve({ hostname: \"127.0.0.1\", port: 0, idleTimeout: 120, fet"
+      ],
+      "sourceBlob": "ca11c2a8e871bfdcb55a3c0770b44010fffffde8",
+      "sourceLines": 114,
+      "diffSha256": "098a32bad90c64c2721d13bb5ea2af5543b8161250871e362ba8b5aa804d43a5",
+      "coverage": "all changed hunks reviewed; source context and affected invariants inspected",
+      "reviewFocus": "Database authority/settlement fixture adaptations; admission behavior."
+    },
+    {
+      "file": "scripts/e2e-retirement-concurrent-admission.mjs",
+      "hunks": [
+        "@@ -5,7 +5,7 @@",
+        "@@ -29,6 +29,7 @@ Object.assign(process.env, {",
+        "@@ -37,7 +38,7 @@ const server = Bun.serve({ hostname: \"127.0.0.1\", port: 0, idleTimeout: 120, fet"
+      ],
+      "sourceBlob": "dd6b3f3704850be9f1d2acb4ccb514283c7e8644",
+      "sourceLines": 163,
+      "diffSha256": "2d5c1b09911c241dd8985b67ccbb4886d0510904a995a482565acbbe5dbcbf09",
+      "coverage": "all changed hunks reviewed; source context and affected invariants inspected",
+      "reviewFocus": "Concurrent fixture writes and awaited cleanup; admission/fence behavior."
+    },
+    {
+      "file": "scripts/e2e-session-store-cost.mjs",
+      "hunks": [
+        "@@ -3,7 +3,7 @@",
+        "@@ -11,7 +11,7 @@ for (const key of Object.keys(process.env)) {",
+        "@@ -58,7 +58,7 @@ for (let i = 0; i < 30; i++) {"
+      ],
+      "sourceBlob": "81ffd961b11eb9cfa2df034aa9a5c52ef511fa66",
+      "sourceLines": 69,
+      "diffSha256": "341666f77352e1e0454d2c4e7441a6d99a9c5aa95b120549b4780c987e8bee20",
+      "coverage": "all changed hunks reviewed; source context and affected invariants inspected",
+      "reviewFocus": "Synthetic SQL seeding and awaited mutations; representative benchmarking limits."
+    },
+    {
+      "file": "src/__tests__/durable-file-system.test.ts",
+      "hunks": [
+        "@@ -4,9 +4,7 @@ import { tmpdir } from \"node:os\"",
+        "@@ -20,7 +18,6 @@ describe(\"platform directory durability\", () => {",
+        "@@ -32,12 +29,8 @@ describe(\"platform directory durability\", () => {"
+      ],
+      "sourceBlob": "1b1d3d446abc8a96fcdff64dc8e57000054e7a7a",
+      "sourceLines": 36,
+      "diffSha256": "0581da426f95b6837cbfbd89e99e66748637a87c1828a3b93b735ee76f22c9dd",
+      "coverage": "all changed hunks reviewed; source context and affected invariants inspected",
+      "reviewFocus": "Removal of obsolete JSON entry-existence helper test; retained directory-sync durability."
+    },
+    {
+      "file": "src/__tests__/errors.test.ts",
+      "hunks": [
+        "@@ -451,6 +451,14 @@ describe(\"classifyError\", () => {"
+      ],
+      "sourceBlob": "0e8b06d6d3707330eb98fd88c0e02c8a68a52310",
+      "sourceLines": 1203,
+      "diffSha256": "174a2e23951297b747b4e4d8bac222b2ce2a19bcaa3432566616795b65a21011",
+      "coverage": "all changed hunks reviewed; source context and affected invariants inspected",
+      "reviewFocus": "Store lock timeout classification test; leaf module boundary."
+    },
+    {
+      "file": "src/__tests__/lifecycle-lock-admission.test.ts",
+      "hunks": [
+        "@@ -3,9 +3,9 @@ import { mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from \"n",
+        "@@ -22,11 +22,7 @@ it(\"does not execute a queued registration after admission cancellation\", async",
+        "@@ -38,7 +34,7 @@ it(\"does not execute a queued registration after admission cancellation\", async",
+        "@@ -46,18 +42,13 @@ it(\"does not execute a queued registration after admission cancellation\", async",
+        "@@ -66,12 +57,12 @@ it(\"finishes directory durability and returns ownership when cancellation arrive",
+        "@@ -148,6 +139,6 @@ it(\"rejects lifecycle reentrancy from a synchronous publication callback and pre"
+      ],
+      "sourceBlob": "56402f51faa9bba95495e5f5ffe5748162f7effd",
+      "sourceLines": 144,
+      "diffSha256": "9f369150ac0d8a97166c6b5fc1e6705a00ea3d642159784cb2c02d73e5040378",
+      "coverage": "all changed hunks reviewed; source context and affected invariants inspected",
+      "reviewFocus": "SQL journal fixture and admission timeout/read behavior."
+    },
+    {
+      "file": "src/__tests__/lifecycle-lock-deadline.test.ts",
+      "hunks": [
+        "@@ -3,8 +3,8 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from \"node:fs\"",
+        "@@ -15,11 +15,7 @@ it.each([true, false])(\"starts a fresh external budget after long local waiting"
+      ],
+      "sourceBlob": "f8f4a1a68b2c60f96de81df98de4deac7abffd1a",
+      "sourceLines": 68,
+      "diffSha256": "6d539eeb975429b2ae3afdb7616cefda7b14263d86ab2ec7a4aaf7f53dafa2b7",
+      "coverage": "all changed hunks reviewed; source context and affected invariants inspected",
+      "reviewFocus": "SQL diagnostic snapshot and lifecycle deadline preservation."
+    },
+    {
+      "file": "src/__tests__/passthrough-early-stop-integration.test.ts",
+      "hunks": [
+        "@@ -14,6 +14,7 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from \"node:fs\"",
+        "@@ -121,7 +122,8 @@ installMcpToolsMock(() => ({",
+        "@@ -162,7 +164,7 @@ const usedSessionKeys = new Set<string>()",
+        "@@ -258,17 +260,18 @@ describe(\"Integration: passthrough early stop\", () => {",
+        "@@ -570,7 +573,7 @@ describe(\"Integration: passthrough early stop\", () => {",
+        "@@ -655,7 +658,7 @@ describe(\"Integration: passthrough early stop\", () => {",
+        "@@ -680,7 +683,7 @@ describe(\"Integration: passthrough early stop\", () => {",
+        "@@ -755,7 +758,7 @@ describe(\"Integration: passthrough early stop\", () => {",
+        "@@ -815,7 +818,7 @@ describe(\"Integration: passthrough early stop\", () => {"
+      ],
+      "sourceBlob": "3e359d802a53512e85b71eafa598a783951d9783",
+      "sourceLines": 3655,
+      "diffSha256": "bd2227cb156418316984155e786d774f1092901ec17a1873137062e9cadeb9ed",
+      "coverage": "all changed hunks reviewed; source context and affected invariants inspected",
+      "reviewFocus": "Database journal reads in early-stop cases; publication and abandonment assertions."
+    },
+    {
+      "file": "src/__tests__/priority-session-store.test.ts",
+      "hunks": [
+        "@@ -2,6 +2,11 @@ import { afterEach, beforeEach, describe, expect, it } from \"bun:test\"",
+        "@@ -11,6 +16,7 @@ import {",
+        "@@ -30,6 +36,38 @@ function asRecord(value: unknown, label: string): Record<string, unknown> {",
+        "@@ -90,12 +128,12 @@ describe(\"durable priority route publication\", () => {",
+        "@@ -107,15 +145,20 @@ describe(\"durable priority route publication\", () => {",
+        "@@ -287,9 +330,7 @@ describe(\"durable priority route publication\", () => {",
+        "@@ -300,7 +341,7 @@ describe(\"durable priority route publication\", () => {",
+        "@@ -343,15 +384,16 @@ describe(\"durable priority route publication\", () => {",
+        "@@ -363,7 +405,7 @@ describe(\"durable priority route publication\", () => {",
+        "@@ -383,56 +425,47 @@ describe(\"durable priority route publication\", () => {",
+        "@@ -445,7 +478,7 @@ describe(\"durable priority route publication\", () => {",
+        "@@ -463,7 +496,7 @@ describe(\"durable priority route publication\", () => {",
+        "@@ -483,14 +516,13 @@ describe(\"durable priority route publication\", () => {",
+        "@@ -518,10 +550,10 @@ describe(\"durable priority route publication\", () => {",
+        "@@ -641,7 +673,7 @@ describe(\"durable priority route publication\", () => {",
+        "@@ -655,7 +687,7 @@ describe(\"durable priority route publication\", () => {",
+        "@@ -695,7 +727,7 @@ describe(\"durable priority route publication\", () => {",
+        "@@ -703,7 +735,7 @@ describe(\"durable priority route publication\", () => {",
+        "@@ -723,7 +755,7 @@ describe(\"durable priority route publication\", () => {",
+        "@@ -802,7 +834,7 @@ describe(\"durable priority route publication\", () => {",
+        "@@ -812,7 +844,7 @@ describe(\"durable priority route publication\", () => {",
+        "@@ -844,7 +876,7 @@ describe(\"durable priority route publication\", () => {",
+        "@@ -854,7 +886,7 @@ describe(\"durable priority route publication\", () => {",
+        "@@ -1175,8 +1207,7 @@ describe(\"durable priority route publication\", () => {",
+        "@@ -1212,7 +1243,7 @@ describe(\"durable priority route publication\", () => {",
+        "@@ -1229,8 +1260,7 @@ describe(\"durable priority route publication\", () => {",
+        "@@ -1246,7 +1276,7 @@ describe(\"durable priority route publication\", () => {",
+        "@@ -1267,8 +1297,7 @@ describe(\"durable priority route publication\", () => {",
+        "@@ -1313,15 +1342,39 @@ describe(\"durable priority route publication\", () => {"
+      ],
+      "sourceBlob": "8768e2048486b256f0fe14edb9a4a141436a52bb",
+      "sourceLines": 1380,
+      "diffSha256": "d1f99f6a282d0d5fc80f2f8ecd75415eabe0ed0eaa6f2c6f28e24251e5b0fbf8",
+      "coverage": "all changed hunks reviewed; source context and affected invariants inspected",
+      "reviewFocus": "All 29 changed hunks: row fixtures, migration, malformed authority, legacy protected routes; R1 missing immutability case and required-CI omission."
+    },
+    {
+      "file": "src/__tests__/profile-copy-prune.test.ts",
+      "hunks": [
+        "@@ -15,6 +15,7 @@ import { CrossProcessTurnCoordinator } from \"../proxy/session/crossProcessTurnCo",
+        "@@ -284,7 +285,7 @@ describe(\"mass prune through the transcript lifecycle\", () => {",
+        "@@ -340,9 +341,7 @@ describe(\"mass prune through the transcript lifecycle\", () => {"
+      ],
+      "sourceBlob": "4e39e1a19e858c6548f5070d971168aaad06331c",
+      "sourceLines": 358,
+      "diffSha256": "097f36ef8ed9a47666fec86bb54474163354d39d0b58d49ad21416de3486b8e8",
+      "coverage": "all changed hunks reviewed; source context and affected invariants inspected",
+      "reviewFocus": "SQL diagnostic/fixture reads and prune-budget behavior."
+    },
+    {
+      "file": "src/__tests__/proxy-cross-process-coordination.test.ts",
+      "hunks": [
+        "@@ -4,6 +4,7 @@ import { mkdtemp, readFile, rm, writeFile } from \"node:fs/promises\"",
+        "@@ -459,8 +460,7 @@ describe(\"proxy coordination across OS processes\", () => {"
+      ],
+      "sourceBlob": "4bb487bfefb58d353df16f3c80d59838fe45c263",
+      "sourceLines": 502,
+      "diffSha256": "e48d762898ea83fb57080d577bd8dd58e18aee90ce7c02d11cb5c24af003e59f",
+      "coverage": "all changed hunks reviewed; source context and affected invariants inspected",
+      "reviewFocus": "Shared mapping setup through SQL and multi-process ownership assertion."
+    },
+    {
+      "file": "src/__tests__/proxy-extra-usage-fallback.test.ts",
+      "hunks": [
+        "@@ -14,7 +14,7 @@ import { installMcpToolsMock } from \"./mcpToolsMock\"",
+        "@@ -44,7 +44,7 @@ let lifecycleBeforeSdkEvents: Array<LifecycleResourceSnapshot | undefined> = []"
+      ],
+      "sourceBlob": "0ca319c46fc48d61c929fe69801a4f98907fb9f6",
+      "sourceLines": 496,
+      "diffSha256": "88f003fc03124b0564cdf84546d8d97e80267cebacd514222518f50d6a79bea0",
+      "coverage": "all changed hunks reviewed; source context and affected invariants inspected",
+      "reviewFocus": "SQL journal snapshots and fallback transcript lifecycle."
+    },
+    {
+      "file": "src/__tests__/proxy-request-cancellation.test.ts",
+      "hunks": [
+        "@@ -202,7 +202,7 @@ describe(\"request cancellation propagation\", () => {"
+      ],
+      "sourceBlob": "dfc1291aa72cc8ed6f77ad477a06347b110722a7",
+      "sourceLines": 348,
+      "diffSha256": "6eb244cbed60c0f292792da0ba982896ebecfed981c30f52445dd10e02984e14",
+      "coverage": "all changed hunks reviewed; source context and affected invariants inspected",
+      "reviewFocus": "Inherited pending-eviction hold reviewed with unchanged helper; R4 hook is vacuous under SQL."
+    },
+    {
+      "file": "src/__tests__/proxy-retirement-admission.test.ts",
+      "hunks": [
+        "@@ -1,5 +1,5 @@",
+        "@@ -38,7 +38,9 @@ installMcpToolsMock(() => ({ createOpencodeMcpServer: () => ({ type: \"sdk\", name",
+        "@@ -111,7 +113,7 @@ describe(\"profile switch admission with bounded retirement\", () => {",
+        "@@ -139,7 +141,7 @@ describe(\"profile switch admission with bounded retirement\", () => {",
+        "@@ -176,8 +178,8 @@ describe(\"profile-copy pruning consent\", () => {"
+      ],
+      "sourceBlob": "12173be8387649818d062b64cee7d5728071a161",
+      "sourceLines": 189,
+      "diffSha256": "a75a2fb7cb57da675b4dd9cc3c10b41d13490c266a0a0d792172f75657cfd207",
+      "coverage": "all changed hunks reviewed; source context and affected invariants inspected",
+      "reviewFocus": "Fixture mappings committed to SQL and transaction settlement, preserving actual admission test authority."
+    },
+    {
+      "file": "src/__tests__/proxy-session-store-locking.test.ts",
+      "hunks": [
+        "@@ -1,31 +1,30 @@",
+        "@@ -33,7 +32,7 @@ describe(\"Shared session store locking\", () => {",
+        "@@ -47,7 +46,6 @@ describe(\"Shared session store locking\", () => {",
+        "@@ -88,159 +86,113 @@ describe(\"Shared session store locking\", () => {",
+        "@@ -248,122 +200,95 @@ describe(\"Shared session store locking\", () => {"
+      ],
+      "sourceBlob": "abee2eaf593eb785adefe488ba6fc9d642e2c05f",
+      "sourceLines": 294,
+      "diffSha256": "ea8db6fb15e72bb6a18c23632bef9c7eb9a83ebe9435f9415d4d629749186f99",
+      "coverage": "all changed hunks reviewed; source context and affected invariants inspected",
+      "reviewFocus": "CAS race, genuine native lock contention/event-loop and killed transaction controls; removed obsolete JSON lock tests."
+    },
+    {
+      "file": "src/__tests__/proxy-session-store.test.ts",
+      "hunks": [
+        "@@ -5,7 +5,8 @@",
+        "@@ -15,13 +16,60 @@ import {",
+        "@@ -108,28 +156,32 @@ describe(\"Shared session store\", () => {",
+        "@@ -145,8 +197,7 @@ describe(\"Shared session store\", () => {",
+        "@@ -208,8 +259,9 @@ describe(\"Shared session store\", () => {",
+        "@@ -218,10 +270,19 @@ describe(\"Shared session store\", () => {",
+        "@@ -258,14 +319,23 @@ describe(\"Shared session store\", () => {",
+        "@@ -328,36 +398,36 @@ describe(\"Shared session store\", () => {",
+        "@@ -447,3 +517,166 @@ describe(\"Shared session store\", () => {"
+      ],
+      "sourceBlob": "b8875062723100d0d9289d54c28e1a9acaf5b76f",
+      "sourceLines": 682,
+      "diffSha256": "6bccfce045b117c426481409e7669e5b235481b6ca5bb45307e6ef15aab66986",
+      "coverage": "all changed hunks reviewed; source context and affected invariants inspected",
+      "reviewFocus": "Migration, interrupted commit/retirement/restart, corruption and newer legacy rows; R1/R2 missing interleavings."
+    },
+    {
+      "file": "src/__tests__/session-gc-contention.test.ts",
+      "hunks": [
+        "@@ -7,6 +7,7 @@ import { join } from \"node:path\"",
+        "@@ -88,7 +89,7 @@ it.each([false, true])(\"durably admits 24 simultaneous registrations with a larg"
+      ],
+      "sourceBlob": "a6226de6237833393ac9f7099ff2ec258bb89ac8",
+      "sourceLines": 107,
+      "diffSha256": "e935e27cf358735b64da56c4cf0f971897218bbea0ef07dd5cd96f4e4122a49a",
+      "coverage": "all changed hunks reviewed; source context and affected invariants inspected",
+      "reviewFocus": "Read-only SQL snapshot diagnostics while checking bounded GC contention."
+    },
+    {
+      "file": "src/__tests__/session-lifecycle-process.test.ts",
+      "hunks": [
+        "@@ -9,6 +9,7 @@ import { captureProcessIncarnation, probeProcessIncarnation } from \"../proxy/ses",
+        "@@ -213,7 +214,7 @@ async function expectExit(worker: WorkerHandle, timeoutMs = 5_000): Promise<void"
+      ],
+      "sourceBlob": "2cd0bd0af1170c8ec190dac835ed327be825b855",
+      "sourceLines": 386,
+      "diffSha256": "3c5d51b24acc6780ab948648d7e6c61a622df8fea351973e2e0eb3c31675d0c1",
+      "coverage": "all changed hunks reviewed; source context and affected invariants inspected",
+      "reviewFocus": "Native SQL snapshot substitution for real-process lifecycle assertions."
+    },
+    {
+      "file": "src/__tests__/session-lifecycle-windows-gc.test.ts",
+      "hunks": [
+        "@@ -10,11 +10,13 @@ import {",
+        "@@ -43,7 +45,10 @@ interface StoredSidecar {",
+        "@@ -101,7 +106,7 @@ function gcOptions(fixture: Awaited<ReturnType<typeof makeFixture>>) {",
+        "@@ -236,7 +241,7 @@ console.log(JSON.stringify({ pid: process.pid, bun: process.versions.bun ?? null"
+      ],
+      "sourceBlob": "024c695f921aef5646dbe290f842f6039adacc90",
+      "sourceLines": 260,
+      "diffSha256": "d53db60e36170298418026ce7127a6ed09a1dd3a9c7da26c8bb58d3ae4911dad",
+      "coverage": "all changed hunks reviewed; source context and affected invariants inspected",
+      "reviewFocus": "Release cached handles before cleanup and SQL snapshots; actual Windows retained smoke path."
+    },
+    {
+      "file": "src/__tests__/session-lifecycle.test.ts",
+      "hunks": [
+        "@@ -33,6 +33,7 @@ import {",
+        "@@ -45,6 +46,7 @@ import {",
+        "@@ -65,6 +67,7 @@ interface StoredResource {",
+        "@@ -135,7 +138,7 @@ describe(\"session transcript lifecycle\", () => {",
+        "@@ -800,7 +803,7 @@ describe(\"session transcript lifecycle\", () => {",
+        "@@ -865,7 +868,7 @@ describe(\"session transcript lifecycle\", () => {",
+        "@@ -1000,6 +1003,189 @@ describe(\"session transcript lifecycle\", () => {",
+        "@@ -1043,5 +1229,5 @@ function locator(sessionId: string, profile = \"profile\"): TranscriptLocator {"
+      ],
+      "sourceBlob": "e4ee65f4c9ec5d1af6daa99f7768be98127707c6",
+      "sourceLines": 1233,
+      "diffSha256": "f5d19416a9a8fb79dd9c6caf271098a0595dc483e0e198dcdfd8f2fc8ef9dc34",
+      "coverage": "all changed hunks reviewed; source context and affected invariants inspected",
+      "reviewFocus": "All added migration/cache/fence tests; R3 unconditional merge encoded without live lease/tombstone conflicts."
+    },
+    {
+      "file": "src/__tests__/store-mutation-loop-lag.test.ts",
+      "hunks": [
+        "@@ -1,8 +1,8 @@",
+        "@@ -22,10 +22,13 @@ import { join } from \"node:path\"",
+        "@@ -73,21 +76,23 @@ function buildFixture(dir: string, entries: number, messagesPerEntry: number): {",
+        "@@ -133,13 +138,11 @@ describe(\"session store mutation cost on a large store\", () => {",
+        "@@ -164,7 +167,7 @@ describe(\"session store mutation cost on a large store\", () => {",
+        "@@ -181,18 +184,18 @@ describe(\"copy-on-write store mutations\", () => {",
+        "@@ -204,13 +207,12 @@ describe(\"copy-on-write store mutations\", () => {",
+        "@@ -221,14 +223,14 @@ describe(\"copy-on-write store mutations\", () => {",
+        "@@ -243,24 +245,26 @@ describe(\"copy-on-write store mutations\", () => {"
+      ],
+      "sourceBlob": "4b0dd82dafaadfca4adfaa110fca4a3b4678e1bb",
+      "sourceLines": 270,
+      "diffSha256": "d0e8c614204872a6406035010b90eee25c4c326f4d1557894f9c30860644092a",
+      "coverage": "all changed hunks reviewed; source context and affected invariants inspected",
+      "reviewFocus": "Large SQL fixture, copy-on-write ownership and per-row mutation cost assertions; cold/native/package limits."
+    },
+    {
+      "file": "src/__tests__/storeDatabaseHelpers.ts",
+      "hunks": [
+        "@@ -0,0 +1,194 @@"
+      ],
+      "sourceBlob": "1c69e1b3a61608bc63159c755a63d5191b6dcd94",
+      "sourceLines": 194,
+      "diffSha256": "790445556de702ab2c321a5b132011e846ff0b29c4d8de62e537adf24cf5f091",
+      "coverage": "all changed hunks reviewed; source context and affected invariants inspected",
+      "reviewFocus": "Entire 194-line new helper: SQL fixture authority, seq/row updates, holds, shutdown; transact versus transactNow caveat for R4."
+    },
+    {
+      "file": "src/__tests__/windows-durable-storage.test.ts",
+      "hunks": [
+        "@@ -13,18 +13,18 @@ import { hostname, tmpdir } from \"node:os\"",
+        "@@ -53,26 +53,7 @@ describe(\"Windows-safe durable session storage\", () => {"
+      ],
+      "sourceBlob": "a1f4af4e49e94813b989abb31ab25a106812c9a0",
+      "sourceLines": 109,
+      "diffSha256": "4c1a863cb961eae477e5def0c6a17319384f05e5936f4514ec72e69cfc53e9cf",
+      "coverage": "all changed hunks reviewed; source context and affected invariants inspected",
+      "reviewFocus": "Release helper and obsolete JSON-store stale lock removal; lifecycle/turn lock smoke retention."
+    },
+    {
+      "file": "src/proxy/errors.ts",
+      "hunks": [
+        "@@ -460,6 +460,7 @@ export function classifyError(errMsg: string, model?: string): ClassifiedError {"
+      ],
+      "sourceBlob": "7f8cfbf19ae804890b07371dfddbaf7f80b04cc9",
+      "sourceLines": 961,
+      "diffSha256": "bf60fd1f9021e471ee870a959e08117ef05b64416a6a17e4f0be80ac368ce98b",
+      "coverage": "all changed hunks reviewed; source context and affected invariants inspected",
+      "reviewFocus": "One-line SQLITE_BUSY store timeout match and test; no new upward import."
+    },
+    {
+      "file": "src/proxy/server.ts",
+      "hunks": [
+        "@@ -9595,7 +9595,7 @@ export async function startProxyServer(config: Partial<ProxyConfig> = {}): Promi"
+      ],
+      "sourceBlob": "4f98f1c4aaf61faf3878a9fdfaf1dd91e9ba9b58",
+      "sourceLines": 9892,
+      "diffSha256": "f728275d910b57eecd45b199b18101ed21a3a6af0cb6646855be761e5aadb8ef",
+      "coverage": "all changed hunks reviewed; source context and affected invariants inspected",
+      "reviewFocus": "Awaited orphan eviction in shutdown/orchestration; inherited async cleanup contract."
+    },
+    {
+      "file": "src/proxy/session/crossProcessTurnCoordinator.ts",
+      "hunks": [
+        "@@ -195,7 +195,7 @@ function ownerIsDead(owner: OwnerRecord | undefined): boolean {"
+      ],
+      "sourceBlob": "a1a4b2d0ef7ebe65cd88899b38a42902b35c9b92",
+      "sourceLines": 638,
+      "diffSha256": "0a322ca2234ace04c570084e15e851a93b447f68e20be70a9795499d19089142",
+      "coverage": "all changed hunks reviewed; source context and affected invariants inspected",
+      "reviewFocus": "Owner diagnostic handling remains within process coordinator; no SQL write authority change."
+    },
+    {
+      "file": "src/proxy/session/durableFileSystem.ts",
+      "hunks": [
+        "@@ -1,4 +1,3 @@",
+        "@@ -19,17 +18,6 @@ export async function syncDirectoryDurably(path: string): Promise<void> {",
+        "@@ -62,19 +50,3 @@ export async function directoryRenameWasBlocked("
+      ],
+      "sourceBlob": "cc8374a46a654461c40fda4e45d75d050b7acc86",
+      "sourceLines": 52,
+      "diffSha256": "ee7e419a9403ecc9c5a1fb0ddfd966f3ece476e3650c26edd2de9da3db2f3aa9",
+      "coverage": "all changed hunks reviewed; source context and affected invariants inspected",
+      "reviewFocus": "Removed obsolete JSON store helper; migrated archive/lifecycle directory sync preserved."
+    },
+    {
+      "file": "src/proxy/session/storeDatabase.ts",
+      "hunks": [
+        "@@ -0,0 +1,495 @@"
+      ],
+      "sourceBlob": "5f09c59048917c1968300a12a3367d512c7ab466",
+      "sourceLines": 495,
+      "diffSha256": "39e69ea0ca3e250be0e5efe2b732947fb66ac8f09050ea35e14a1bddbd048daf",
+      "coverage": "all changed hunks reviewed; source context and affected invariants inspected",
+      "reviewFocus": "Entire new 495-line module: schema, native reader/writer, thread waits/FIFO, COMMIT outcome, identity/close, digest retirement; R2/R5 and engine gates."
+    },
+    {
+      "file": "src/proxy/sessionLifecycle.ts",
+      "hunks": [
+        "@@ -1,6 +1,6 @@",
+        "@@ -41,6 +41,15 @@ import {",
+        "@@ -224,7 +233,7 @@ export async function acquireActiveTranscriptLease(",
+        "@@ -241,7 +250,7 @@ export async function acquireActiveTranscriptLease(",
+        "@@ -256,7 +265,7 @@ export async function attachActiveTranscriptExecutor(",
+        "@@ -264,7 +273,7 @@ export async function attachActiveTranscriptExecutor(",
+        "@@ -274,7 +283,7 @@ export async function releaseActiveTranscriptLease(",
+        "@@ -283,7 +292,7 @@ export async function releaseActiveTranscriptLease(",
+        "@@ -353,7 +362,7 @@ async function prepareForkIntent(",
+        "@@ -385,7 +394,7 @@ async function prepareForkIntent(",
+        "@@ -399,7 +408,7 @@ export async function ensureTranscriptJournaled(",
+        "@@ -426,7 +435,7 @@ export async function ensureTranscriptJournaled(",
+        "@@ -440,7 +449,7 @@ export async function registerLiveTranscript(",
+        "@@ -459,7 +468,7 @@ export async function registerLiveTranscript(",
+        "@@ -476,7 +485,7 @@ export async function registerLiveTranscript(",
+        "@@ -490,7 +499,7 @@ export async function commitFork(",
+        "@@ -505,7 +514,7 @@ export async function commitFork(",
+        "@@ -548,7 +557,7 @@ async function updatePinnedTranscript<T extends boolean | string>(",
+        "@@ -589,20 +598,20 @@ async function updatePinnedTranscript<T extends boolean | string>(",
+        "@@ -618,7 +627,7 @@ export async function abandonFork(",
+        "@@ -631,9 +640,9 @@ export async function abandonFork(",
+        "@@ -658,7 +667,7 @@ async function reconcileUnderLock(",
+        "@@ -757,7 +766,7 @@ async function reconcileUnderLock(",
+        "@@ -784,7 +793,7 @@ export async function releaseSupersededProfileCopies(",
+        "@@ -892,7 +901,7 @@ async function claimDeletion(",
+        "@@ -909,7 +918,7 @@ async function claimDeletion(",
+        "@@ -920,7 +929,7 @@ async function claimDeletion(",
+        "@@ -933,7 +942,7 @@ async function attachDeletionExecutor(",
+        "@@ -941,7 +950,7 @@ async function attachDeletionExecutor(",
+        "@@ -952,7 +961,7 @@ async function finishDeletion(",
+        "@@ -977,7 +986,7 @@ async function finishDeletion(",
+        "@@ -986,7 +995,7 @@ async function countDeferred(",
+        "@@ -1643,22 +1652,224 @@ async function recoverStaleLock(lockPath: string, staleMs: number): Promise<void",
+        "@@ -1669,27 +1880,100 @@ async function readSidecar(path: string): Promise<SessionGcSidecar> {",
+        "@@ -1783,22 +2067,32 @@ function upgradeLegacySidecar(value: unknown): unknown {"
+      ],
+      "sourceBlob": "39769f35ba331ffb4100d75f42eccbf6469b2835",
+      "sourceLines": 2408,
+      "diffSha256": "812f7283cddc8de71aa56a96c11cc1b3b5a4746b1ceb9dcb1f8aabca61707d7f",
+      "coverage": "all changed hunks reviewed; source context and affected invariants inspected",
+      "reviewFocus": "All 35 changed hunks and substantive cache/commit/import paths: fences, leases, GC, lock preservation, validation; R3."
+    },
+    {
+      "file": "src/proxy/sessionStore.ts",
+      "hunks": [
+        "@@ -1,57 +1,31 @@",
+        "@@ -234,9 +208,6 @@ function advanceKeySlot(key: string, meta: SessionStoreMeta): void {",
+        "@@ -262,420 +233,6 @@ export function getMaxPriorityAttemptsLimit(): number {",
+        "@@ -694,15 +251,6 @@ export function getSessionStoreDir(): string {",
+        "@@ -980,30 +528,7 @@ function validateStoreMeta(value: unknown): SessionStoreMeta {",
+        "@@ -1014,35 +539,169 @@ function validateStoreMeta(value: unknown): SessionStoreMeta {",
+        "@@ -1063,101 +722,114 @@ function freezeSessionForRead(session: StoredSession): StoredSession {",
+        "@@ -1165,7 +837,7 @@ export function readSessionStoreGenerationSnapshot(",
+        "@@ -1181,7 +853,6 @@ export function readSessionStoreGenerationSnapshot(",
+        "@@ -1191,106 +862,316 @@ function readStore(): Record<string, StoredSession> {",
+        "@@ -1306,7 +1187,7 @@ export type SharedSessionLookupResult =",
+        "@@ -1341,7 +1222,7 @@ export type PriorityAssignmentLookupResult =",
+        "@@ -1361,7 +1242,7 @@ export function lookupPriorityAssignmentResult(routeKey: string): PriorityAssign",
+        "@@ -1809,6 +1690,7 @@ export async function storeSharedSessionAndPriorityAssignment(",
+        "@@ -2102,7 +1984,8 @@ export async function attachSharedTranscriptLocator(",
+        "@@ -2230,7 +2113,7 @@ function selectSupersededProfileCopies(",
+        "@@ -2250,7 +2133,7 @@ export function listSupersededProfileConversations(options: ProfileCopyPruneOpti"
+      ],
+      "sourceBlob": "8be931516dca1287482935e5610e72ac8e2e096b",
+      "sourceLines": 2214,
+      "diffSha256": "89941c63e4587caa83b1d862f034a8122ab60ed857dd74ec7565c2cc99ee76c2",
+      "coverage": "all changed hunks reviewed; source context and affected invariants inspected",
+      "reviewFocus": "Entire 2,214-line SQL-head file and removed JSON paths: codec, incremental cache, CAS/priority, migration/queue/copy ownership; R1/R2."
+    }
+  ]
+}

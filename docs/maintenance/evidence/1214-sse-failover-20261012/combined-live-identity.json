@@ -1,0 +1,35 @@
+{
+  "build": {
+    "source": "local",
+    "kind": "artifact",
+    "version": "1.81.0",
+    "releaseVersion": "1.81.0",
+    "sha": "a41e19981d3cfac9223d40355401b5a0ad16d186",
+    "branch": "codex/sse-failover-1214-20261012",
+    "dirty": false,
+    "sourceHash": "1c998e194195573158e979dc220013fcd237cc991ab895f90ccccbad5c2f3aa6",
+    "branchUrl": "https://github.com/rynfar/meridian/tree/codex%2Fsse-failover-1214-20261012",
+    "commitUrl": "https://github.com/rynfar/meridian/commit/a41e19981d3cfac9223d40355401b5a0ad16d186",
+    "counter": 2,
+    "counterScope": "e1779015-5245-470f-aec6-6fdc52defbc5",
+    "attemptId": "be6b0c64-3240-44b3-a562-471cba222061",
+    "builtAt": "2026-10-12T20:02:09.853Z",
+    "displayVersion": "v1.81.0-2-codex/sse-failover-1214-20261012-a41e1998",
+    "certification": "verified"
+  },
+  "package": {
+    "name": "@rynfar/meridian",
+    "version": "1.81.0",
+    "shasum": "87a1881b3c5802876e81dfb4b4d061257dd4026a",
+    "integrity": "sha512-gyDDVg0xRZA1nyk9s6Cr7tUMd+lTWIsLpHGHjFMZO/bxI5iF4toXJylp2PJT9IXJb9stMtlja/9PDq0YuqCong=="
+  },
+  "sdk": "0.2.141",
+  "nativeVersion": "2.1.296",
+  "nativeResolvedPath": "/Users/rynfar/.local/bin/claude",
+  "node": "22.22.3",
+  "platform": "darwin/arm64",
+  "harnessHead": "cbb340eba",
+  "originalSession": 23810,
+  "exit": 0,
+  "grantRemoved": true
+}

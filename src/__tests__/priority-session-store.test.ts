@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from "bun:test"
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs"
+import { existsSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import {
@@ -894,6 +894,69 @@ describe("durable priority route publication", () => {
     expect(lookupPriorityAssignmentResult("conversation-4")).toEqual(attachedRoute)
     clearSharedSessions()
     expect(lookupPriorityAssignmentResult("conversation-4").status).toBe("missing")
+  })
+
+  it("does not publish an identical locator, but retains locked identity and generation checks", () => {
+    const key = "personal:locator-noop"
+    const sdkId = "sdk-locator-noop"
+    expect(atomicPublish({
+      routeKey: "locator-noop",
+      mappingKey: key,
+      profileId: "personal",
+      sdkSessionId: sdkId,
+      digest: HUMAN_A,
+    })).not.toBe(false)
+    const locator = { sessionId: sdkId, configDir: dir, projectDir: dir, lifecycleGeneration: "fixture-generation" }
+    const attached = attachSharedTranscriptLocator(key, sdkId, locator)
+    expect(attached).not.toBe(false)
+    if (attached === false) throw new Error("fixture attachment failed")
+    const path = join(dir, "sessions.json")
+    const before = statSync(path, { bigint: true })
+    const bytes = readFileSync(path)
+    const route = lookupPriorityAssignmentResult("locator-noop")
+    for (let index = 0; index < 5; index++) {
+      expect(attachSharedTranscriptLocator(key, sdkId, { ...locator }, attached)).toBe(attached)
+      expect(attachSharedTranscriptLocator(key, sdkId, locator)).toBe(attached)
+    }
+    expect(attachSharedTranscriptLocator(key, sdkId, locator, "stale-generation")).toBe(false)
+    expect(attachSharedTranscriptLocator(key, "wrong-sdk", { ...locator, sessionId: "wrong-sdk" })).toBe(false)
+    expect(attachSharedTranscriptLocator("missing", sdkId, locator)).toBe(false)
+    const after = statSync(path, { bigint: true })
+    expect([after.dev, after.ino, after.size, after.mtimeNs, after.ctimeNs]).toEqual([
+      before.dev, before.ino, before.size, before.mtimeNs, before.ctimeNs,
+    ])
+    expect(readFileSync(path)).toEqual(bytes)
+    expect(lookupPriorityAssignmentResult("locator-noop")).toEqual(route)
+    expect(lookupSharedSessionResult(key)).toMatchObject({ status: "found", generation: attached })
+
+    // Each compared optional field is significant. Real changes still publish
+    // mapping and route generations together; old-generation calls stay fenced.
+    let generation = attached
+    for (const change of [
+      { configDir: join(dir, "changed-config") },
+      { projectDir: join(dir, "changed-project") },
+      { lifecycleGeneration: "changed-generation" },
+      { projectDir: undefined },
+      { lifecycleGeneration: undefined },
+    ]) {
+      const current = lookupSharedSession(key)?.currentTranscript
+      if (!current) throw new Error("current fixture locator is missing")
+      const changed = { ...current, ...change }
+      const prior = generation
+      const priorRoute = lookupPriorityAssignmentResult("locator-noop")
+      const updated = attachSharedTranscriptLocator(key, sdkId, changed, prior)
+      expect(updated).not.toBe(false)
+      expect(updated).not.toBe(prior)
+      if (updated === false) throw new Error("changed attachment failed")
+      generation = updated
+      expect(lookupPriorityAssignmentResult("locator-noop")).not.toEqual(priorRoute)
+      expect(lookupPriorityAssignmentResult("locator-noop")).toMatchObject({
+        status: "found", assignment: { mappingGeneration: updated },
+      })
+      expect(attachSharedTranscriptLocator(key, sdkId, changed, prior)).toBe(false)
+      expect(attachSharedTranscriptLocator(key, sdkId, { ...changed }, updated)).toBe(updated)
+      expect(lookupSharedSessionResult(key)).toMatchObject({ status: "found", generation: updated })
+    }
   })
 
   it("bounds route records separately without deleting their session mappings", () => {

@@ -1,0 +1,29 @@
+{
+  "modelCalls": 0,
+  "ownedProfile": "owned-profile",
+  "packageSource": "76038fb799632c6d3b2fb120f5bdc6234130573b",
+  "startExit": 0,
+  "routing": {
+    "routing": "active",
+    "modes": [
+      "active",
+      "sticky",
+      "priority",
+      "active+priority"
+    ],
+    "profileOrder": [
+      "owned-profile"
+    ],
+    "profiles": [
+      "owned-profile"
+    ],
+    "envOverride": {
+      "routing": false,
+      "profileOrder": false
+    }
+  },
+  "result": "PASS",
+  "console": "\u001b[33m\u26a0 Could not verify Claude auth status. If requests fail, run: claude login\u001b[0m\n[PROXY] CREDENTIALS READ-ONLY MODE (MERIDIAN_CREDENTIALS_READONLY): this instance will not refresh or write OAuth credentials. Token rotation is another instance's job; credentials are re-read from disk.\nMeridian running at http://127.0.0.1:33951\nTelemetry dashboard: http://127.0.0.1:33951/telemetry\nModel pins: fable=claude-fable-5-1 opus=claude-opus-5-5 sonnet=claude-sonnet-5-5 haiku=claude-haiku-5-5\nClaude executable: /tmp/meridian-1353-startup/node_modules/@anthropic-ai/claude-code-linux-arm64/claude (resolved via platform-package)\n\nPoint any Anthropic-compatible tool at this endpoint:\n  ANTHROPIC_API_KEY=x ANTHROPIC_BASE_URL=http://127.0.0.1:33951\n",
+  "stopExit": 0,
+  "joined": true
+}

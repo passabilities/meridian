@@ -1,0 +1,2635 @@
+{
+  "schemaVersion": 1,
+  "packet": "P8 tests and fixtures",
+  "reviewedAt": "2026-10-04",
+  "reviewer": "/root/handoff_audit",
+  "head": "0bf16b0d83f2fcc8c9b55df06bf20f97d763a23f",
+  "githubBase": "f443faee0b135c5d4bfe1e6fe771c6a262ae5f33",
+  "currentMain": "8e1c8bf738d7372ded01f28e99d6ec167acaf76f",
+  "coverageCount": 79,
+  "coverageComplete": true,
+  "runtimeValidation": "None: read-only review only; no tests, probes, installs, models, auth or GitHub changes. Negative controls are proposed static falsifiers, not executed results.",
+  "disposition": "Not acceptance. Public SQL contract remains unapproved. #1244 JSON cleanup remains separately approved. Prior bounded review is not promoted to full acceptance. Production packets and root startup/package/docs review remain separate.",
+  "instructionSources": [
+    "AGENTS.md supplied by owner",
+    ".agents/references/api-contract.md from immutable current main",
+    ".agents/skills/meridian-evidence/SKILL.md from immutable current main",
+    "ARCHITECTURE.md SQLite bookkeeping boundary from candidate",
+    "E2E.md packaged SQLite bookkeeping gate from candidate"
+  ],
+  "findings": [
+    {
+      "id": "P8-F1",
+      "priority": "P1",
+      "type": "required validation coverage",
+      "location": "package.json:29; src/__tests__/fixtures/bookkeeping-store-backend.ts:6; src/__tests__/fixtures/bookkeeping-lifecycle-install.ts:7",
+      "title": "Normal npm/CI never selects the adapted historical SQLite suites",
+      "evidence": "npm test executes the standard and isolated files with neither BOOKKEEPING_TEST_BACKEND=sqlite nor BOOKKEEPING_TEST_STORE_BACKEND=sqlite. Both installers immediately return in that state. CI and release workflows run npm test without the switch. Individual observer/fixture child tests select SQLite only for themselves. Consequently priority-session-store, proxy-session-store, pruning, cache-coherence, lifecycle, process, Windows-GC, publication-lease and large contention historical assertions run as JSON under the claimed normal gate, despite substantial new direct SQL suites.",
+      "impact": "A green required test job cannot substantiate preservation of all adapted store/lifecycle invariants under the opt-in backend. New backend-only regressions in these historical cases can escape the routine gate. This is not evidence that those cases currently fail.",
+      "correction": "Add explicit process-isolated SQLite invocations for the adapted suites, retaining JSON invocations and visible legacy-only skip reasons. Do not globally turn the whole standard batch SQLite; isolated process-global backend/mock discipline matters. Typecheck must remain pretest.",
+      "negativeControl": "In a throwaway probe, make setupStoreBackend/setupLifecycleBackend throw only when the SQLite switch is selected. Normal required test should reach/fail that control. Then restore and run each adapted suite in isolated SQLite mode; currently static runner inspection proves the control is never reached.",
+      "controlExecuted": false
+    },
+    {
+      "id": "P8-F2",
+      "priority": "P2",
+      "type": "current-main evidence regression",
+      "location": "src/__tests__/session-lifecycle-process.test.ts:54; src/__tests__/session-lifecycle-process.test.ts:159; src/__tests__/session-lifecycle-process.test.ts:329",
+      "title": "Candidate discards the current-main actual executor startup/release handshake",
+      "evidence": "Compared with exact current main 8e1c8bf, candidate removes the executor-started marker loop before ready, EXECUTOR_STARTED_FILE and EXECUTOR_RELEASE_FILE env fields, and parent explicit release after proving the dead-owner fence. It substitutes await Bun.sleep(1500) in an asynchronously started SDK-gate child and emits ready immediately after spawn. The comment acknowledges ready does not start the physical child lifetime.",
+      "impact": "SIGKILL can target an unopened gate rather than a running orphaned executor. A delayed host can also expire the guessed child lifetime before the fencing assertions. This loses the causal invariant already present in current main; waiting for wrapper exit afterwards does not restore proof the SDK child had started before owner death.",
+      "correction": "Preserve current-main startup marker and explicit release handshake while adding backend installation; assert exact running executor remains alive while owner is killed and fencing is checked, then release and join it.",
+      "negativeControl": "Delay asynchronous SDK-gate publication past owner ready; the candidate can report ready with no physical executor-start marker. The maintained main fixture must wait for marker and never kill owner before it. Also delay parent fencing assertions past1500ms; explicit release keeps child alive without guessing.",
+      "controlExecuted": false
+    },
+    {
+      "id": "P8-F3",
+      "priority": "P2",
+      "type": "nondiscriminating regression test",
+      "location": "src/__tests__/session-lifecycle-gc-budgets.test.ts:387; src/__tests__/session-lifecycle-gc-budgets.test.ts:398; src/__tests__/session-lifecycle-gc-budgets.test.ts:400",
+      "title": "Hanging-child budget case does not prove the full execution timeout",
+      "evidence": "The case uses runTimeoutMs300 and deletionTimeoutMs2500, but asserts only failed/retired/timeout text, cleared executor, an SDK marker and removed gate. It records/asserts no monotonic elapsed time from gate/SDK start. A child killed300ms after actual SDK start has the same state/error/marker/cleanup facts. The earlier delayed-claim30ms-success test does discriminate charging exhausted run remainder before invocation; it does not make this execution-duration assertion discriminating.",
+      "impact": "The named hanging-execution control remains green if an already-started deletion is truncated to the short run budget. Current implementation passes the full timeout argument, so this finding is about missing regression discrimination, not a detected timeout bug.",
+      "correction": "Record a monotonic start marker after the gate actually opens or have a finite SDK delay greater than300ms and below2500ms that must succeed; retain the hung child kill/join case with elapsed lower bound tied to execution start and a bounded upper bound.",
+      "negativeControl": "For this one case, shorten only the post-gate execution timeout to300ms while retaining handshake and SDK start. Existing verdict/marker assertions still match; repaired control must fail.",
+      "controlExecuted": false
+    },
+    {
+      "id": "P8-F4",
+      "priority": "P2",
+      "type": "nondiscriminating regression test",
+      "location": "src/__tests__/bookkeeping-transactions.test.ts:329; src/__tests__/bookkeeping-transactions.test.ts:354; src/__tests__/bookkeeping-transactions.test.ts:367; src/__tests__/fixtures/bookkeeping-contention.ts:54",
+      "title": "Successful Node contention ignores its measured stall metrics",
+      "evidence": "The actual250ms held-lock fixture measures maxLag and event-loop-delay histogram and reports elapsed/ticks. Parent asserts Node>=22, callback once, committed row1 and ticks>0 only. A200ms synchronous pause during the2000ms admission budget can leave some ticks before/after and preserve all assertions.",
+      "impact": "The test title claims no long synchronous event-loop stall, but its success criteria do not enforce that claim. Other expiry/three-process heartbeat controls have useful25ms gap assertions and a blocking negative control; this finding is scoped to successful wait admission.",
+      "correction": "Use the maintained heartbeat helper or assert a tolerated max-gap/tick-density bound including endpoints throughout the successful wait, and keep exact row/callback checks.",
+      "negativeControl": "Insert a bounded blocking Atomics wait during the successful contention interval while keeping final admission below2000ms. The current parent accepts positive ticks; a repaired success-path lag assertion must reject it.",
+      "controlExecuted": false
+    },
+    {
+      "id": "P8-F5",
+      "priority": "P2",
+      "type": "lost new-backend invariant coverage",
+      "location": "src/__tests__/priority-session-store.test.ts:1111; src/__tests__/priority-session-store.test.ts:1157; src/__tests__/bookkeeping-store-multiprocess.test.ts:13",
+      "title": "Real finalize-versus-rollback winner invariant is treated as JSON-only",
+      "evidence": "The original two-process terminal settlement race is wrapped in legacyStoreOnly. Its child functions race finalizeSharedSessionAndPriorityAssignment against rollbackSharedSessionAndPriorityAssignment for identical mapping/assignment generations and assert exactly one winner plus coherent route/mapping. The new20-barrier SQL race covers storeSharedSessionAndPriorityAssignment publication, not terminal settlement; sequential SQL settlement tests do not race processes.",
+      "impact": "Terminal single-winner is a backend semantic invariant independent of JSON bytes. It has no actual multi-process SQL counterpart even after fixing F1. No current production violation was observed; SQL implementation uses one write transaction and is structurally serialized.",
+      "correction": "Provide initialized-SQL child settlement fixture and retain the same exactly-one terminal winner, loser/no-partial-state, coherent-generation and attempt-authority assertions for both finalize and rollback winning schedules.",
+      "negativeControl": "A settlement mutant that checks generations/rollback authority before BEGIN then applies stale observations after admission can preserve sequential behavior but permit two terminal winners. Synchronize two initialized SQL children before admission and force both schedules; repaired test must reject the mutant.",
+      "controlExecuted": false
+    }
+  ],
+  "proofGaps": [
+    {
+      "id": "P8-G1",
+      "location": "src/__tests__/bookkeeping-old-artifacts.test.ts:18; src/__tests__/bookkeeping-old-artifacts.test.ts:23; src/__tests__/bookkeeping-old-artifacts.test.ts:28; E2E.md:7179",
+      "title": "Historical artifact coverage is optional and compatibility identity is not enforced",
+      "detail": "The npm1.78.0 artifact has a useful positive real writer/SDK-child control and exposes actual lexical implementations rather than substituting new source. Network/tool/cache failure explicitly skips it; missing compatibility package also explicitly skips. Arbitrary existing BOOKKEEPING_COMPAT_TARBALL is accepted without expected package version/source digest. Full npm green may therefore contain zero historical-writer executions, and an arbitrary artifact cannot be accepted as a named older variant without external identity evidence. Documentation properly calls optional unavailability missing rather than pass.",
+      "negativeControl": "Use unavailable registry/cache with no compat tarball and inspect explicit skips; required acceptance must remain missing. Supply a candidate/current tarball as compat and require package version/source/archive digest validation to reject a mislabeled baseline. Preserve actual published1.78.0 positive control and per-file release behavior."
+    },
+    {
+      "id": "P8-G2",
+      "location": "src/__tests__/bookkeeping-cache-publication.test.ts; src/__tests__/bookkeeping-lifecycle-injection.test.ts; src/__tests__/bookkeeping-crash-process.test.ts; src/__tests__/fixtures/bookkeeping-safety.ts:44",
+      "title": "Durability proof boundaries must stay explicit",
+      "detail": "Most IOERR/COMMIT/close errors are injected JS transaction/close wrapper seams. After-IOERR really executes native COMMIT before throwing; deferred-FK test produces an actual failed native COMMIT; SIGKILL exercises actual process death at named durable cuts. These are meaningful distinct proofs, but none establishes arbitrary filesystem power-loss, real driver-close failure, torn disk writes or fsync IOERR behavior. Rich snapshots use counts plus production export codecs; independent per-entry source digests and explicit70-case bytes strengthen but do not independently hash every internal SQL row.",
+      "negativeControl": "Keep wrapper-before/after commit controls distinct; any future fsync/driver fault claim needs an actual layer fault and reopen/readback proof. Do not label every error-matrix iteration a native disk failure or SIGKILL power-loss."
+    },
+    {
+      "id": "P8-G3",
+      "location": "src/proxy/session/bookkeeping/storagePaths.ts:13; src/__tests__/bookkeeping-review.test.ts; src/__tests__/session-lifecycle-process.test.ts:297; src/__tests__/session-lifecycle-windows-gc.test.ts:220; E2E.md:7173",
+      "title": "Native client/platform and public SQL acceptance remain open",
+      "detail": "Node fixtures are real local processes and native libsql; several are Bun child processes. Filesystem allowlist parameter injection proves policy logic, not actual native Linux/Windows runtime. SQLite filesystem allowlist permits darwin/linux only unless operator opts into unverified FS, so adapted Windows-GC SQL run is not default-supported Windows acceptance. Existing Windows-only recovery is explicitly gated and some POSIX cases return silently on win32. Fake SDK Hono app.fetch and marker children are not actual affected model/client E2E. Packaged smoke explicitly disclaims model turns and requires final independently installed package on Linux. New opt-in environment/public initialization/lifecycle contract cannot gain owner approval from these tests; approval remains absent per root scope."
+    },
+    {
+      "id": "P8-G4",
+      "location": "src/__tests__/bookkeeping-server-admission.test.ts; src/__tests__/bookkeeping-deletion-invariant.test.ts",
+      "title": "AST inventories are local guards, not exhaustive semantic proof",
+      "detail": "Deletion AST test documents local syntactic limits and has useful alias/computed negative cases. Server admission AST uses hardcoded direct mutation identifiers and expected parent-call patterns; alias/property/interprocedural paths are not covered. No uncovered production call was proved here. A green AST inventory cannot replace runtime whole-server mutation/cancellation evidence or production packet review."
+    },
+    {
+      "id": "P8-G5",
+      "location": "src/__tests__/bookkeeping-migration.test.ts; src/__tests__/bookkeeping-export.test.ts; src/__tests__/bookkeeping-reconcile.test.ts; src/__tests__/session-gc-contention.test.ts",
+      "title": "Large payload timings are mostly artifacts rather than resource-bound assertions",
+      "detail": "Large migration/export fixtures validate38MB content/counts, and reconcile benchmarks report128/2000 counts/timings; they do not bound peak memory/event-loop delay. The1400-resource24-registration test asserts zero timeout and hash-count bound but adapted SQL invocation is missing from npm. JSON warm-mutation lag does have a measured median<75% actual-lock/fsync baseline and serialization controls. Distinguish that accepted JSON optimization evidence from a full SQL scalability claim."
+    }
+  ],
+  "coverage": [
+    {
+      "index": 0,
+      "path": "src/__tests__/bookkeeping-admission-seam.test.ts",
+      "status": "complete_semantic_read_only",
+      "extent": "complete new file and relevant implementation seams",
+      "patch": "diffs-github-base/015-src____tests____bookkeeping-admission-seam.test.ts.patch",
+      "newHunkRanges": [
+        {
+          "start": 1,
+          "length": 71
+        }
+      ],
+      "headLineCount": 71,
+      "headSha256": "c0992822e2063b8028f8e38aaaff09b6b351f663003ef7fe757c035009f718a9",
+      "semanticReview": "One-time admission-wait seam has an explicit blocking Atomics negative control, actual external Node BEGIN holder, timer-starvation assertion, and typed expiry; cleanup restores seam and joins child. This is meaningful heartbeat discrimination, unlike the successful-wait case in F4.",
+      "relatedImplementationSeams": [
+        "src/proxy/session/bookkeeping/transaction.ts",
+        "src/proxy/session/bookkeeping/connection.ts",
+        "src/proxy/session/bookkeeping/schema.ts",
+        "src/proxy/session/bookkeeping/storagePaths.ts",
+        "src/proxy/session/bookkeeping/guard.ts"
+      ],
+      "findingIds": [],
+      "againstCurrentMain": "new file absent from current main"
+    },
+    {
+      "index": 1,
+      "path": "src/__tests__/bookkeeping-barrier.test.ts",
+      "status": "complete_semantic_read_only",
+      "extent": "complete new file and relevant implementation seams",
+      "patch": "diffs-github-base/016-src____tests____bookkeeping-barrier.test.ts.patch",
+      "newHunkRanges": [
+        {
+          "start": 1,
+          "length": 89
+        }
+      ],
+      "headLineCount": 89,
+      "headSha256": "fc2e97ddbe30c1614b45e366d46298c3c6da64711a2ef570d428e38b34976b9d",
+      "semanticReview": "Barrier tests preserve source/private inode and bytes through before/after rename hooks, occupied destinations, substitutions, and resumed intents. Hooks model deterministic race windows; no machine power-loss claim follows.",
+      "relatedImplementationSeams": [
+        "src/proxy/session/bookkeeping/migration.ts",
+        "src/proxy/session/bookkeeping/migrationImport.ts",
+        "src/proxy/session/bookkeeping/exportJson.ts",
+        "src/proxy/session/bookkeeping/exportSnapshot.ts",
+        "src/proxy/session/bookkeeping/bootstrapOwner.ts",
+        "src/proxy/session/bookkeeping/barrier.ts",
+        "src/proxy/session/bookkeeping/privateRetirement.ts",
+        "src/proxy/session/bookkeeping/guard.ts",
+        "src/proxy/session/bookkeeping/inspect.ts",
+        "src/proxy/session/bookkeeping/recanonicalize.ts"
+      ],
+      "findingIds": [],
+      "againstCurrentMain": "new file absent from current main"
+    },
+    {
+      "index": 2,
+      "path": "src/__tests__/bookkeeping-bootstrap-recovery.test.ts",
+      "status": "complete_semantic_read_only",
+      "extent": "complete new file and relevant implementation seams",
+      "patch": "diffs-github-base/017-src____tests____bookkeeping-bootstrap-recovery.test.ts.patch",
+      "newHunkRanges": [
+        {
+          "start": 1,
+          "length": 139
+        }
+      ],
+      "headLineCount": 139,
+      "headSha256": "620418ff5e117d234a7220f63c079df23991aa2197ffa1881dbca6b03d783b02",
+      "semanticReview": "Actual SIGKILL bootstrap/migration children cover main/guard hardlink publication and private retirement, with readonly byte inspection and same-inode recovery. Actual external exclusive probes support retained OS exclusion. UNIX FIFO/symlink and NAME_MAX cases do not establish native Windows behavior.",
+      "relatedImplementationSeams": [
+        "src/proxy/session/bookkeeping/migration.ts",
+        "src/proxy/session/bookkeeping/migrationImport.ts",
+        "src/proxy/session/bookkeeping/exportJson.ts",
+        "src/proxy/session/bookkeeping/exportSnapshot.ts",
+        "src/proxy/session/bookkeeping/bootstrapOwner.ts",
+        "src/proxy/session/bookkeeping/barrier.ts",
+        "src/proxy/session/bookkeeping/privateRetirement.ts",
+        "src/proxy/session/bookkeeping/guard.ts",
+        "src/proxy/session/bookkeeping/inspect.ts",
+        "src/proxy/session/bookkeeping/recanonicalize.ts"
+      ],
+      "findingIds": [],
+      "againstCurrentMain": "new file absent from current main"
+    },
+    {
+      "index": 3,
+      "path": "src/__tests__/bookkeeping-cache-publication.test.ts",
+      "status": "complete_semantic_read_only",
+      "extent": "complete new file and relevant implementation seams",
+      "patch": "diffs-github-base/018-src____tests____bookkeeping-cache-publication.test.ts.patch",
+      "newHunkRanges": [
+        {
+          "start": 1,
+          "length": 258
+        }
+      ],
+      "headLineCount": 258,
+      "headSha256": "edc98c54b5bebeebd129f1a736b574261e9181d287a5ea5aeceb560a320f2a0c",
+      "semanticReview": "Durable/cache publication tests inspect read-own-writes and after-COMMIT authority, rollback on false/throw, missing/evicted/cleared entries, priority finalize/rollback, and before/after native COMMIT wrapper errors. Degraded-read observation is deliberate; injected IOERR is not an actual disk failure.",
+      "relatedImplementationSeams": [
+        "src/proxy/session/cache.ts",
+        "src/proxy/session/bookkeeping/storeScope.ts",
+        "src/proxy/session/bookkeeping/transaction.ts",
+        "src/proxy/session/bookkeeping/storeSettlementSql.ts"
+      ],
+      "findingIds": [],
+      "againstCurrentMain": "new file absent from current main"
+    },
+    {
+      "index": 4,
+      "path": "src/__tests__/bookkeeping-checkpoint-queue.test.ts",
+      "status": "complete_semantic_read_only",
+      "extent": "complete new file and relevant implementation seams",
+      "patch": "diffs-github-base/019-src____tests____bookkeeping-checkpoint-queue.test.ts.patch",
+      "newHunkRanges": [
+        {
+          "start": 1,
+          "length": 154
+        }
+      ],
+      "headLineCount": 154,
+      "headSha256": "b6a769bebc4a76579edc5dce6e210d2ebddf6efc84c3ee9cb18f555da022e6f8",
+      "semanticReview": "Checkpoint FIFO, deadline/cancellation, pending count, external Node writer, and live reader WAL debt assertions are substantive. PASSIVE partial progress is distinguished from offline TRUNCATE and after-release success.",
+      "relatedImplementationSeams": [
+        "src/proxy/session/bookkeeping/transaction.ts",
+        "src/proxy/session/bookkeeping/connection.ts",
+        "src/proxy/session/bookkeeping/schema.ts",
+        "src/proxy/session/bookkeeping/storagePaths.ts",
+        "src/proxy/session/bookkeeping/guard.ts"
+      ],
+      "findingIds": [],
+      "againstCurrentMain": "new file absent from current main"
+    },
+    {
+      "index": 5,
+      "path": "src/__tests__/bookkeeping-cli.test.ts",
+      "status": "complete_semantic_read_only",
+      "extent": "complete new file and relevant implementation seams",
+      "patch": "diffs-github-base/020-src____tests____bookkeeping-cli.test.ts.patch",
+      "newHunkRanges": [
+        {
+          "start": 1,
+          "length": 354
+        }
+      ],
+      "headLineCount": 354,
+      "headSha256": "96ad175d49f5b621acc6b4a80adebf847dec54a978560d43553836205123756b",
+      "semanticReview": "Built Node CLI executes 50 cycles, real external reader/holder refusal, SIGKILL recovery, byte/inode preservation, candidate incarnation and foreign SQLite preflight controls. Builds local dist, not independently installed registry acceptance; synthetic residue inventories remain qualified.",
+      "relatedImplementationSeams": [
+        "src/proxy/session/bookkeeping/migration.ts",
+        "src/proxy/session/bookkeeping/migrationImport.ts",
+        "src/proxy/session/bookkeeping/exportJson.ts",
+        "src/proxy/session/bookkeeping/exportSnapshot.ts",
+        "src/proxy/session/bookkeeping/bootstrapOwner.ts",
+        "src/proxy/session/bookkeeping/barrier.ts",
+        "src/proxy/session/bookkeeping/privateRetirement.ts",
+        "src/proxy/session/bookkeeping/guard.ts",
+        "src/proxy/session/bookkeeping/inspect.ts",
+        "src/proxy/session/bookkeeping/recanonicalize.ts"
+      ],
+      "findingIds": [],
+      "againstCurrentMain": "new file absent from current main"
+    },
+    {
+      "index": 6,
+      "path": "src/__tests__/bookkeeping-codec-differential.test.ts",
+      "status": "complete_semantic_read_only",
+      "extent": "complete new file and relevant implementation seams",
+      "patch": "diffs-github-base/021-src____tests____bookkeeping-codec-differential.test.ts.patch",
+      "newHunkRanges": [
+        {
+          "start": 1,
+          "length": 147
+        }
+      ],
+      "headLineCount": 147,
+      "headSha256": "4721b5ebc955e570f2020a9a2cf700cd5946f637c4c5cceebcb2877fbb04f26a",
+      "semanticReview": "Independent accepted/refused corpus and expected wire bytes are compared across Bun and bundled Node codec execution, then migration/export. Production source codec is also used as oracle, so this is strengthened by explicit expected byte/error cases rather than being wholly independent of the codec.",
+      "relatedImplementationSeams": [
+        "src/proxy/session/bookkeeping/legacyCodec.ts",
+        "src/proxy/session/bookkeeping/legacyExport.ts",
+        "src/proxy/session/bookkeeping/migrationImport.ts",
+        "src/proxy/session/bookkeeping/exportSnapshot.ts"
+      ],
+      "findingIds": [],
+      "againstCurrentMain": "new file absent from current main"
+    },
+    {
+      "index": 7,
+      "path": "src/__tests__/bookkeeping-codec.test.ts",
+      "status": "complete_semantic_read_only",
+      "extent": "complete new file and relevant implementation seams",
+      "patch": "diffs-github-base/022-src____tests____bookkeeping-codec.test.ts.patch",
+      "newHunkRanges": [
+        {
+          "start": 1,
+          "length": 203
+        }
+      ],
+      "headLineCount": 203,
+      "headSha256": "616a46e68af1e2ca023c64153ff99b2afbb0b6ae8da7850e73a83a9014726407",
+      "semanticReview": "Version/fence allocation, unknown payload ordering, explicit false executor fields, nullable SDK UUIDs, priority metadata, corrupted-vs-absent input and unrepresentable own-map keys have direct assertions. Maintenance refusal is separated from tolerant historical request decoding.",
+      "relatedImplementationSeams": [
+        "src/proxy/session/bookkeeping/legacyCodec.ts",
+        "src/proxy/session/bookkeeping/legacyExport.ts",
+        "src/proxy/session/bookkeeping/migrationImport.ts",
+        "src/proxy/session/bookkeeping/exportSnapshot.ts"
+      ],
+      "findingIds": [],
+      "againstCurrentMain": "new file absent from current main"
+    },
+    {
+      "index": 8,
+      "path": "src/__tests__/bookkeeping-cold-maintenance.test.ts",
+      "status": "complete_semantic_read_only",
+      "extent": "complete new file and relevant implementation seams",
+      "patch": "diffs-github-base/023-src____tests____bookkeeping-cold-maintenance.test.ts.patch",
+      "newHunkRanges": [
+        {
+          "start": 1,
+          "length": 266
+        }
+      ],
+      "headLineCount": 266,
+      "headSha256": "9414bd8cfa1d52e744eeff33411b02badc9eec400b0dbfb818582895eb8566ff",
+      "semanticReview": "Cold guard identity, fresh provenance, no implicit SQL adoption/fallback, read-only inspection, exact owned bootstrap recovery and stopped residue archival have real child controls. Current-build legacy writer is a protocol control; only the optional artifact suite provides historical bundle coverage.",
+      "relatedImplementationSeams": [
+        "src/proxy/session/bookkeeping/migration.ts",
+        "src/proxy/session/bookkeeping/migrationImport.ts",
+        "src/proxy/session/bookkeeping/exportJson.ts",
+        "src/proxy/session/bookkeeping/exportSnapshot.ts",
+        "src/proxy/session/bookkeeping/bootstrapOwner.ts",
+        "src/proxy/session/bookkeeping/barrier.ts",
+        "src/proxy/session/bookkeeping/privateRetirement.ts",
+        "src/proxy/session/bookkeeping/guard.ts",
+        "src/proxy/session/bookkeeping/inspect.ts",
+        "src/proxy/session/bookkeeping/recanonicalize.ts"
+      ],
+      "findingIds": [],
+      "againstCurrentMain": "new file absent from current main"
+    },
+    {
+      "index": 9,
+      "path": "src/__tests__/bookkeeping-crash-process.test.ts",
+      "status": "complete_semantic_read_only",
+      "extent": "complete new file and relevant implementation seams",
+      "patch": "diffs-github-base/024-src____tests____bookkeeping-crash-process.test.ts.patch",
+      "newHunkRanges": [
+        {
+          "start": 1,
+          "length": 201
+        }
+      ],
+      "headLineCount": 201,
+      "headSha256": "f00c80758dbe58800264a1ad285d22236b99fc4c881e6b80ac714d7d96883330",
+      "semanticReview": "Rich migration/export/cycle fixtures run actual process SIGKILL at named durable phase cuts and compare row counts/export digests plus source JSON entry digests. This establishes process-crash recovery at those cuts, not power-loss durability or arbitrary driver/fsync failure.",
+      "relatedImplementationSeams": [
+        "src/proxy/session/bookkeeping/migration.ts",
+        "src/proxy/session/bookkeeping/migrationImport.ts",
+        "src/proxy/session/bookkeeping/exportJson.ts",
+        "src/proxy/session/bookkeeping/exportSnapshot.ts",
+        "src/proxy/session/bookkeeping/bootstrapOwner.ts",
+        "src/proxy/session/bookkeeping/barrier.ts",
+        "src/proxy/session/bookkeeping/privateRetirement.ts",
+        "src/proxy/session/bookkeeping/guard.ts",
+        "src/proxy/session/bookkeeping/inspect.ts",
+        "src/proxy/session/bookkeeping/recanonicalize.ts"
+      ],
+      "findingIds": [],
+      "againstCurrentMain": "new file absent from current main"
+    },
+    {
+      "index": 10,
+      "path": "src/__tests__/bookkeeping-deletion-invariant.test.ts",
+      "status": "complete_semantic_read_only",
+      "extent": "complete new file and relevant implementation seams",
+      "patch": "diffs-github-base/025-src____tests____bookkeeping-deletion-invariant.test.ts.patch",
+      "newHunkRanges": [
+        {
+          "start": 1,
+          "length": 164
+        }
+      ],
+      "headLineCount": 164,
+      "headSha256": "ee9d038be45918d4ed52d982c366e4f4a1ce864753bb520ffa18842510730b7a",
+      "semanticReview": "AST deletion invariant examines the full authored source inventory and a meaningful alias/computed-call negative corpus. It explicitly scopes itself to local syntax, not whole-program taint or hostile filesystem actor proof.",
+      "relatedImplementationSeams": [
+        "src/proxy/server.ts",
+        "src/proxy/session/bookkeeping/privateNames.ts",
+        "src/proxy/session/bookkeeping/runtime.ts"
+      ],
+      "findingIds": [],
+      "againstCurrentMain": "new file absent from current main"
+    },
+    {
+      "index": 11,
+      "path": "src/__tests__/bookkeeping-export.test.ts",
+      "status": "complete_semantic_read_only",
+      "extent": "complete new file and relevant implementation seams",
+      "patch": "diffs-github-base/026-src____tests____bookkeeping-export.test.ts.patch",
+      "newHunkRanges": [
+        {
+          "start": 1,
+          "length": 270
+        }
+      ],
+      "headLineCount": 270,
+      "headSha256": "2f8713aac5ffc0399fbeda45a20b0255b7ee25af78cfe43cd435603fb5122411",
+      "semanticReview": "Export preserves current state over imported backups, invalidates legacy payload after row-version ABA, refuses live/foreign ownership, v1 loss of priority rows and wrong digests. Archived SQLite readonly mutation is real. Large 38MB fixture checks content/counts but records rather than bounds time/memory.",
+      "relatedImplementationSeams": [
+        "src/proxy/session/bookkeeping/migration.ts",
+        "src/proxy/session/bookkeeping/migrationImport.ts",
+        "src/proxy/session/bookkeeping/exportJson.ts",
+        "src/proxy/session/bookkeeping/exportSnapshot.ts",
+        "src/proxy/session/bookkeeping/bootstrapOwner.ts",
+        "src/proxy/session/bookkeeping/barrier.ts",
+        "src/proxy/session/bookkeeping/privateRetirement.ts",
+        "src/proxy/session/bookkeeping/guard.ts",
+        "src/proxy/session/bookkeeping/inspect.ts",
+        "src/proxy/session/bookkeeping/recanonicalize.ts"
+      ],
+      "findingIds": [],
+      "againstCurrentMain": "new file absent from current main"
+    },
+    {
+      "index": 12,
+      "path": "src/__tests__/bookkeeping-gc-checkpoint.test.ts",
+      "status": "complete_semantic_read_only",
+      "extent": "complete new file and relevant implementation seams",
+      "patch": "diffs-github-base/027-src____tests____bookkeeping-gc-checkpoint.test.ts.patch",
+      "newHunkRanges": [
+        {
+          "start": 1,
+          "length": 94
+        }
+      ],
+      "headLineCount": 94,
+      "headSha256": "b3e6c6004aded8a263055b940287c2d5d83c4920415bc050838ed8a6cb8ff38f",
+      "semanticReview": "Test extracts actual server GC closure via TypeScript AST and invokes it with explicit dependencies. It covers post-GC checkpoint debt, native BUSY deadline, injected fatal error, next-sweep retry, and no checkpoint after failed GC. This is not whole-server startup/wiring acceptance.",
+      "relatedImplementationSeams": [
+        "src/proxy/session/bookkeeping/transaction.ts",
+        "src/proxy/session/bookkeeping/connection.ts",
+        "src/proxy/session/bookkeeping/schema.ts",
+        "src/proxy/session/bookkeeping/storagePaths.ts",
+        "src/proxy/session/bookkeeping/guard.ts"
+      ],
+      "findingIds": [],
+      "againstCurrentMain": "new file absent from current main"
+    },
+    {
+      "index": 13,
+      "path": "src/__tests__/bookkeeping-handshake-cancellation.test.ts",
+      "status": "complete_semantic_read_only",
+      "extent": "complete new file and relevant implementation seams",
+      "patch": "diffs-github-base/028-src____tests____bookkeeping-handshake-cancellation.test.ts.patch",
+      "newHunkRanges": [
+        {
+          "start": 1,
+          "length": 78
+        }
+      ],
+      "headLineCount": 78,
+      "headSha256": "7435c407c6df3dfbed6692a4c12d284b320fcba5de51b3d4275abe05f6519eab",
+      "semanticReview": "After real claim COMMIT a child acquires actual native write lock; deadline/clear/cancel modes inspect executor COMMIT counts, SDK marker absence/presence, pending cleanup and later admission. Captured marker proves a stand-in SDK ran, not actual model/SDK deletion.",
+      "relatedImplementationSeams": [
+        "src/proxy/session/bookkeeping/lifecycleDeletionSql.ts",
+        "src/proxy/session/bookkeeping/lifecycleGcSql.ts",
+        "src/proxy/sessionLifecycle.ts"
+      ],
+      "findingIds": [],
+      "againstCurrentMain": "new file absent from current main"
+    },
+    {
+      "index": 14,
+      "path": "src/__tests__/bookkeeping-lifecycle-deletion.test.ts",
+      "status": "complete_semantic_read_only",
+      "extent": "complete new file and relevant implementation seams",
+      "patch": "diffs-github-base/029-src____tests____bookkeeping-lifecycle-deletion.test.ts.patch",
+      "newHunkRanges": [
+        {
+          "start": 1,
+          "length": 466
+        }
+      ],
+      "headLineCount": 466,
+      "headSha256": "d3980359ae482a8851c263ab5134d8679101f36f84abd822e08920e331b6cb4b",
+      "semanticReview": "Deletion tests cover exact/null/foreign pins, pages, budgets, outside-SQL incarnation capture, owner/token CAS, COMMIT faults, bounded tombstones, custom hung deleter permanent fencing, real child gate attach/kill/join and orphan owner. Custom-deleter timeout and SDK child controls are distinct.",
+      "relatedImplementationSeams": [
+        "src/proxy/session/bookkeeping/lifecycleDeletionSql.ts",
+        "src/proxy/session/bookkeeping/lifecycleGcSql.ts",
+        "src/proxy/sessionLifecycle.ts"
+      ],
+      "findingIds": [],
+      "againstCurrentMain": "new file absent from current main"
+    },
+    {
+      "index": 15,
+      "path": "src/__tests__/bookkeeping-lifecycle-differential.test.ts",
+      "status": "complete_semantic_read_only",
+      "extent": "complete new file and relevant implementation seams",
+      "patch": "diffs-github-base/030-src____tests____bookkeeping-lifecycle-differential.test.ts.patch",
+      "newHunkRanges": [
+        {
+          "start": 1,
+          "length": 133
+        }
+      ],
+      "headLineCount": 133,
+      "headSha256": "9ef335a2dc3cdbeb6149a9dc749faf5aef417f61f0a2af6749f01e3cb4398a4a",
+      "semanticReview": "Step-by-step JSON/SQL operation differential normalizes only internal rowVersion, fixes UUID/clock/incarnation, and compares resource/fence/pin/result/error ledgers after transitions including publication, lease death, retry, and bounded GC. Simulated death remains policy evidence, complemented by real-process tests elsewhere.",
+      "relatedImplementationSeams": [
+        "src/proxy/session/bookkeeping/lifecyclePrepareSql.ts",
+        "src/proxy/session/bookkeeping/lifecyclePublicationSql.ts",
+        "src/proxy/session/bookkeeping/lifecycleTransitionsSql.ts",
+        "src/proxy/session/bookkeeping/lifecycleLeasesSql.ts",
+        "src/proxy/session/bookkeeping/lifecycleReconcileSql.ts",
+        "src/proxy/session/bookkeeping/resources.ts",
+        "src/proxy/sessionLifecycle.ts"
+      ],
+      "findingIds": [],
+      "againstCurrentMain": "new file absent from current main"
+    },
+    {
+      "index": 16,
+      "path": "src/__tests__/bookkeeping-lifecycle-fixture.test.ts",
+      "status": "complete_semantic_read_only",
+      "extent": "complete new file and relevant implementation seams",
+      "patch": "diffs-github-base/031-src____tests____bookkeeping-lifecycle-fixture.test.ts.patch",
+      "newHunkRanges": [
+        {
+          "start": 1,
+          "length": 57
+        }
+      ],
+      "headLineCount": 57,
+      "headSha256": "77fb518f0cdaa024e4b3ab32ee1aa0958223e430b0910a1ae1bf1dac985ddcd9",
+      "semanticReview": "Fresh child fixture exercises real initialized SQLite lifecycle/store ports and durable pin protection with no JSON document, then teardown and reopen. It validates fixture installation twice, not backend execution of every adapted historical suite.",
+      "relatedImplementationSeams": [
+        "src/proxy/session/bookkeeping/lifecyclePrepareSql.ts",
+        "src/proxy/session/bookkeeping/lifecyclePublicationSql.ts",
+        "src/proxy/session/bookkeeping/lifecycleTransitionsSql.ts",
+        "src/proxy/session/bookkeeping/lifecycleLeasesSql.ts",
+        "src/proxy/session/bookkeeping/lifecycleReconcileSql.ts",
+        "src/proxy/session/bookkeeping/resources.ts",
+        "src/proxy/sessionLifecycle.ts"
+      ],
+      "findingIds": [],
+      "againstCurrentMain": "new file absent from current main"
+    },
+    {
+      "index": 17,
+      "path": "src/__tests__/bookkeeping-lifecycle-injection.test.ts",
+      "status": "complete_semantic_read_only",
+      "extent": "complete new file and relevant implementation seams",
+      "patch": "diffs-github-base/032-src____tests____bookkeeping-lifecycle-injection.test.ts.patch",
+      "newHunkRanges": [
+        {
+          "start": 1,
+          "length": 160
+        }
+      ],
+      "headLineCount": 160,
+      "headSha256": "a095e84d9b21edee2201f37eb8f69d81a415d5a7f157f8a5b229f1d6ff77c461",
+      "semanticReview": "COMMIT fault matrix targets 21 operations, ordinals 1\u20134, BUSY/before-IOERR/after-IOERR. Independent expected committed-prefix effects and all-table snapshots check callback counts, no hooks, lease/generation authority and retry. Wrapper errors model uncertain outcomes; no actual IOERR injection at filesystem layer.",
+      "relatedImplementationSeams": [
+        "src/proxy/session/bookkeeping/lifecyclePrepareSql.ts",
+        "src/proxy/session/bookkeeping/lifecyclePublicationSql.ts",
+        "src/proxy/session/bookkeeping/lifecycleTransitionsSql.ts",
+        "src/proxy/session/bookkeeping/lifecycleLeasesSql.ts",
+        "src/proxy/session/bookkeeping/lifecycleReconcileSql.ts",
+        "src/proxy/session/bookkeeping/resources.ts",
+        "src/proxy/sessionLifecycle.ts"
+      ],
+      "findingIds": [],
+      "againstCurrentMain": "new file absent from current main"
+    },
+    {
+      "index": 18,
+      "path": "src/__tests__/bookkeeping-lifecycle-observer.test.ts",
+      "status": "complete_semantic_read_only",
+      "extent": "complete new file and relevant implementation seams",
+      "patch": "diffs-github-base/033-src____tests____bookkeeping-lifecycle-observer.test.ts.patch",
+      "newHunkRanges": [
+        {
+          "start": 1,
+          "length": 63
+        }
+      ],
+      "headLineCount": 63,
+      "headSha256": "08f26a1d282de816c98de380e90c24091a40211766ce5929f6a7bb97d99ff37f",
+      "semanticReview": "Cross-backend observer child confirms real rows/leases/fences/counts/pins and no document rewrites. SQL observer uses production row hydration in one snapshot; it is a test adapter, not a public lifecycle API.",
+      "relatedImplementationSeams": [
+        "src/proxy/session/bookkeeping/lifecyclePrepareSql.ts",
+        "src/proxy/session/bookkeeping/lifecyclePublicationSql.ts",
+        "src/proxy/session/bookkeeping/lifecycleTransitionsSql.ts",
+        "src/proxy/session/bookkeeping/lifecycleLeasesSql.ts",
+        "src/proxy/session/bookkeeping/lifecycleReconcileSql.ts",
+        "src/proxy/session/bookkeeping/resources.ts",
+        "src/proxy/sessionLifecycle.ts"
+      ],
+      "findingIds": [],
+      "againstCurrentMain": "new file absent from current main"
+    },
+    {
+      "index": 19,
+      "path": "src/__tests__/bookkeeping-lifecycle-prepare.test.ts",
+      "status": "complete_semantic_read_only",
+      "extent": "complete new file and relevant implementation seams",
+      "patch": "diffs-github-base/034-src____tests____bookkeeping-lifecycle-prepare.test.ts.patch",
+      "newHunkRanges": [
+        {
+          "start": 1,
+          "length": 253
+        }
+      ],
+      "headLineCount": 253,
+      "headSha256": "bbcae5670d2935019b96d1a7d90f1d1acdc79cfbeb015a3d0e0b32ff1da21f54",
+      "semanticReview": "Preparation asserts one transaction/fence/publication owner, rollback, five-state guards, exact generations, collision/NUL, capacity, safe-integer fences and retirement headroom. Failed capacity and invalid clocks preserve rows/leases rather than partially promoting.",
+      "relatedImplementationSeams": [
+        "src/proxy/session/bookkeeping/lifecyclePrepareSql.ts",
+        "src/proxy/session/bookkeeping/lifecyclePublicationSql.ts",
+        "src/proxy/session/bookkeeping/lifecycleTransitionsSql.ts",
+        "src/proxy/session/bookkeeping/lifecycleLeasesSql.ts",
+        "src/proxy/session/bookkeeping/lifecycleReconcileSql.ts",
+        "src/proxy/session/bookkeeping/resources.ts",
+        "src/proxy/sessionLifecycle.ts"
+      ],
+      "findingIds": [],
+      "againstCurrentMain": "new file absent from current main"
+    },
+    {
+      "index": 20,
+      "path": "src/__tests__/bookkeeping-lifecycle-publication.test.ts",
+      "status": "complete_semantic_read_only",
+      "extent": "complete new file and relevant implementation seams",
+      "patch": "diffs-github-base/035-src____tests____bookkeeping-lifecycle-publication.test.ts.patch",
+      "newHunkRanges": [
+        {
+          "start": 1,
+          "length": 383
+        }
+      ],
+      "headLineCount": 383,
+      "headSha256": "48f3d1fc1b2f6ccf5e694432632b81aab0c18bee98d688c78b005b95c7259fac",
+      "semanticReview": "Publication table matrix checks state, all joined tables, stale dual CAS, false/throw/thenable rollback, locator restoration, COMMIT uncertainty, leases and post-commit hooks. Canonicalization happens before lock; actual Node publication race has one winner with no partial row/pin.",
+      "relatedImplementationSeams": [
+        "src/proxy/session/bookkeeping/lifecyclePrepareSql.ts",
+        "src/proxy/session/bookkeeping/lifecyclePublicationSql.ts",
+        "src/proxy/session/bookkeeping/lifecycleTransitionsSql.ts",
+        "src/proxy/session/bookkeeping/lifecycleLeasesSql.ts",
+        "src/proxy/session/bookkeeping/lifecycleReconcileSql.ts",
+        "src/proxy/session/bookkeeping/resources.ts",
+        "src/proxy/sessionLifecycle.ts"
+      ],
+      "findingIds": [],
+      "againstCurrentMain": "new file absent from current main"
+    },
+    {
+      "index": 21,
+      "path": "src/__tests__/bookkeeping-lifecycle-transitions.test.ts",
+      "status": "complete_semantic_read_only",
+      "extent": "complete new file and relevant implementation seams",
+      "patch": "diffs-github-base/036-src____tests____bookkeeping-lifecycle-transitions.test.ts.patch",
+      "newHunkRanges": [
+        {
+          "start": 1,
+          "length": 299
+        }
+      ],
+      "headLineCount": 299,
+      "headSha256": "7d6ab27378ee2b0bce7429e7f88e14568dc2532b9aae26f4c1843ea7dacd7619",
+      "semanticReview": "Transition and lease suite rejects unavailable backend ports, missing/stale generations, recursive/cross-database scopes and unsafe owner observations. Full owner/token/version predicates are tested against replaced leases; real writer BUSY/deferred-release heartbeat complements simulated death/boot controls.",
+      "relatedImplementationSeams": [
+        "src/proxy/session/bookkeeping/lifecyclePrepareSql.ts",
+        "src/proxy/session/bookkeeping/lifecyclePublicationSql.ts",
+        "src/proxy/session/bookkeeping/lifecycleTransitionsSql.ts",
+        "src/proxy/session/bookkeeping/lifecycleLeasesSql.ts",
+        "src/proxy/session/bookkeeping/lifecycleReconcileSql.ts",
+        "src/proxy/session/bookkeeping/resources.ts",
+        "src/proxy/sessionLifecycle.ts"
+      ],
+      "findingIds": [],
+      "againstCurrentMain": "new file absent from current main"
+    },
+    {
+      "index": 22,
+      "path": "src/__tests__/bookkeeping-maintenance.test.ts",
+      "status": "complete_semantic_read_only",
+      "extent": "complete new file and relevant implementation seams",
+      "patch": "diffs-github-base/037-src____tests____bookkeeping-maintenance.test.ts.patch",
+      "newHunkRanges": [
+        {
+          "start": 1,
+          "length": 248
+        }
+      ],
+      "headLineCount": 248,
+      "headSha256": "efb86bfd8b8345dba9cb4e80d5534ffd0cc66dfa718ee4582145a406cb8cbbe8",
+      "semanticReview": "Maintenance tests hold actual shared/exclusive guards, probe two processes and same-process aliases, retain guard through poisoned main reopen, refuse foreign/zero/wrong-format guards and validate epoch handoff gaps. Closing one shared borrower must not release physical exclusion.",
+      "relatedImplementationSeams": [
+        "src/proxy/session/bookkeeping/migration.ts",
+        "src/proxy/session/bookkeeping/migrationImport.ts",
+        "src/proxy/session/bookkeeping/exportJson.ts",
+        "src/proxy/session/bookkeeping/exportSnapshot.ts",
+        "src/proxy/session/bookkeeping/bootstrapOwner.ts",
+        "src/proxy/session/bookkeeping/barrier.ts",
+        "src/proxy/session/bookkeeping/privateRetirement.ts",
+        "src/proxy/session/bookkeeping/guard.ts",
+        "src/proxy/session/bookkeeping/inspect.ts",
+        "src/proxy/session/bookkeeping/recanonicalize.ts"
+      ],
+      "findingIds": [],
+      "againstCurrentMain": "new file absent from current main"
+    },
+    {
+      "index": 23,
+      "path": "src/__tests__/bookkeeping-migration.test.ts",
+      "status": "complete_semantic_read_only",
+      "extent": "complete new file and relevant implementation seams",
+      "patch": "diffs-github-base/038-src____tests____bookkeeping-migration.test.ts.patch",
+      "newHunkRanges": [
+        {
+          "start": 1,
+          "length": 218
+        }
+      ],
+      "headLineCount": 218,
+      "headSha256": "81fe6fa18d8f91bd14679bd13469a7eac5000cda1c2bd3080aa91165b692fc13",
+      "semanticReview": "Migration asserts exact legacy resources/history/fence/priority import and barrier/backups, explicit stopped-writer attestation, preflight refusal before publication, resumable SIGKILL cuts and no reimport after COMMIT. ENOSPC uses an availableBytes seam. Large fixture is count/content evidence with recorded metrics, not latency/memory acceptance.",
+      "relatedImplementationSeams": [
+        "src/proxy/session/bookkeeping/migration.ts",
+        "src/proxy/session/bookkeeping/migrationImport.ts",
+        "src/proxy/session/bookkeeping/exportJson.ts",
+        "src/proxy/session/bookkeeping/exportSnapshot.ts",
+        "src/proxy/session/bookkeeping/bootstrapOwner.ts",
+        "src/proxy/session/bookkeeping/barrier.ts",
+        "src/proxy/session/bookkeeping/privateRetirement.ts",
+        "src/proxy/session/bookkeeping/guard.ts",
+        "src/proxy/session/bookkeeping/inspect.ts",
+        "src/proxy/session/bookkeeping/recanonicalize.ts"
+      ],
+      "findingIds": [],
+      "againstCurrentMain": "new file absent from current main"
+    },
+    {
+      "index": 24,
+      "path": "src/__tests__/bookkeeping-old-artifacts.test.ts",
+      "status": "complete_semantic_read_only",
+      "extent": "complete new file and relevant implementation seams",
+      "patch": "diffs-github-base/039-src____tests____bookkeeping-old-artifacts.test.ts.patch",
+      "newHunkRanges": [
+        {
+          "start": 1,
+          "length": 199
+        }
+      ],
+      "headLineCount": 199,
+      "headSha256": "addacdbaad375e74956b0d7145ad91216392b0587c9a38736e84953bec39cd2c",
+      "semanticReview": "Old npm bundle lexical bindings are exposed without rewriting implementations, with positive real writer/gated-child marker controls and READY/export-cut refusal. Registry unavailability and unset optional compatibility tarball skip tests explicitly. Supplied compatibility artifact version/content digest are not enforced or escrowed by this suite (G1).",
+      "relatedImplementationSeams": [
+        "src/proxy/session/bookkeeping/migration.ts",
+        "src/proxy/session/bookkeeping/migrationImport.ts",
+        "src/proxy/session/bookkeeping/exportJson.ts",
+        "src/proxy/session/bookkeeping/exportSnapshot.ts",
+        "src/proxy/session/bookkeeping/bootstrapOwner.ts",
+        "src/proxy/session/bookkeeping/barrier.ts",
+        "src/proxy/session/bookkeeping/privateRetirement.ts",
+        "src/proxy/session/bookkeeping/guard.ts",
+        "src/proxy/session/bookkeeping/inspect.ts",
+        "src/proxy/session/bookkeeping/recanonicalize.ts"
+      ],
+      "findingIds": [
+        "P8-G1"
+      ],
+      "againstCurrentMain": "new file absent from current main"
+    },
+    {
+      "index": 25,
+      "path": "src/__tests__/bookkeeping-private-retirement.test.ts",
+      "status": "complete_semantic_read_only",
+      "extent": "complete new file and relevant implementation seams",
+      "patch": "diffs-github-base/040-src____tests____bookkeeping-private-retirement.test.ts.patch",
+      "newHunkRanges": [
+        {
+          "start": 1,
+          "length": 88
+        }
+      ],
+      "headLineCount": 88,
+      "headSha256": "8e12a52668caa1912b127be4aa9ff171134f7c7a7d39385b27cf10dfc60eb991",
+      "semanticReview": "Private retirement tests check identity-preserving capture/restoration, interruption/resume, occupied public names and preserved foreign/new-public bytes. It validates protocol race hooks and manifest refusal, not arbitrary concurrent tampering after private ownership.",
+      "relatedImplementationSeams": [
+        "src/proxy/session/bookkeeping/migration.ts",
+        "src/proxy/session/bookkeeping/migrationImport.ts",
+        "src/proxy/session/bookkeeping/exportJson.ts",
+        "src/proxy/session/bookkeeping/exportSnapshot.ts",
+        "src/proxy/session/bookkeeping/bootstrapOwner.ts",
+        "src/proxy/session/bookkeeping/barrier.ts",
+        "src/proxy/session/bookkeeping/privateRetirement.ts",
+        "src/proxy/session/bookkeeping/guard.ts",
+        "src/proxy/session/bookkeeping/inspect.ts",
+        "src/proxy/session/bookkeeping/recanonicalize.ts"
+      ],
+      "findingIds": [],
+      "againstCurrentMain": "new file absent from current main"
+    },
+    {
+      "index": 26,
+      "path": "src/__tests__/bookkeeping-recanonicalize.test.ts",
+      "status": "complete_semantic_read_only",
+      "extent": "complete new file and relevant implementation seams",
+      "patch": "diffs-github-base/041-src____tests____bookkeeping-recanonicalize.test.ts.patch",
+      "newHunkRanges": [
+        {
+          "start": 1,
+          "length": 155
+        }
+      ],
+      "headLineCount": 155,
+      "headSha256": "7ebe3789934378fc8f836c25e328d7461d24faa4b88181103b7c55c46f75be9f",
+      "semanticReview": "Recanonicalization tests preserve raw history/CAS/fences/resources while repairing only projection/pins, reject resource-key drift and structural corruption, and demand exclusive READY ownership. UID/realpath behavior is POSIX-oriented; native Windows is not established.",
+      "relatedImplementationSeams": [
+        "src/proxy/session/bookkeeping/migration.ts",
+        "src/proxy/session/bookkeeping/migrationImport.ts",
+        "src/proxy/session/bookkeeping/exportJson.ts",
+        "src/proxy/session/bookkeeping/exportSnapshot.ts",
+        "src/proxy/session/bookkeeping/bootstrapOwner.ts",
+        "src/proxy/session/bookkeeping/barrier.ts",
+        "src/proxy/session/bookkeeping/privateRetirement.ts",
+        "src/proxy/session/bookkeeping/guard.ts",
+        "src/proxy/session/bookkeeping/inspect.ts",
+        "src/proxy/session/bookkeeping/recanonicalize.ts"
+      ],
+      "findingIds": [],
+      "againstCurrentMain": "new file absent from current main"
+    },
+    {
+      "index": 27,
+      "path": "src/__tests__/bookkeeping-reconcile.test.ts",
+      "status": "complete_semantic_read_only",
+      "extent": "complete new file and relevant implementation seams",
+      "patch": "diffs-github-base/042-src____tests____bookkeeping-reconcile.test.ts.patch",
+      "newHunkRanges": [
+        {
+          "start": 1,
+          "length": 297
+        }
+      ],
+      "headLineCount": 297,
+      "headSha256": "98fa32334fbb035725ae91d43ebe16db07ded72f9fd2ac514986ba5394189f1f",
+      "semanticReview": "Reconcile pages 257 resources with generation/version rechecks, concurrent pins/new upper-bound rows, rescue-before-retire ordering, leases and exact deleting-owner recovery. POSIX surviving process-group control is real; boot/foreign-host policies are simulated. Timing benchmarks only record measurements.",
+      "relatedImplementationSeams": [
+        "src/proxy/session/bookkeeping/lifecyclePrepareSql.ts",
+        "src/proxy/session/bookkeeping/lifecyclePublicationSql.ts",
+        "src/proxy/session/bookkeeping/lifecycleTransitionsSql.ts",
+        "src/proxy/session/bookkeeping/lifecycleLeasesSql.ts",
+        "src/proxy/session/bookkeeping/lifecycleReconcileSql.ts",
+        "src/proxy/session/bookkeeping/resources.ts",
+        "src/proxy/sessionLifecycle.ts"
+      ],
+      "findingIds": [],
+      "againstCurrentMain": "new file absent from current main"
+    },
+    {
+      "index": 28,
+      "path": "src/__tests__/bookkeeping-review.test.ts",
+      "status": "complete_semantic_read_only",
+      "extent": "complete new file and relevant implementation seams",
+      "patch": "diffs-github-base/043-src____tests____bookkeeping-review.test.ts.patch",
+      "newHunkRanges": [
+        {
+          "start": 1,
+          "length": 460
+        }
+      ],
+      "headLineCount": 460,
+      "headSha256": "5c6babba42c18f740f55cc528e20d023000b7e9315a6ff8e3b229b6b676db9d3",
+      "semanticReview": "Adversarial review tests include real WAL DMS fcntl lock, actual RAISE(ROLLBACK), read capability rejection, full corruption audits, alias/no-open child controls, two real initializers, poison reopen and schema/index checks. Filesystem policy parameter injection proves allowlist logic, not actual Linux filesystem or Windows support.",
+      "relatedImplementationSeams": [
+        "src/proxy/session/bookkeeping/transaction.ts",
+        "src/proxy/session/bookkeeping/connection.ts",
+        "src/proxy/session/bookkeeping/schema.ts",
+        "src/proxy/session/bookkeeping/storagePaths.ts",
+        "src/proxy/session/bookkeeping/guard.ts"
+      ],
+      "findingIds": [],
+      "againstCurrentMain": "new file absent from current main"
+    },
+    {
+      "index": 29,
+      "path": "src/__tests__/bookkeeping-runtime.test.ts",
+      "status": "complete_semantic_read_only",
+      "extent": "complete new file and relevant implementation seams",
+      "patch": "diffs-github-base/044-src____tests____bookkeeping-runtime.test.ts.patch",
+      "newHunkRanges": [
+        {
+          "start": 1,
+          "length": 241
+        }
+      ],
+      "headLineCount": 241,
+      "headSha256": "dc62888b9ed2e5e18042262030f7a66b4a88b590845dbce9570fbaef629c3e7a",
+      "semanticReview": "Runtime default/opt-in/initialization/ref ownership, no implicit migration, atomic rollback pins, canonical identity and prelisten paged prune are checked. Real external Node writer and >=20 timer ticks exercise async admission. Mocked createProxy does not establish authenticated client/model acceptance or owner approval.",
+      "relatedImplementationSeams": [
+        "src/proxy/session/bookkeeping/runtime.ts",
+        "src/proxy/session/bookkeeping/lifecyclePublicationSql.ts",
+        "src/proxy/server.ts"
+      ],
+      "findingIds": [],
+      "againstCurrentMain": "new file absent from current main"
+    },
+    {
+      "index": 30,
+      "path": "src/__tests__/bookkeeping-schema.test.ts",
+      "status": "complete_semantic_read_only",
+      "extent": "complete new file and relevant implementation seams",
+      "patch": "diffs-github-base/045-src____tests____bookkeeping-schema.test.ts.patch",
+      "newHunkRanges": [
+        {
+          "start": 1,
+          "length": 426
+        }
+      ],
+      "headLineCount": 426,
+      "headSha256": "853b9bfaf8150ba48c84c9a62d00fbf7728dcdef822812c168977a7ade9d85b0",
+      "semanticReview": "Real SQLite DDL/CHECK/FK/triggers/counts/index plans/private pragmas and path integrity are asserted; legacy history/pins/fence/projection corruption refuses initialization. Query plans and bounded LIMIT shape are not measured production performance. FULL/WAL configuration alone is not power-loss proof.",
+      "relatedImplementationSeams": [
+        "src/proxy/session/bookkeeping/transaction.ts",
+        "src/proxy/session/bookkeeping/connection.ts",
+        "src/proxy/session/bookkeeping/schema.ts",
+        "src/proxy/session/bookkeeping/storagePaths.ts",
+        "src/proxy/session/bookkeeping/guard.ts"
+      ],
+      "findingIds": [],
+      "againstCurrentMain": "new file absent from current main"
+    },
+    {
+      "index": 31,
+      "path": "src/__tests__/bookkeeping-server-admission.test.ts",
+      "status": "complete_semantic_read_only",
+      "extent": "complete new file and relevant implementation seams",
+      "patch": "diffs-github-base/046-src____tests____bookkeeping-server-admission.test.ts.patch",
+      "newHunkRanges": [
+        {
+          "start": 1,
+          "length": 83
+        }
+      ],
+      "headLineCount": 83,
+      "headSha256": "ad7f7aa16e201786b59f05ca5af0b51b9feaefe84379330a1aa69075f029b0f9",
+      "semanticReview": "Server admission AST inventory checks direct hardcoded mutation-root identifiers under expected admit/publish scopes and selected publication flags. It is a useful local guard, but alias/member-call/interprocedural bypass is not tracked; no whole-server behavior or exhaustive dataflow claim is established.",
+      "relatedImplementationSeams": [
+        "src/proxy/server.ts",
+        "src/proxy/session/bookkeeping/privateNames.ts",
+        "src/proxy/session/bookkeeping/runtime.ts"
+      ],
+      "findingIds": [
+        "P8-G4"
+      ],
+      "againstCurrentMain": "new file absent from current main"
+    },
+    {
+      "index": 32,
+      "path": "src/__tests__/bookkeeping-server.test.ts",
+      "status": "complete_semantic_read_only",
+      "extent": "complete new file and relevant implementation seams",
+      "patch": "diffs-github-base/047-src____tests____bookkeeping-server.test.ts.patch",
+      "newHunkRanges": [
+        {
+          "start": 1,
+          "length": 138
+        }
+      ],
+      "headLineCount": 138,
+      "headSha256": "e38afdfcf0f3d1823cf066212380f7b2df1c3ee485b65d3be5e192581fc458bb",
+      "semanticReview": "Actual Hono app.fetch Messages paths use fake SDK and real SQLite ports: stream/nonstream success and publication COMMIT before/BUSY/after failure. Nonstream asserts 503 overloaded_error; stream asserts error text/type but not exact wire/event order. No actual client/model/platform gate.",
+      "relatedImplementationSeams": [
+        "src/proxy/session/bookkeeping/runtime.ts",
+        "src/proxy/session/bookkeeping/lifecyclePublicationSql.ts",
+        "src/proxy/server.ts"
+      ],
+      "findingIds": [],
+      "againstCurrentMain": "new file absent from current main"
+    },
+    {
+      "index": 33,
+      "path": "src/__tests__/bookkeeping-store-contract.test.ts",
+      "status": "complete_semantic_read_only",
+      "extent": "complete new file and relevant implementation seams",
+      "patch": "diffs-github-base/048-src____tests____bookkeeping-store-contract.test.ts.patch",
+      "newHunkRanges": [
+        {
+          "start": 1,
+          "length": 145
+        }
+      ],
+      "headLineCount": 145,
+      "headSha256": "f42caabf9a12468ffde39457ef5bfe59d8b47638a49459b518ea007dc1c6a729",
+      "semanticReview": "Scalar NUL fails before SQL and fence effects; NUL inside encoded history/payload is preserved, locators copied, own-write reads roll back, and incompatible schema refuses. Export CLI invokes local dist, so its execution assumes a prior build stage; standalone file run is not self-contained packaging proof.",
+      "relatedImplementationSeams": [
+        "src/proxy/session/bookkeeping/sqliteStoreBackend.ts",
+        "src/proxy/session/bookkeeping/storeScope.ts",
+        "src/proxy/session/bookkeeping/storeWriteSql.ts",
+        "src/proxy/session/bookkeeping/storeMaintenanceWriteSql.ts",
+        "src/proxy/session/bookkeeping/storeMutationSupport.ts",
+        "src/proxy/session/bookkeeping/storePublicationSql.ts",
+        "src/proxy/session/bookkeeping/storeSettlementSql.ts",
+        "src/proxy/session/bookkeeping/storeMappingsSql.ts",
+        "src/proxy/session/bookkeeping/storeMaintenanceSql.ts"
+      ],
+      "findingIds": [],
+      "againstCurrentMain": "new file absent from current main"
+    },
+    {
+      "index": 34,
+      "path": "src/__tests__/bookkeeping-store-differential.test.ts",
+      "status": "complete_semantic_read_only",
+      "extent": "complete new file and relevant implementation seams",
+      "patch": "diffs-github-base/049-src____tests____bookkeeping-store-differential.test.ts.patch",
+      "newHunkRanges": [
+        {
+          "start": 1,
+          "length": 141
+        }
+      ],
+      "headLineCount": 141,
+      "headSha256": "52a91bd7bfb2d479d27cb2b0a63cf6a4da5003fd7649e535aafbb9c74b7697ee",
+      "semanticReview": "Store JSON/SQL differential fixes UUID/clock and compares results across ordinary CAS, attempts, dual publication, settlement, pins, caps and snapshots. This is policy equivalence against JSON fa\u00e7ade, not concurrent-process settlement proof.",
+      "relatedImplementationSeams": [
+        "src/proxy/session/bookkeeping/sqliteStoreBackend.ts",
+        "src/proxy/session/bookkeeping/storeScope.ts",
+        "src/proxy/session/bookkeeping/storeWriteSql.ts",
+        "src/proxy/session/bookkeeping/storeMaintenanceWriteSql.ts",
+        "src/proxy/session/bookkeeping/storeMutationSupport.ts",
+        "src/proxy/session/bookkeeping/storePublicationSql.ts",
+        "src/proxy/session/bookkeeping/storeSettlementSql.ts",
+        "src/proxy/session/bookkeeping/storeMappingsSql.ts",
+        "src/proxy/session/bookkeeping/storeMaintenanceSql.ts"
+      ],
+      "findingIds": [],
+      "againstCurrentMain": "new file absent from current main"
+    },
+    {
+      "index": 35,
+      "path": "src/__tests__/bookkeeping-store-multiprocess.test.ts",
+      "status": "complete_semantic_read_only",
+      "extent": "complete new file and relevant implementation seams",
+      "patch": "diffs-github-base/050-src____tests____bookkeeping-store-multiprocess.test.ts.patch",
+      "newHunkRanges": [
+        {
+          "start": 1,
+          "length": 97
+        }
+      ],
+      "headLineCount": 97,
+      "headSha256": "76ef87200e3867d48aa2008559554b799ba2c90b0ebbc997bd0b5b7b57d8255f",
+      "semanticReview": "Twenty actual Bun child barriers assert exactly one identical dual-generation publication winner, real BUSY or CAS loser, and coherent mappings/history/route. This covers publication, not finalize-vs-rollback terminal settlement (F5), and is Bun rather than Node fixture execution.",
+      "relatedImplementationSeams": [
+        "src/proxy/session/bookkeeping/sqliteStoreBackend.ts",
+        "src/proxy/session/bookkeeping/storeScope.ts",
+        "src/proxy/session/bookkeeping/storeWriteSql.ts",
+        "src/proxy/session/bookkeeping/storeMaintenanceWriteSql.ts",
+        "src/proxy/session/bookkeeping/storeMutationSupport.ts",
+        "src/proxy/session/bookkeeping/storePublicationSql.ts",
+        "src/proxy/session/bookkeeping/storeSettlementSql.ts",
+        "src/proxy/session/bookkeeping/storeMappingsSql.ts",
+        "src/proxy/session/bookkeeping/storeMaintenanceSql.ts"
+      ],
+      "findingIds": [],
+      "againstCurrentMain": "new file absent from current main"
+    },
+    {
+      "index": 36,
+      "path": "src/__tests__/bookkeeping-store-mutations.test.ts",
+      "status": "complete_semantic_read_only",
+      "extent": "complete new file and relevant implementation seams",
+      "patch": "diffs-github-base/051-src____tests____bookkeeping-store-mutations.test.ts.patch",
+      "newHunkRanges": [
+        {
+          "start": 1,
+          "length": 598
+        }
+      ],
+      "headLineCount": 598,
+      "headSha256": "dd6398237e337e56080163105292cf4daabf437a927c569e651da1982a38b4aa",
+      "semanticReview": "Complete SQL mutation API suite directly checks CAS/absence fences, priority claims/publication/finalize/rollback, caps/rollback protection, imports, own-write joins/hook order and external native BUSY with no Atomics sleep. Sequential settlement assertions do not replace the missing concurrent terminal race.",
+      "relatedImplementationSeams": [
+        "src/proxy/session/bookkeeping/sqliteStoreBackend.ts",
+        "src/proxy/session/bookkeeping/storeScope.ts",
+        "src/proxy/session/bookkeeping/storeWriteSql.ts",
+        "src/proxy/session/bookkeeping/storeMaintenanceWriteSql.ts",
+        "src/proxy/session/bookkeeping/storeMutationSupport.ts",
+        "src/proxy/session/bookkeeping/storePublicationSql.ts",
+        "src/proxy/session/bookkeeping/storeSettlementSql.ts",
+        "src/proxy/session/bookkeeping/storeMappingsSql.ts",
+        "src/proxy/session/bookkeeping/storeMaintenanceSql.ts"
+      ],
+      "findingIds": [],
+      "againstCurrentMain": "new file absent from current main"
+    },
+    {
+      "index": 37,
+      "path": "src/__tests__/bookkeeping-store-reads.test.ts",
+      "status": "complete_semantic_read_only",
+      "extent": "complete new file and relevant implementation seams",
+      "patch": "diffs-github-base/052-src____tests____bookkeeping-store-reads.test.ts.patch",
+      "newHunkRanges": [
+        {
+          "start": 1,
+          "length": 221
+        }
+      ],
+      "headLineCount": 221,
+      "headSha256": "9fbc8c3335964ac00bbae4d2be1ef573261801db1db5f7469c6ddb667f10a289",
+      "semanticReview": "SQL reads are compared with pre-migration JSON fa\u00e7ade including ties/numeric object order, legacy denial, exact history/null SDK entries and pins. Addressed winner hydrates only addressed history; generation/pin metadata avoids history fetch. Query-plan spies are shape controls, not throughput benchmarks.",
+      "relatedImplementationSeams": [
+        "src/proxy/session/bookkeeping/sqliteStoreBackend.ts",
+        "src/proxy/session/bookkeeping/storeScope.ts",
+        "src/proxy/session/bookkeeping/storeWriteSql.ts",
+        "src/proxy/session/bookkeeping/storeMaintenanceWriteSql.ts",
+        "src/proxy/session/bookkeeping/storeMutationSupport.ts",
+        "src/proxy/session/bookkeeping/storePublicationSql.ts",
+        "src/proxy/session/bookkeeping/storeSettlementSql.ts",
+        "src/proxy/session/bookkeeping/storeMappingsSql.ts",
+        "src/proxy/session/bookkeeping/storeMaintenanceSql.ts"
+      ],
+      "findingIds": [],
+      "againstCurrentMain": "new file absent from current main"
+    },
+    {
+      "index": 38,
+      "path": "src/__tests__/bookkeeping-store-seam.test.ts",
+      "status": "complete_semantic_read_only",
+      "extent": "complete new file and relevant implementation seams",
+      "patch": "diffs-github-base/053-src____tests____bookkeeping-store-seam.test.ts.patch",
+      "newHunkRanges": [
+        {
+          "start": 1,
+          "length": 189
+        }
+      ],
+      "headLineCount": 189,
+      "headSha256": "13ea4b5b46376f83ad58c8c521838b222948ff1c6004cb4ccda9163fbc8b4ade",
+      "semanticReview": "Internal backend seam keeps JSON default, rejects identity/cross-database changes, joins scopes/hooks, forbids accidental JSON access in SQL scope and preserves signatures/CAS lineage. Real external writer and Atomics spy test immediate BUSY. Test seam installation is not public approval.",
+      "relatedImplementationSeams": [
+        "src/proxy/session/bookkeeping/sqliteStoreBackend.ts",
+        "src/proxy/session/bookkeeping/storeScope.ts",
+        "src/proxy/session/bookkeeping/storeWriteSql.ts",
+        "src/proxy/session/bookkeeping/storeMaintenanceWriteSql.ts",
+        "src/proxy/session/bookkeeping/storeMutationSupport.ts",
+        "src/proxy/session/bookkeeping/storePublicationSql.ts",
+        "src/proxy/session/bookkeeping/storeSettlementSql.ts",
+        "src/proxy/session/bookkeeping/storeMappingsSql.ts",
+        "src/proxy/session/bookkeeping/storeMaintenanceSql.ts"
+      ],
+      "findingIds": [],
+      "againstCurrentMain": "new file absent from current main"
+    },
+    {
+      "index": 39,
+      "path": "src/__tests__/bookkeeping-transactions.test.ts",
+      "status": "complete_semantic_read_only",
+      "extent": "complete new file and relevant implementation seams",
+      "patch": "diffs-github-base/054-src____tests____bookkeeping-transactions.test.ts.patch",
+      "newHunkRanges": [
+        {
+          "start": 1,
+          "length": 630
+        }
+      ],
+      "headLineCount": 630,
+      "headSha256": "40de1afd1084c80089a4b30d765c8de012f84022791591a2bd556ec3d8c53295",
+      "semanticReview": "Engine tests cover real deferred-FK failed COMMIT, false/throw rollback, uncertain wrapper errors, expired tx capabilities, FIFO/cancellation/pending, actual multi-SELECT snapshot, WAL checkpoint and Node/three-process admission. Successful 250ms contention only asserts ticks>0 despite measuring lag (F4).",
+      "relatedImplementationSeams": [
+        "src/proxy/session/bookkeeping/transaction.ts",
+        "src/proxy/session/bookkeeping/connection.ts",
+        "src/proxy/session/bookkeeping/schema.ts",
+        "src/proxy/session/bookkeeping/storagePaths.ts",
+        "src/proxy/session/bookkeeping/guard.ts"
+      ],
+      "findingIds": [
+        "P8-F4"
+      ],
+      "againstCurrentMain": "new file absent from current main"
+    },
+    {
+      "index": 40,
+      "path": "src/__tests__/bookkeeping-uuid.test.ts",
+      "status": "complete_semantic_read_only",
+      "extent": "complete new file and relevant implementation seams",
+      "patch": "diffs-github-base/055-src____tests____bookkeeping-uuid.test.ts.patch",
+      "newHunkRanges": [
+        {
+          "start": 1,
+          "length": 119
+        }
+      ],
+      "headLineCount": 119,
+      "headSha256": "58b7d0da2151fa85d90c2491356371a320b20d9830dc048010c6e3d01078d771",
+      "semanticReview": "UUID type/runtime rejection corpus exercises migration/export/cycles/retirement/CLI and unchanged inode/byte snapshots. Type assertions require npm pretest; targeted Bun alone does not establish TypeScript branding.",
+      "relatedImplementationSeams": [
+        "src/proxy/session/bookkeeping/migration.ts",
+        "src/proxy/session/bookkeeping/migrationImport.ts",
+        "src/proxy/session/bookkeeping/exportJson.ts",
+        "src/proxy/session/bookkeeping/exportSnapshot.ts",
+        "src/proxy/session/bookkeeping/bootstrapOwner.ts",
+        "src/proxy/session/bookkeeping/barrier.ts",
+        "src/proxy/session/bookkeeping/privateRetirement.ts",
+        "src/proxy/session/bookkeeping/guard.ts",
+        "src/proxy/session/bookkeeping/inspect.ts",
+        "src/proxy/session/bookkeeping/recanonicalize.ts"
+      ],
+      "findingIds": [],
+      "againstCurrentMain": "new file absent from current main"
+    },
+    {
+      "index": 41,
+      "path": "src/__tests__/fixtures/bookkeeping-admission-deadline.ts",
+      "status": "complete_semantic_read_only",
+      "extent": "complete new file and relevant implementation seams",
+      "patch": "diffs-github-base/056-src____tests____fixtures__bookkeeping-admission-deadline.ts.patch",
+      "newHunkRanges": [
+        {
+          "start": 1,
+          "length": 62
+        }
+      ],
+      "headLineCount": 62,
+      "headSha256": "881237ab2bef64e4c29cf8a0a5e37ade58aad13ba45e86c7e72198f837586d10",
+      "semanticReview": "Bundled Node child runs 150 native-lock admissions with 80ms deadlines and elapsed bounds. Parent owns actual holder and cleanup; this fixture intentionally calls deadline-only assertion, with separate heartbeat fixture/three-process tests proving timer responsiveness.",
+      "relatedImplementationSeams": [
+        "src/proxy/session/bookkeeping/transaction.ts",
+        "src/proxy/session/bookkeeping/connection.ts",
+        "src/proxy/session/bookkeeping/schema.ts",
+        "src/proxy/session/bookkeeping/storagePaths.ts",
+        "src/proxy/session/bookkeeping/guard.ts"
+      ],
+      "findingIds": [],
+      "againstCurrentMain": "new file absent from current main"
+    },
+    {
+      "index": 42,
+      "path": "src/__tests__/fixtures/bookkeeping-bootstrap-window.ts",
+      "status": "complete_semantic_read_only",
+      "extent": "complete new file and relevant implementation seams",
+      "patch": "diffs-github-base/057-src____tests____fixtures__bookkeeping-bootstrap-window.ts.patch",
+      "newHunkRanges": [
+        {
+          "start": 1,
+          "length": 16
+        }
+      ],
+      "headLineCount": 16,
+      "headSha256": "bf5974ea074400ce8038e98885f90de53cc334f3d32d2ce4e9afde88836e3fc8",
+      "semanticReview": "Bootstrap phase observer kills real process at authored bootstrap/migration/retirement checkpoints. This is an actual process crash cut; crashPoint selection and output do not simulate machine power-loss.",
+      "relatedImplementationSeams": [
+        "src/proxy/session/bookkeeping/migration.ts",
+        "src/proxy/session/bookkeeping/migrationImport.ts",
+        "src/proxy/session/bookkeeping/exportJson.ts",
+        "src/proxy/session/bookkeeping/exportSnapshot.ts",
+        "src/proxy/session/bookkeeping/bootstrapOwner.ts",
+        "src/proxy/session/bookkeeping/barrier.ts",
+        "src/proxy/session/bookkeeping/privateRetirement.ts",
+        "src/proxy/session/bookkeeping/guard.ts",
+        "src/proxy/session/bookkeeping/inspect.ts",
+        "src/proxy/session/bookkeeping/recanonicalize.ts"
+      ],
+      "findingIds": [],
+      "againstCurrentMain": "new file absent from current main"
+    },
+    {
+      "index": 43,
+      "path": "src/__tests__/fixtures/bookkeeping-bootstrap.ts",
+      "status": "complete_semantic_read_only",
+      "extent": "complete new file and relevant implementation seams",
+      "patch": "diffs-github-base/058-src____tests____fixtures__bookkeeping-bootstrap.ts.patch",
+      "newHunkRanges": [
+        {
+          "start": 1,
+          "length": 9
+        }
+      ],
+      "headLineCount": 9,
+      "headSha256": "759885a0c6a207f87fe7b1f8d728b2ba11f9912965d537de7fa9d9aa5b76b4fa",
+      "semanticReview": "Async initialization fixture performs real schema initialization after IPC release, reports one schema version and closes. It supports simultaneous-initializer test, not independent packaged install.",
+      "relatedImplementationSeams": [
+        "src/proxy/session/bookkeeping/transaction.ts",
+        "src/proxy/session/bookkeeping/connection.ts",
+        "src/proxy/session/bookkeeping/schema.ts",
+        "src/proxy/session/bookkeeping/storagePaths.ts",
+        "src/proxy/session/bookkeeping/guard.ts"
+      ],
+      "findingIds": [],
+      "againstCurrentMain": "new file absent from current main"
+    },
+    {
+      "index": 44,
+      "path": "src/__tests__/fixtures/bookkeeping-cli-cycles.ts",
+      "status": "complete_semantic_read_only",
+      "extent": "complete new file and relevant implementation seams",
+      "patch": "diffs-github-base/059-src____tests____fixtures__bookkeeping-cli-cycles.ts.patch",
+      "newHunkRanges": [
+        {
+          "start": 1,
+          "length": 9
+        }
+      ],
+      "headLineCount": 9,
+      "headSha256": "a2ca0a7730e758e363ded9bdc3ba1cb4093959024a21496346a3d61c32b35a4d",
+      "semanticReview": "CLI cycle fixture executes actual CLI command function 50 migrate/export rounds in one Node process and requires every exit code zero. It tests registry/guard lifetime reuse inside that process.",
+      "relatedImplementationSeams": [
+        "src/proxy/session/bookkeeping/migration.ts",
+        "src/proxy/session/bookkeeping/migrationImport.ts",
+        "src/proxy/session/bookkeeping/exportJson.ts",
+        "src/proxy/session/bookkeeping/exportSnapshot.ts",
+        "src/proxy/session/bookkeeping/bootstrapOwner.ts",
+        "src/proxy/session/bookkeeping/barrier.ts",
+        "src/proxy/session/bookkeeping/privateRetirement.ts",
+        "src/proxy/session/bookkeeping/guard.ts",
+        "src/proxy/session/bookkeeping/inspect.ts",
+        "src/proxy/session/bookkeeping/recanonicalize.ts"
+      ],
+      "findingIds": [],
+      "againstCurrentMain": "new file absent from current main"
+    },
+    {
+      "index": 45,
+      "path": "src/__tests__/fixtures/bookkeeping-cold-guard.ts",
+      "status": "complete_semantic_read_only",
+      "extent": "complete new file and relevant implementation seams",
+      "patch": "diffs-github-base/060-src____tests____fixtures__bookkeeping-cold-guard.ts.patch",
+      "newHunkRanges": [
+        {
+          "start": 1,
+          "length": 36
+        }
+      ],
+      "headLineCount": 36,
+      "headSha256": "0ea16ba7e19ccf0b330ffeac052babe479be7fbd71cab4f0faff054c61031a5c",
+      "semanticReview": "Cold guard fixture probes real guard, actual current-build legacy writer and synthetic durable retirement provenance. Its generic probe refusal exit73 alone is not typed lock causality, but parent tests pair it with held/free positive control and stronger typed guard fixture.",
+      "relatedImplementationSeams": [
+        "src/proxy/session/bookkeeping/migration.ts",
+        "src/proxy/session/bookkeeping/migrationImport.ts",
+        "src/proxy/session/bookkeeping/exportJson.ts",
+        "src/proxy/session/bookkeeping/exportSnapshot.ts",
+        "src/proxy/session/bookkeeping/bootstrapOwner.ts",
+        "src/proxy/session/bookkeeping/barrier.ts",
+        "src/proxy/session/bookkeeping/privateRetirement.ts",
+        "src/proxy/session/bookkeeping/guard.ts",
+        "src/proxy/session/bookkeeping/inspect.ts",
+        "src/proxy/session/bookkeeping/recanonicalize.ts"
+      ],
+      "findingIds": [],
+      "againstCurrentMain": "new file absent from current main"
+    },
+    {
+      "index": 46,
+      "path": "src/__tests__/fixtures/bookkeeping-contention.ts",
+      "status": "complete_semantic_read_only",
+      "extent": "complete new file and relevant implementation seams",
+      "patch": "diffs-github-base/061-src____tests____fixtures__bookkeeping-contention.ts.patch",
+      "newHunkRanges": [
+        {
+          "start": 1,
+          "length": 95
+        }
+      ],
+      "headLineCount": 95,
+      "headSha256": "825afef4b3f789cc768a5bab87dc56592c37f9158c370364ac6088be8ca10795",
+      "semanticReview": "Successful-lock fixture runs real external Node BEGIN holder for 250ms, measures ticks/maxLag/histogram and committed row; parent only asserts ticks>0 (F4). Cleanup joins native child. It needs a success-path stall discriminator.",
+      "relatedImplementationSeams": [
+        "src/proxy/session/bookkeeping/transaction.ts",
+        "src/proxy/session/bookkeeping/connection.ts",
+        "src/proxy/session/bookkeeping/schema.ts",
+        "src/proxy/session/bookkeeping/storagePaths.ts",
+        "src/proxy/session/bookkeeping/guard.ts"
+      ],
+      "findingIds": [
+        "P8-F4"
+      ],
+      "againstCurrentMain": "new file absent from current main"
+    },
+    {
+      "index": 47,
+      "path": "src/__tests__/fixtures/bookkeeping-export-oracle.ts",
+      "status": "complete_semantic_read_only",
+      "extent": "complete new file and relevant implementation seams",
+      "patch": "diffs-github-base/062-src____tests____fixtures__bookkeeping-export-oracle.ts.patch",
+      "newHunkRanges": [
+        {
+          "start": 1,
+          "length": 24
+        }
+      ],
+      "headLineCount": 24,
+      "headSha256": "4b3c5db1f7453ec2f94233eff48d32833c570a257763fea754f257b4d8fcdaf6",
+      "semanticReview": "Export oracle derives expected source entries through production legacy decoder and compares full decoded before/after plus exact per-entry JSON digest. It catches exported loss of supported fields; decoder-shared normalization is not a fully independent raw-byte oracle.",
+      "relatedImplementationSeams": [
+        "src/proxy/session/bookkeeping/legacyCodec.ts",
+        "src/proxy/session/bookkeeping/legacyExport.ts",
+        "src/proxy/session/bookkeeping/migrationImport.ts",
+        "src/proxy/session/bookkeeping/exportSnapshot.ts"
+      ],
+      "findingIds": [],
+      "againstCurrentMain": "new file absent from current main"
+    },
+    {
+      "index": 48,
+      "path": "src/__tests__/fixtures/bookkeeping-guard.ts",
+      "status": "complete_semantic_read_only",
+      "extent": "complete new file and relevant implementation seams",
+      "patch": "diffs-github-base/063-src____tests____fixtures__bookkeeping-guard.ts.patch",
+      "newHunkRanges": [
+        {
+          "start": 1,
+          "length": 39
+        }
+      ],
+      "headLineCount": 39,
+      "headSha256": "2aaf661b0d30a6a78c577b3519ede136d2544c9d03bce7383e48da4d99f59907",
+      "semanticReview": "Guard fixture uses real shared/exclusive SQLite and maps only typed busy to refusal73, with runtime IPC close and durable dead bootstrap alias support. This strengthens raw OS exclusion over generic fixture refusals.",
+      "relatedImplementationSeams": [
+        "src/proxy/session/bookkeeping/migration.ts",
+        "src/proxy/session/bookkeeping/migrationImport.ts",
+        "src/proxy/session/bookkeeping/exportJson.ts",
+        "src/proxy/session/bookkeeping/exportSnapshot.ts",
+        "src/proxy/session/bookkeeping/bootstrapOwner.ts",
+        "src/proxy/session/bookkeeping/barrier.ts",
+        "src/proxy/session/bookkeeping/privateRetirement.ts",
+        "src/proxy/session/bookkeeping/guard.ts",
+        "src/proxy/session/bookkeeping/inspect.ts",
+        "src/proxy/session/bookkeeping/recanonicalize.ts"
+      ],
+      "findingIds": [],
+      "againstCurrentMain": "new file absent from current main"
+    },
+    {
+      "index": 49,
+      "path": "src/__tests__/fixtures/bookkeeping-heartbeat.ts",
+      "status": "complete_semantic_read_only",
+      "extent": "complete new file and relevant implementation seams",
+      "patch": "diffs-github-base/064-src____tests____fixtures__bookkeeping-heartbeat.ts.patch",
+      "newHunkRanges": [
+        {
+          "start": 1,
+          "length": 33
+        }
+      ],
+      "headLineCount": 33,
+      "headSha256": "c72e70fda53f730872a1bb0332343f7fad01ecb2eb45ed8a2d7ed6ef51948121",
+      "semanticReview": "Heartbeat helper includes interval endpoints, minimum tick density and maximum25ms gap; deadline bounds are explicit. Blocking Atomics seam is a negative control showing this assertion fails on starved timers.",
+      "relatedImplementationSeams": [
+        "src/proxy/session/bookkeeping/transaction.ts",
+        "src/proxy/session/bookkeeping/connection.ts",
+        "src/proxy/session/bookkeeping/schema.ts",
+        "src/proxy/session/bookkeeping/storagePaths.ts",
+        "src/proxy/session/bookkeeping/guard.ts"
+      ],
+      "findingIds": [],
+      "againstCurrentMain": "new file absent from current main"
+    },
+    {
+      "index": 50,
+      "path": "src/__tests__/fixtures/bookkeeping-lifecycle-backend.ts",
+      "status": "complete_semantic_read_only",
+      "extent": "complete new file and relevant implementation seams",
+      "patch": "diffs-github-base/065-src____tests____fixtures__bookkeeping-lifecycle-backend.ts.patch",
+      "newHunkRanges": [
+        {
+          "start": 1,
+          "length": 11
+        }
+      ],
+      "headLineCount": 11,
+      "headSha256": "240a024462f41022a0e4b5d59d4969da978a4b1d761918acf8a354d9908c5f3e",
+      "semanticReview": "Env-gated legacy-only adapter visibly skips JSON protocol tests only for SQLite and reexports fixture installer. Normal npm does not set the env switch (F1); adaptation itself does not prove historical SQL suites ran.",
+      "relatedImplementationSeams": [
+        "src/proxy/session/bookkeeping/lifecyclePrepareSql.ts",
+        "src/proxy/session/bookkeeping/lifecyclePublicationSql.ts",
+        "src/proxy/session/bookkeeping/lifecycleTransitionsSql.ts",
+        "src/proxy/session/bookkeeping/lifecycleLeasesSql.ts",
+        "src/proxy/session/bookkeeping/lifecycleReconcileSql.ts",
+        "src/proxy/session/bookkeeping/resources.ts",
+        "src/proxy/sessionLifecycle.ts"
+      ],
+      "findingIds": [
+        "P8-F1"
+      ],
+      "againstCurrentMain": "new file absent from current main"
+    },
+    {
+      "index": 51,
+      "path": "src/__tests__/fixtures/bookkeeping-lifecycle-injection-effects.ts",
+      "status": "complete_semantic_read_only",
+      "extent": "complete new file and relevant implementation seams",
+      "patch": "diffs-github-base/066-src____tests____fixtures__bookkeeping-lifecycle-injection-effects.ts.patch",
+      "newHunkRanges": [
+        {
+          "start": 1,
+          "length": 147
+        }
+      ],
+      "headLineCount": 147,
+      "headSha256": "7f447d52b7b544458637c38eeae540fe7e6ad66113d9dfb976238315b307047f",
+      "semanticReview": "Expected COMMIT-prefix effects clone prior state and explicitly model resources/fences/leases/pins/counts/locator mutation. Random tokens are UUID-shape checked, not fully independently regenerated; assertions use after only for generated identity, with nonrandom effects independently specified.",
+      "relatedImplementationSeams": [
+        "src/proxy/session/bookkeeping/lifecyclePrepareSql.ts",
+        "src/proxy/session/bookkeeping/lifecyclePublicationSql.ts",
+        "src/proxy/session/bookkeeping/lifecycleTransitionsSql.ts",
+        "src/proxy/session/bookkeeping/lifecycleLeasesSql.ts",
+        "src/proxy/session/bookkeeping/lifecycleReconcileSql.ts",
+        "src/proxy/session/bookkeeping/resources.ts",
+        "src/proxy/sessionLifecycle.ts"
+      ],
+      "findingIds": [],
+      "againstCurrentMain": "new file absent from current main"
+    },
+    {
+      "index": 52,
+      "path": "src/__tests__/fixtures/bookkeeping-lifecycle-injection.ts",
+      "status": "complete_semantic_read_only",
+      "extent": "complete new file and relevant implementation seams",
+      "patch": "diffs-github-base/067-src____tests____fixtures__bookkeeping-lifecycle-injection.ts.patch",
+      "newHunkRanges": [
+        {
+          "start": 1,
+          "length": 53
+        }
+      ],
+      "headLineCount": 53,
+      "headSha256": "397fd893e7cfa8f63c1d6ee6bf8a9368a550a1dfc7bb5d00fbcf87a5ef12a51d",
+      "semanticReview": "Fault injector arms exact write-COMMIT ordinal, executes actual COMMIT only in after-IOERR mode and verifies hit count. Deleting-resource fixture writes synthetic persisted crash state; it is not a dead-process observation by itself.",
+      "relatedImplementationSeams": [
+        "src/proxy/session/bookkeeping/lifecyclePrepareSql.ts",
+        "src/proxy/session/bookkeeping/lifecyclePublicationSql.ts",
+        "src/proxy/session/bookkeeping/lifecycleTransitionsSql.ts",
+        "src/proxy/session/bookkeeping/lifecycleLeasesSql.ts",
+        "src/proxy/session/bookkeeping/lifecycleReconcileSql.ts",
+        "src/proxy/session/bookkeeping/resources.ts",
+        "src/proxy/sessionLifecycle.ts"
+      ],
+      "findingIds": [],
+      "againstCurrentMain": "new file absent from current main"
+    },
+    {
+      "index": 53,
+      "path": "src/__tests__/fixtures/bookkeeping-lifecycle-install.ts",
+      "status": "complete_semantic_read_only",
+      "extent": "complete new file and relevant implementation seams",
+      "patch": "diffs-github-base/068-src____tests____fixtures__bookkeeping-lifecycle-install.ts.patch",
+      "newHunkRanges": [
+        {
+          "start": 1,
+          "length": 28
+        }
+      ],
+      "headLineCount": 28,
+      "headSha256": "212290f3f66e9a8b9c53ef6b755b1da0cbe1d9e5b7e80805ffc9e7bdbcf6cc05",
+      "semanticReview": "Fixture installer activates actual SQLite store/lifecycle ports only when BOOKKEEPING_TEST_BACKEND=sqlite, supports multiple child/derived directories and restores ports/store on teardown. Parent/child env inheritance is essential; missing npm invocations are F1.",
+      "relatedImplementationSeams": [
+        "src/proxy/session/bookkeeping/lifecyclePrepareSql.ts",
+        "src/proxy/session/bookkeeping/lifecyclePublicationSql.ts",
+        "src/proxy/session/bookkeeping/lifecycleTransitionsSql.ts",
+        "src/proxy/session/bookkeeping/lifecycleLeasesSql.ts",
+        "src/proxy/session/bookkeeping/lifecycleReconcileSql.ts",
+        "src/proxy/session/bookkeeping/resources.ts",
+        "src/proxy/sessionLifecycle.ts"
+      ],
+      "findingIds": [
+        "P8-F1"
+      ],
+      "againstCurrentMain": "new file absent from current main"
+    },
+    {
+      "index": 54,
+      "path": "src/__tests__/fixtures/bookkeeping-lifecycle-observer.ts",
+      "status": "complete_semantic_read_only",
+      "extent": "complete new file and relevant implementation seams",
+      "patch": "diffs-github-base/069-src____tests____fixtures__bookkeeping-lifecycle-observer.ts.patch",
+      "newHunkRanges": [
+        {
+          "start": 1,
+          "length": 51
+        }
+      ],
+      "headLineCount": 51,
+      "headSha256": "4a495eeef6834b82000e36dec3161cd9563f9e7e5d4fc2eb757dea9f7e037c8a",
+      "semanticReview": "Observer reads real SQL resources/lease projections, fence slots/counts and pins in one read scope, or raw JSON sidecar. Production readResource/readResourceLease are used; this is not a schema-independent serialization oracle.",
+      "relatedImplementationSeams": [
+        "src/proxy/session/bookkeeping/lifecyclePrepareSql.ts",
+        "src/proxy/session/bookkeeping/lifecyclePublicationSql.ts",
+        "src/proxy/session/bookkeeping/lifecycleTransitionsSql.ts",
+        "src/proxy/session/bookkeeping/lifecycleLeasesSql.ts",
+        "src/proxy/session/bookkeeping/lifecycleReconcileSql.ts",
+        "src/proxy/session/bookkeeping/resources.ts",
+        "src/proxy/sessionLifecycle.ts"
+      ],
+      "findingIds": [],
+      "againstCurrentMain": "new file absent from current main"
+    },
+    {
+      "index": 55,
+      "path": "src/__tests__/fixtures/bookkeeping-migrate.ts",
+      "status": "complete_semantic_read_only",
+      "extent": "complete new file and relevant implementation seams",
+      "patch": "diffs-github-base/070-src____tests____fixtures__bookkeeping-migrate.ts.patch",
+      "newHunkRanges": [
+        {
+          "start": 1,
+          "length": 6
+        }
+      ],
+      "headLineCount": 6,
+      "headSha256": "0c41bb971d7dcdb21fff6a0a8e2f654120916ed9f0ea5223d7b6bae6e6fe4340",
+      "semanticReview": "Node migration fixture calls actual migrateBookkeeping with explicit writersStopped attestation and serializes result. It is synthetic offline fixture authority, not authorization to migrate owner data.",
+      "relatedImplementationSeams": [
+        "src/proxy/session/bookkeeping/migration.ts",
+        "src/proxy/session/bookkeeping/migrationImport.ts",
+        "src/proxy/session/bookkeeping/exportJson.ts",
+        "src/proxy/session/bookkeeping/exportSnapshot.ts",
+        "src/proxy/session/bookkeeping/bootstrapOwner.ts",
+        "src/proxy/session/bookkeeping/barrier.ts",
+        "src/proxy/session/bookkeeping/privateRetirement.ts",
+        "src/proxy/session/bookkeeping/guard.ts",
+        "src/proxy/session/bookkeeping/inspect.ts",
+        "src/proxy/session/bookkeeping/recanonicalize.ts"
+      ],
+      "findingIds": [],
+      "againstCurrentMain": "new file absent from current main"
+    },
+    {
+      "index": 56,
+      "path": "src/__tests__/fixtures/bookkeeping-nested-codec-corpus.ts",
+      "status": "complete_semantic_read_only",
+      "extent": "complete new file and relevant implementation seams",
+      "patch": "diffs-github-base/071-src____tests____fixtures__bookkeeping-nested-codec-corpus.ts.patch",
+      "newHunkRanges": [
+        {
+          "start": 1,
+          "length": 70
+        }
+      ],
+      "headLineCount": 70,
+      "headSha256": "44ca6b41f1ff66b800a1dfcf0878c4fcdf673ffa9c4d6ac21a74af719ef62c05",
+      "semanticReview": "Nested corpus supplies accepted/rejected sidecar/store owner/fence/generation/priority cases, duplicate JSON keys and own-map-key edges. Expected cases are portable fixture policy, combined with explicit error/byte differential assertions.",
+      "relatedImplementationSeams": [
+        "src/proxy/session/bookkeeping/legacyCodec.ts",
+        "src/proxy/session/bookkeeping/legacyExport.ts",
+        "src/proxy/session/bookkeeping/migrationImport.ts",
+        "src/proxy/session/bookkeeping/exportSnapshot.ts"
+      ],
+      "findingIds": [],
+      "againstCurrentMain": "new file absent from current main"
+    },
+    {
+      "index": 57,
+      "path": "src/__tests__/fixtures/bookkeeping-publication-process.ts",
+      "status": "complete_semantic_read_only",
+      "extent": "complete new file and relevant implementation seams",
+      "patch": "diffs-github-base/072-src____tests____fixtures__bookkeeping-publication-process.ts.patch",
+      "newHunkRanges": [
+        {
+          "start": 1,
+          "length": 28
+        }
+      ],
+      "headLineCount": 28,
+      "headSha256": "e0f0a8aff368e86833d47e499a1e6c746d905f0865110701e769cc7618184c1e",
+      "semanticReview": "Actual Node publication fixture installs SQL fa\u00e7ade, pauses at IPC barrier, runs async publish plus exact store CAS, distinguishes typed BUSY, and closes. It supports one-winner publication race, not terminal settlement.",
+      "relatedImplementationSeams": [
+        "src/proxy/session/bookkeeping/lifecyclePrepareSql.ts",
+        "src/proxy/session/bookkeeping/lifecyclePublicationSql.ts",
+        "src/proxy/session/bookkeeping/lifecycleTransitionsSql.ts",
+        "src/proxy/session/bookkeeping/lifecycleLeasesSql.ts",
+        "src/proxy/session/bookkeeping/lifecycleReconcileSql.ts",
+        "src/proxy/session/bookkeeping/resources.ts",
+        "src/proxy/sessionLifecycle.ts"
+      ],
+      "findingIds": [],
+      "againstCurrentMain": "new file absent from current main"
+    },
+    {
+      "index": 58,
+      "path": "src/__tests__/fixtures/bookkeeping-residue-inventory.ts",
+      "status": "complete_semantic_read_only",
+      "extent": "complete new file and relevant implementation seams",
+      "patch": "diffs-github-base/073-src____tests____fixtures__bookkeeping-residue-inventory.ts.patch",
+      "newHunkRanges": [
+        {
+          "start": 1,
+          "length": 25
+        }
+      ],
+      "headLineCount": 25,
+      "headSha256": "ac0039afb34a783ed1b8621569680fcf02ef97fdcdd949726abc70391bd158df",
+      "semanticReview": "Residue inventory deliberately generates dead-boot candidate/gate identities, foreign/live/unknown residues and untouched turn-lock directories. These are fixture classification records, not actual historical process ancestry.",
+      "relatedImplementationSeams": [
+        "src/proxy/session/bookkeeping/migration.ts",
+        "src/proxy/session/bookkeeping/migrationImport.ts",
+        "src/proxy/session/bookkeeping/exportJson.ts",
+        "src/proxy/session/bookkeeping/exportSnapshot.ts",
+        "src/proxy/session/bookkeeping/bootstrapOwner.ts",
+        "src/proxy/session/bookkeeping/barrier.ts",
+        "src/proxy/session/bookkeeping/privateRetirement.ts",
+        "src/proxy/session/bookkeeping/guard.ts",
+        "src/proxy/session/bookkeeping/inspect.ts",
+        "src/proxy/session/bookkeeping/recanonicalize.ts"
+      ],
+      "findingIds": [],
+      "againstCurrentMain": "new file absent from current main"
+    },
+    {
+      "index": 59,
+      "path": "src/__tests__/fixtures/bookkeeping-rich-fixture.ts",
+      "status": "complete_semantic_read_only",
+      "extent": "complete new file and relevant implementation seams",
+      "patch": "diffs-github-base/074-src____tests____fixtures__bookkeeping-rich-fixture.ts.patch",
+      "newHunkRanges": [
+        {
+          "start": 1,
+          "length": 112
+        }
+      ],
+      "headLineCount": 112,
+      "headSha256": "c1e8714a33e520acc008dd41876d5f1b215ed838177dd50cc85a5d9d72a00df7",
+      "semanticReview": "Rich fixture includes explicit false executorRecoverable, unknown payload ordering, null UUIDs, generations/fences and v3 attempts/rollbacks. Uninterrupted control uses cloned original inputs. Snapshots combine all-table counts with production export digests; not every internal SQL row is hashed independently.",
+      "relatedImplementationSeams": [
+        "src/proxy/session/bookkeeping/migration.ts",
+        "src/proxy/session/bookkeeping/migrationImport.ts",
+        "src/proxy/session/bookkeeping/exportJson.ts",
+        "src/proxy/session/bookkeeping/exportSnapshot.ts",
+        "src/proxy/session/bookkeeping/bootstrapOwner.ts",
+        "src/proxy/session/bookkeeping/barrier.ts",
+        "src/proxy/session/bookkeeping/privateRetirement.ts",
+        "src/proxy/session/bookkeeping/guard.ts",
+        "src/proxy/session/bookkeeping/inspect.ts",
+        "src/proxy/session/bookkeeping/recanonicalize.ts"
+      ],
+      "findingIds": [],
+      "againstCurrentMain": "new file absent from current main"
+    },
+    {
+      "index": 60,
+      "path": "src/__tests__/fixtures/bookkeeping-safety.ts",
+      "status": "complete_semantic_read_only",
+      "extent": "complete new file and relevant implementation seams",
+      "patch": "diffs-github-base/075-src____tests____fixtures__bookkeeping-safety.ts.patch",
+      "newHunkRanges": [
+        {
+          "start": 1,
+          "length": 86
+        }
+      ],
+      "headLineCount": 86,
+      "headSha256": "ea61f61f5d935b2977667c41350ec13e20a35ab932cd0c733744d6afea5b0411",
+      "semanticReview": "Safety fixture instruments auxiliary opens on lock-bearing inodes and runs actual cleanup, plus FIFO refusal. closeDatabase failures are wrapper functions that throw without native close, validating fail-closed authority logic rather than demonstrating actual driver-close failure behavior.",
+      "relatedImplementationSeams": [
+        "src/proxy/session/bookkeeping/transaction.ts",
+        "src/proxy/session/bookkeeping/connection.ts",
+        "src/proxy/session/bookkeeping/schema.ts",
+        "src/proxy/session/bookkeeping/storagePaths.ts",
+        "src/proxy/session/bookkeeping/guard.ts"
+      ],
+      "findingIds": [],
+      "againstCurrentMain": "new file absent from current main"
+    },
+    {
+      "index": 61,
+      "path": "src/__tests__/fixtures/bookkeeping-store-backend.ts",
+      "status": "complete_semantic_read_only",
+      "extent": "complete new file and relevant implementation seams",
+      "patch": "diffs-github-base/076-src____tests____fixtures__bookkeeping-store-backend.ts.patch",
+      "newHunkRanges": [
+        {
+          "start": 1,
+          "length": 27
+        }
+      ],
+      "headLineCount": 27,
+      "headSha256": "f61e333cd482f34f4568eb734f7b36f988a8920aa3ed9e9ae840859ae8ffeda4",
+      "semanticReview": "Env-gated store fixture initializes actual fresh schema and SQL backend, visibly skips JSON file-protocol cases, then closes/resets. Both accepted switches are absent from npm test stages (F1).",
+      "relatedImplementationSeams": [
+        "src/proxy/session/bookkeeping/sqliteStoreBackend.ts",
+        "src/proxy/session/bookkeeping/storeScope.ts",
+        "src/proxy/session/bookkeeping/storeWriteSql.ts",
+        "src/proxy/session/bookkeeping/storeMaintenanceWriteSql.ts",
+        "src/proxy/session/bookkeeping/storeMutationSupport.ts",
+        "src/proxy/session/bookkeeping/storePublicationSql.ts",
+        "src/proxy/session/bookkeeping/storeSettlementSql.ts",
+        "src/proxy/session/bookkeeping/storeMappingsSql.ts",
+        "src/proxy/session/bookkeeping/storeMaintenanceSql.ts"
+      ],
+      "findingIds": [
+        "P8-F1"
+      ],
+      "againstCurrentMain": "new file absent from current main"
+    },
+    {
+      "index": 62,
+      "path": "src/__tests__/fixtures/bookkeeping-store-racer.ts",
+      "status": "complete_semantic_read_only",
+      "extent": "complete new file and relevant implementation seams",
+      "patch": "diffs-github-base/077-src____tests____fixtures__bookkeeping-store-racer.ts.patch",
+      "newHunkRanges": [
+        {
+          "start": 1,
+          "length": 27
+        }
+      ],
+      "headLineCount": 27,
+      "headSha256": "f599cd84aa758ee55639196b3e3d030a7f77ba82cba23feba1cfa1c5d3a9a1ff",
+      "semanticReview": "Actual Bun child direct SQL publication racer waits on IPC and reports won/CAS/typed BUSY, closes connection and disconnects. Valid publication race control; a Node-platform claim would be inaccurate.",
+      "relatedImplementationSeams": [
+        "src/proxy/session/bookkeeping/sqliteStoreBackend.ts",
+        "src/proxy/session/bookkeeping/storeScope.ts",
+        "src/proxy/session/bookkeeping/storeWriteSql.ts",
+        "src/proxy/session/bookkeeping/storeMaintenanceWriteSql.ts",
+        "src/proxy/session/bookkeeping/storeMutationSupport.ts",
+        "src/proxy/session/bookkeeping/storePublicationSql.ts",
+        "src/proxy/session/bookkeeping/storeSettlementSql.ts",
+        "src/proxy/session/bookkeeping/storeMappingsSql.ts",
+        "src/proxy/session/bookkeeping/storeMaintenanceSql.ts"
+      ],
+      "findingIds": [],
+      "againstCurrentMain": "new file absent from current main"
+    },
+    {
+      "index": 63,
+      "path": "src/__tests__/fixtures/bookkeeping-support.ts",
+      "status": "complete_semantic_read_only",
+      "extent": "complete new file and relevant implementation seams",
+      "patch": "diffs-github-base/078-src____tests____fixtures__bookkeeping-support.ts.patch",
+      "newHunkRanges": [
+        {
+          "start": 1,
+          "length": 20
+        }
+      ],
+      "headLineCount": 20,
+      "headSha256": "9270096ae7654e28b3763a361b9eb67d67bcaf4194fb039396995760ef6b6835",
+      "semanticReview": "Support bundles authored fixture for Node with external libsql and links current checkout node_modules; optional bench output goes to acceptance directory. Thus actual Node executes native code, but not independently installed tarball dependencies.",
+      "relatedImplementationSeams": [
+        "src/proxy/session/bookkeeping/transaction.ts",
+        "src/proxy/session/bookkeeping/connection.ts",
+        "src/proxy/session/bookkeeping/schema.ts",
+        "src/proxy/session/bookkeeping/storagePaths.ts",
+        "src/proxy/session/bookkeeping/guard.ts"
+      ],
+      "findingIds": [],
+      "againstCurrentMain": "new file absent from current main"
+    },
+    {
+      "index": 64,
+      "path": "src/__tests__/fixtures/bookkeeping-three-process.ts",
+      "status": "complete_semantic_read_only",
+      "extent": "complete new file and relevant implementation seams",
+      "patch": "diffs-github-base/079-src____tests____fixtures__bookkeeping-three-process.ts.patch",
+      "newHunkRanges": [
+        {
+          "start": 1,
+          "length": 179
+        }
+      ],
+      "headLineCount": 179,
+      "headSha256": "881e2c698a925152e465750e356adc39de307bd2b019b8d4f4b484e2e8bf2c3e",
+      "semanticReview": "Three actual Node workers have an initial held-lock80ms expiry/heartbeat discriminator, then250 contended admissions per worker with bounded budget, counts/row checks and actual IPC. Phase2 does not demand any BUSY loser; phase1 ensures true contention and timer control.",
+      "relatedImplementationSeams": [
+        "src/proxy/session/bookkeeping/transaction.ts",
+        "src/proxy/session/bookkeeping/connection.ts",
+        "src/proxy/session/bookkeeping/schema.ts",
+        "src/proxy/session/bookkeeping/storagePaths.ts",
+        "src/proxy/session/bookkeeping/guard.ts"
+      ],
+      "findingIds": [],
+      "againstCurrentMain": "new file absent from current main"
+    },
+    {
+      "index": 65,
+      "path": "src/__tests__/fixtures/bookkeeping-transition.ts",
+      "status": "complete_semantic_read_only",
+      "extent": "complete new file and relevant implementation seams",
+      "patch": "diffs-github-base/080-src____tests____fixtures__bookkeeping-transition.ts.patch",
+      "newHunkRanges": [
+        {
+          "start": 1,
+          "length": 10
+        }
+      ],
+      "headLineCount": 10,
+      "headSha256": "29fa28d112a11de464166b471cbee06147137eb695e960cb91f2d32f95a205dc",
+      "semanticReview": "Transition fixture invokes actual migration/export/abort with stopped-writer attestation. SIGKILL phase environment is inherited and parent validates terminal/crash results.",
+      "relatedImplementationSeams": [
+        "src/proxy/session/bookkeeping/migration.ts",
+        "src/proxy/session/bookkeeping/migrationImport.ts",
+        "src/proxy/session/bookkeeping/exportJson.ts",
+        "src/proxy/session/bookkeeping/exportSnapshot.ts",
+        "src/proxy/session/bookkeeping/bootstrapOwner.ts",
+        "src/proxy/session/bookkeeping/barrier.ts",
+        "src/proxy/session/bookkeeping/privateRetirement.ts",
+        "src/proxy/session/bookkeeping/guard.ts",
+        "src/proxy/session/bookkeeping/inspect.ts",
+        "src/proxy/session/bookkeeping/recanonicalize.ts"
+      ],
+      "findingIds": [],
+      "againstCurrentMain": "new file absent from current main"
+    },
+    {
+      "index": 66,
+      "path": "src/__tests__/fixtures/full-document-store-rewrite.ts",
+      "status": "complete_semantic_read_only",
+      "extent": "complete new file and relevant implementation seams",
+      "patch": "diffs-github-base/081-src____tests____fixtures__full-document-store-rewrite.ts.patch",
+      "newHunkRanges": [
+        {
+          "start": 1,
+          "length": 36
+        }
+      ],
+      "headLineCount": 36,
+      "headSha256": "ccd495f127c37f682f0f10a81f3440e7d45a717bad3abffe7d314bdb9c42bae8",
+      "semanticReview": "Full-document baseline uses actual historical lock, fsync-temp, rename and directory flush protocol instead of a parse/write-only synthetic baseline. Unknown errors are retained/cleanup logged; best-effort directory flush matches legacy semantics.",
+      "relatedImplementationSeams": [
+        "src/proxy/sessionStore.ts",
+        "src/proxy/session/durableFileSystem.ts",
+        "src/__tests__/fixtures/full-document-store-rewrite.ts"
+      ],
+      "findingIds": [],
+      "againstCurrentMain": "new file absent from current main"
+    },
+    {
+      "index": 67,
+      "path": "src/__tests__/priority-session-store.test.ts",
+      "status": "complete_semantic_read_only",
+      "extent": "complete changed hunks, relevant retained assertions and implementation seams",
+      "patch": "diffs-github-base/083-src____tests____priority-session-store.test.ts.patch",
+      "newHunkRanges": [
+        {
+          "start": 1,
+          "length": 5
+        },
+        {
+          "start": 12,
+          "length": 8
+        },
+        {
+          "start": 26,
+          "length": 26
+        },
+        {
+          "start": 105,
+          "length": 11
+        },
+        {
+          "start": 117,
+          "length": 7
+        },
+        {
+          "start": 243,
+          "length": 7
+        },
+        {
+          "start": 358,
+          "length": 7
+        },
+        {
+          "start": 408,
+          "length": 7
+        },
+        {
+          "start": 460,
+          "length": 7
+        },
+        {
+          "start": 470,
+          "length": 7
+        },
+        {
+          "start": 488,
+          "length": 7
+        },
+        {
+          "start": 508,
+          "length": 14
+        },
+        {
+          "start": 543,
+          "length": 10
+        },
+        {
+          "start": 647,
+          "length": 7
+        },
+        {
+          "start": 666,
+          "length": 7
+        },
+        {
+          "start": 680,
+          "length": 7
+        },
+        {
+          "start": 701,
+          "length": 7
+        },
+        {
+          "start": 720,
+          "length": 7
+        },
+        {
+          "start": 728,
+          "length": 7
+        },
+        {
+          "start": 748,
+          "length": 12
+        },
+        {
+          "start": 789,
+          "length": 7
+        },
+        {
+          "start": 829,
+          "length": 7
+        },
+        {
+          "start": 839,
+          "length": 10
+        },
+        {
+          "start": 871,
+          "length": 7
+        },
+        {
+          "start": 881,
+          "length": 7
+        },
+        {
+          "start": 1043,
+          "length": 7
+        },
+        {
+          "start": 1108,
+          "length": 7
+        },
+        {
+          "start": 1187,
+          "length": 7
+        },
+        {
+          "start": 1245,
+          "length": 7
+        },
+        {
+          "start": 1279,
+          "length": 7
+        }
+      ],
+      "headLineCount": 1354,
+      "headSha256": "fac9bd6b28c89a18fa379ae580e65373eacc7266419122c6c1163a8b721cba71",
+      "semanticReview": "All changed store contract/API assertions preserve separate JSON byte invariants. File-protocol/old-writer/cross-process suites become visibly legacy-only. Real finalize-vs-rollback single-winner is incorrectly categorized with JSON protocol despite being a backend semantic invariant (F5).",
+      "relatedImplementationSeams": [
+        "src/proxy/session/bookkeeping/sqliteStoreBackend.ts",
+        "src/proxy/session/bookkeeping/storeScope.ts",
+        "src/proxy/session/bookkeeping/storeWriteSql.ts",
+        "src/proxy/session/bookkeeping/storeMaintenanceWriteSql.ts",
+        "src/proxy/session/bookkeeping/storeMutationSupport.ts",
+        "src/proxy/session/bookkeeping/storePublicationSql.ts",
+        "src/proxy/session/bookkeeping/storeSettlementSql.ts",
+        "src/proxy/session/bookkeeping/storeMappingsSql.ts",
+        "src/proxy/session/bookkeeping/storeMaintenanceSql.ts"
+      ],
+      "findingIds": [
+        "P8-F1",
+        "P8-F5"
+      ],
+      "againstCurrentMain": "complete changed-hunk comparison; preserves existing hunks apart from F2"
+    },
+    {
+      "index": 68,
+      "path": "src/__tests__/proxy-session-store.test.ts",
+      "status": "complete_semantic_read_only",
+      "extent": "complete changed hunks, relevant retained assertions and implementation seams",
+      "patch": "diffs-github-base/084-src____tests____proxy-session-store.test.ts.patch",
+      "newHunkRanges": [
+        {
+          "start": 22,
+          "length": 7
+        },
+        {
+          "start": 30,
+          "length": 12
+        },
+        {
+          "start": 93,
+          "length": 7
+        },
+        {
+          "start": 111,
+          "length": 7
+        },
+        {
+          "start": 127,
+          "length": 7
+        },
+        {
+          "start": 135,
+          "length": 7
+        },
+        {
+          "start": 211,
+          "length": 7
+        },
+        {
+          "start": 260,
+          "length": 7
+        }
+      ],
+      "headLineCount": 452,
+      "headSha256": "eafbca20f78bb689aff49beb2b2abf9bf75c4e3eb45972bd218ec5a68e364190",
+      "semanticReview": "Backend installation adapts unchanged public store behavior; raw identity cache/foreign file replacement/deletion/JSON upgrade/corruption cases remain JSON-only. New SQL locator/history/denial equivalents exist elsewhere. Compared current-main delta: no newly removed current-main assertion.",
+      "relatedImplementationSeams": [
+        "src/proxy/session/bookkeeping/sqliteStoreBackend.ts",
+        "src/proxy/session/bookkeeping/storeScope.ts",
+        "src/proxy/session/bookkeeping/storeWriteSql.ts",
+        "src/proxy/session/bookkeeping/storeMaintenanceWriteSql.ts",
+        "src/proxy/session/bookkeeping/storeMutationSupport.ts",
+        "src/proxy/session/bookkeeping/storePublicationSql.ts",
+        "src/proxy/session/bookkeeping/storeSettlementSql.ts",
+        "src/proxy/session/bookkeeping/storeMappingsSql.ts",
+        "src/proxy/session/bookkeeping/storeMaintenanceSql.ts"
+      ],
+      "findingIds": [
+        "P8-F1"
+      ],
+      "againstCurrentMain": "complete changed-hunk comparison; preserves existing hunks apart from F2"
+    },
+    {
+      "index": 69,
+      "path": "src/__tests__/session-cache-coherence.test.ts",
+      "status": "complete_semantic_read_only",
+      "extent": "complete changed hunks, relevant retained assertions and implementation seams",
+      "patch": "diffs-github-base/085-src____tests____session-cache-coherence.test.ts.patch",
+      "newHunkRanges": [
+        {
+          "start": 2,
+          "length": 7
+        },
+        {
+          "start": 13,
+          "length": 13
+        }
+      ],
+      "headLineCount": 87,
+      "headSha256": "5b142c9a6814ea6ab1a8306eab0dda96626c941bda312aee58748c7b901f0c6e",
+      "semanticReview": "Historic cache-coherence cases simulate a foreign store mutation in the same process, then assert local cache refresh/eviction/generation scoping. Added installer permits SQL variants but npm leaves it off (F1). Actual SQL process publication has separate coverage; this file alone is not a cross-process test.",
+      "relatedImplementationSeams": [
+        "src/proxy/session/cache.ts",
+        "src/proxy/session/bookkeeping/storeScope.ts",
+        "src/proxy/session/bookkeeping/transaction.ts",
+        "src/proxy/session/bookkeeping/storeSettlementSql.ts"
+      ],
+      "findingIds": [
+        "P8-F1"
+      ],
+      "againstCurrentMain": "complete changed-hunk comparison; preserves existing hunks apart from F2"
+    },
+    {
+      "index": 70,
+      "path": "src/__tests__/session-gc-contention.test.ts",
+      "status": "complete_semantic_read_only",
+      "extent": "complete changed hunks, relevant retained assertions and implementation seams",
+      "patch": "diffs-github-base/086-src____tests____session-gc-contention.test.ts.patch",
+      "newHunkRanges": [
+        {
+          "start": 1,
+          "length": 12
+        },
+        {
+          "start": 19,
+          "length": 14
+        },
+        {
+          "start": 37,
+          "length": 16
+        },
+        {
+          "start": 105,
+          "length": 7
+        },
+        {
+          "start": 118,
+          "length": 8
+        }
+      ],
+      "headLineCount": 125,
+      "headSha256": "32a78d468170eef38ba77bbcd9f5455e34f555bd5ba3518165f3c7bf61653157",
+      "semanticReview": "Large1400/800-pin sidecar fixture adapts to real SQL rows, concurrent24 registrations plus optional GC assert zero timeouts, correct durable rows and bounded hash count. Timings are recorded. SQL mode only runs under unconfigured env (F1).",
+      "relatedImplementationSeams": [
+        "src/proxy/session/bookkeeping/lifecyclePrepareSql.ts",
+        "src/proxy/session/bookkeeping/lifecyclePublicationSql.ts",
+        "src/proxy/session/bookkeeping/lifecycleTransitionsSql.ts",
+        "src/proxy/session/bookkeeping/lifecycleLeasesSql.ts",
+        "src/proxy/session/bookkeeping/lifecycleReconcileSql.ts",
+        "src/proxy/session/bookkeeping/resources.ts",
+        "src/proxy/sessionLifecycle.ts"
+      ],
+      "findingIds": [
+        "P8-F1"
+      ],
+      "againstCurrentMain": "complete changed-hunk comparison; preserves existing hunks apart from F2"
+    },
+    {
+      "index": 71,
+      "path": "src/__tests__/session-lifecycle-gc-budgets.test.ts",
+      "status": "complete_semantic_read_only",
+      "extent": "complete new file and relevant implementation seams",
+      "patch": "diffs-github-base/087-src____tests____session-lifecycle-gc-budgets.test.ts.patch",
+      "newHunkRanges": [
+        {
+          "start": 1,
+          "length": 418
+        }
+      ],
+      "headLineCount": 418,
+      "headSha256": "2ad91bfcfab410c726b6ea77858a505c5b8608946c35def987256f611ccc2644",
+      "semanticReview": "Four JSON durable-sync/gate budget cases use real default Node child with stand-in SDK; first claim-delay and late-attach controls are discriminating. Fourth hanging-child execution test has no2500ms elapsed/start-gate assertion and passes with a truncated execution budget (F3). No SQL installer in this file.",
+      "relatedImplementationSeams": [
+        "src/proxy/session/bookkeeping/lifecycleDeletionSql.ts",
+        "src/proxy/session/bookkeeping/lifecycleGcSql.ts",
+        "src/proxy/sessionLifecycle.ts"
+      ],
+      "findingIds": [
+        "P8-F3"
+      ],
+      "againstCurrentMain": "new file absent from current main"
+    },
+    {
+      "index": 72,
+      "path": "src/__tests__/session-lifecycle-process.test.ts",
+      "status": "complete_semantic_read_only",
+      "extent": "complete changed hunks, relevant retained assertions and implementation seams",
+      "patch": "diffs-github-base/088-src____tests____session-lifecycle-process.test.ts.patch",
+      "newHunkRanges": [
+        {
+          "start": 1,
+          "length": 8
+        },
+        {
+          "start": 24,
+          "length": 8
+        },
+        {
+          "start": 136,
+          "length": 7
+        },
+        {
+          "start": 150,
+          "length": 7
+        },
+        {
+          "start": 219,
+          "length": 7
+        },
+        {
+          "start": 229,
+          "length": 7
+        },
+        {
+          "start": 252,
+          "length": 7
+        },
+        {
+          "start": 294,
+          "length": 7
+        },
+        {
+          "start": 338,
+          "length": 7
+        },
+        {
+          "start": 364,
+          "length": 7
+        },
+        {
+          "start": 376,
+          "length": 7
+        }
+      ],
+      "headLineCount": 392,
+      "headSha256": "6704502c865c3b0c07bf05bb69ca7786608669ea486e7c05c5c137d0f36581bd",
+      "semanticReview": "Real armed/unarmed/orphaned child leases and SDK absent/error classification are preserved under backend adapter. Current-main executor-started/release handshake is reverted to asynchronous-ready plus guessed1500ms lifetime (F2). Three POSIX cases silently return on win32; no native Windows claim.",
+      "relatedImplementationSeams": [
+        "src/proxy/session/bookkeeping/lifecyclePrepareSql.ts",
+        "src/proxy/session/bookkeeping/lifecyclePublicationSql.ts",
+        "src/proxy/session/bookkeeping/lifecycleTransitionsSql.ts",
+        "src/proxy/session/bookkeeping/lifecycleLeasesSql.ts",
+        "src/proxy/session/bookkeeping/lifecycleReconcileSql.ts",
+        "src/proxy/session/bookkeeping/resources.ts",
+        "src/proxy/sessionLifecycle.ts"
+      ],
+      "findingIds": [
+        "P8-F1",
+        "P8-F2",
+        "P8-G3"
+      ],
+      "againstCurrentMain": "complete changed-hunk comparison; preserves existing hunks apart from F2"
+    },
+    {
+      "index": 73,
+      "path": "src/__tests__/session-lifecycle-windows-gc.test.ts",
+      "status": "complete_semantic_read_only",
+      "extent": "complete changed hunks, relevant retained assertions and implementation seams",
+      "patch": "diffs-github-base/089-src____tests____session-lifecycle-windows-gc.test.ts.patch",
+      "newHunkRanges": [
+        {
+          "start": 1,
+          "length": 10
+        },
+        {
+          "start": 31,
+          "length": 14
+        },
+        {
+          "start": 73,
+          "length": 8
+        },
+        {
+          "start": 98,
+          "length": 7
+        },
+        {
+          "start": 217,
+          "length": 8
+        },
+        {
+          "start": 233,
+          "length": 7
+        },
+        {
+          "start": 241,
+          "length": 7
+        },
+        {
+          "start": 249,
+          "length": 5
+        }
+      ],
+      "headLineCount": 253,
+      "headSha256": "cb45479ddaa282ee448613b6cb348cbf54bcf2e6738c286e569d60b8076a1668",
+      "semanticReview": "Default SDK stand-in child deletion/backlog/kill/incarnation-budget cases run on host platform; Windows-only reused-PID recovery is correctly describe.if gated. Added SQL installer remains off in npm; native win32 storage itself is refused without unverified-filesystem override.",
+      "relatedImplementationSeams": [
+        "src/proxy/session/bookkeeping/lifecycleDeletionSql.ts",
+        "src/proxy/session/bookkeeping/lifecycleGcSql.ts",
+        "src/proxy/sessionLifecycle.ts"
+      ],
+      "findingIds": [
+        "P8-F1",
+        "P8-G3"
+      ],
+      "againstCurrentMain": "complete changed-hunk comparison; preserves existing hunks apart from F2"
+    },
+    {
+      "index": 74,
+      "path": "src/__tests__/session-lifecycle.test.ts",
+      "status": "complete_semantic_read_only",
+      "extent": "complete changed hunks, relevant retained assertions and implementation seams",
+      "patch": "diffs-github-base/090-src____tests____session-lifecycle.test.ts.patch",
+      "newHunkRanges": [
+        {
+          "start": 1,
+          "length": 8
+        },
+        {
+          "start": 50,
+          "length": 9
+        },
+        {
+          "start": 62,
+          "length": 7
+        },
+        {
+          "start": 78,
+          "length": 7
+        },
+        {
+          "start": 117,
+          "length": 7
+        },
+        {
+          "start": 133,
+          "length": 7
+        },
+        {
+          "start": 188,
+          "length": 7
+        },
+        {
+          "start": 216,
+          "length": 7
+        },
+        {
+          "start": 235,
+          "length": 7
+        },
+        {
+          "start": 257,
+          "length": 7
+        },
+        {
+          "start": 273,
+          "length": 9
+        },
+        {
+          "start": 298,
+          "length": 7
+        },
+        {
+          "start": 496,
+          "length": 7
+        },
+        {
+          "start": 514,
+          "length": 7
+        },
+        {
+          "start": 726,
+          "length": 7
+        },
+        {
+          "start": 743,
+          "length": 7
+        },
+        {
+          "start": 763,
+          "length": 7
+        },
+        {
+          "start": 771,
+          "length": 7
+        },
+        {
+          "start": 784,
+          "length": 7
+        },
+        {
+          "start": 798,
+          "length": 7
+        },
+        {
+          "start": 825,
+          "length": 7
+        },
+        {
+          "start": 850,
+          "length": 7
+        },
+        {
+          "start": 863,
+          "length": 7
+        },
+        {
+          "start": 883,
+          "length": 7
+        },
+        {
+          "start": 903,
+          "length": 7
+        },
+        {
+          "start": 1038,
+          "length": 6
+        }
+      ],
+      "headLineCount": 1043,
+      "headSha256": "3ed46b5d9b99da141270f07d7d10ef9a5a584f43629decd813d68ee732ef779e",
+      "semanticReview": "Existing lifecycle state/leases/capacity/pin/publication/GC invariants adapt through real SQL observer/injector. JSON lock/corruption/recovery file tests remain visibly legacy-only; direct new SQL variants address most equivalents. Normal npm leaves installer off (F1).",
+      "relatedImplementationSeams": [
+        "src/proxy/session/bookkeeping/lifecyclePrepareSql.ts",
+        "src/proxy/session/bookkeeping/lifecyclePublicationSql.ts",
+        "src/proxy/session/bookkeeping/lifecycleTransitionsSql.ts",
+        "src/proxy/session/bookkeeping/lifecycleLeasesSql.ts",
+        "src/proxy/session/bookkeeping/lifecycleReconcileSql.ts",
+        "src/proxy/session/bookkeeping/resources.ts",
+        "src/proxy/sessionLifecycle.ts"
+      ],
+      "findingIds": [
+        "P8-F1"
+      ],
+      "againstCurrentMain": "complete changed-hunk comparison; preserves existing hunks apart from F2"
+    },
+    {
+      "index": 75,
+      "path": "src/__tests__/session-publication-lease.test.ts",
+      "status": "complete_semantic_read_only",
+      "extent": "complete changed hunks, relevant retained assertions and implementation seams",
+      "patch": "diffs-github-base/091-src____tests____session-publication-lease.test.ts.patch",
+      "newHunkRanges": [
+        {
+          "start": 1,
+          "length": 5
+        },
+        {
+          "start": 24,
+          "length": 7
+        },
+        {
+          "start": 34,
+          "length": 10
+        },
+        {
+          "start": 109,
+          "length": 8
+        }
+      ],
+      "headLineCount": 141,
+      "headSha256": "5ba76be4a5c23556e4dcc27f2e12a91aa0673f0c11d69c954903a46372c708ec",
+      "semanticReview": "Publication ownership tests retain pre/post-SDK/prepublication protection, CAS/throw retained ownership, writer exclusivity and dead-owner recovery. Actual child now installs env-selected SQL ports, but normal npm never selects that mode (F1).",
+      "relatedImplementationSeams": [
+        "src/proxy/session/bookkeeping/lifecyclePrepareSql.ts",
+        "src/proxy/session/bookkeeping/lifecyclePublicationSql.ts",
+        "src/proxy/session/bookkeeping/lifecycleTransitionsSql.ts",
+        "src/proxy/session/bookkeeping/lifecycleLeasesSql.ts",
+        "src/proxy/session/bookkeeping/lifecycleReconcileSql.ts",
+        "src/proxy/session/bookkeeping/resources.ts",
+        "src/proxy/sessionLifecycle.ts"
+      ],
+      "findingIds": [
+        "P8-F1"
+      ],
+      "againstCurrentMain": "complete changed-hunk comparison; preserves existing hunks apart from F2"
+    },
+    {
+      "index": 76,
+      "path": "src/__tests__/session-store-pruning.test.ts",
+      "status": "complete_semantic_read_only",
+      "extent": "complete changed hunks, relevant retained assertions and implementation seams",
+      "patch": "diffs-github-base/092-src____tests____session-store-pruning.test.ts.patch",
+      "newHunkRanges": [
+        {
+          "start": 10,
+          "length": 7
+        },
+        {
+          "start": 26,
+          "length": 13
+        }
+      ],
+      "headLineCount": 118,
+      "headSha256": "3fa871908dd4e2c95cc7a02c6bfcfd56c06f23574718a267bc15bf09a7c32e22",
+      "semanticReview": "Existing count/clock-backward/LRU/no-read-pruning invariants gain SQL fixture. The old no-TTL case still only reads a newly created session and does not manufacture an aged timestamp; that weak assertion was not introduced here. Normal npm misses SQL variant (F1).",
+      "relatedImplementationSeams": [
+        "src/proxy/session/bookkeeping/sqliteStoreBackend.ts",
+        "src/proxy/session/bookkeeping/storeScope.ts",
+        "src/proxy/session/bookkeeping/storeWriteSql.ts",
+        "src/proxy/session/bookkeeping/storeMaintenanceWriteSql.ts",
+        "src/proxy/session/bookkeeping/storeMutationSupport.ts",
+        "src/proxy/session/bookkeeping/storePublicationSql.ts",
+        "src/proxy/session/bookkeeping/storeSettlementSql.ts",
+        "src/proxy/session/bookkeeping/storeMappingsSql.ts",
+        "src/proxy/session/bookkeeping/storeMaintenanceSql.ts"
+      ],
+      "findingIds": [
+        "P8-F1"
+      ],
+      "againstCurrentMain": "complete changed-hunk comparison; preserves existing hunks apart from F2"
+    },
+    {
+      "index": 77,
+      "path": "src/__tests__/store-mutation-baseline.test.ts",
+      "status": "complete_semantic_read_only",
+      "extent": "complete new file and relevant implementation seams",
+      "patch": "diffs-github-base/095-src____tests____store-mutation-baseline.test.ts.patch",
+      "newHunkRanges": [
+        {
+          "start": 1,
+          "length": 91
+        }
+      ],
+      "headLineCount": 91,
+      "headSha256": "9adfe486a834818be0349920d3b275d01a918c732109f565ddb8a13404b7bfa7",
+      "semanticReview": "Durability baseline traces real lock/temp/inode publish and three sync operations, exact Unicode/unknown field byte preservation, lock contention, rename-error cleanup and legacy best-effort dirflush. Appropriate #1244 JSON cleanup evidence, not SQL contract acceptance.",
+      "relatedImplementationSeams": [
+        "src/proxy/sessionStore.ts",
+        "src/proxy/session/durableFileSystem.ts",
+        "src/__tests__/fixtures/full-document-store-rewrite.ts"
+      ],
+      "findingIds": [],
+      "againstCurrentMain": "new file absent from current main"
+    },
+    {
+      "index": 78,
+      "path": "src/__tests__/store-mutation-loop-lag.test.ts",
+      "status": "complete_semantic_read_only",
+      "extent": "complete changed hunks, relevant retained assertions and implementation seams",
+      "patch": "diffs-github-base/096-src____tests____store-mutation-loop-lag.test.ts.patch",
+      "newHunkRanges": [
+        {
+          "start": 26,
+          "length": 7
+        },
+        {
+          "start": 104,
+          "length": 10
+        }
+      ],
+      "headLineCount": 252,
+      "headSha256": "4b46d543a74011a82f48518478ab9a62953f3ab7e7580888207d016510604b44",
+      "semanticReview": "Loop-lag comparison now measures a real full-document locked/fsynced rewrite, while warm mutation asserts median<75% baseline and no reparsing/unchanged serialization, plus copy-on-write/foreign-writer controls. This concerns existing JSON optimization, not SQL latency evidence.",
+      "relatedImplementationSeams": [
+        "src/proxy/sessionStore.ts",
+        "src/proxy/session/durableFileSystem.ts",
+        "src/__tests__/fixtures/full-document-store-rewrite.ts"
+      ],
+      "findingIds": [],
+      "againstCurrentMain": "complete changed-hunk comparison; preserves existing hunks apart from F2"
+    }
+  ]
+}

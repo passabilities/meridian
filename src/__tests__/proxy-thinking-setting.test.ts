@@ -72,6 +72,7 @@ installMcpToolsMock(() => ({
 }))
 
 const { createProxyServer, clearSessionCache } = await import("../proxy/server")
+const { telemetryStore } = await import("../telemetry")
 
 function createTestApp() {
   const { app } = createProxyServer({ port: 0, host: "127.0.0.1" })
@@ -163,6 +164,71 @@ describe("per-adapter thinking setting — explicit \"disabled\" is authoritativ
     const app = createTestApp()
     await post(app, { ...BASE_BODY, thinking })
     expect(capturedOptions.thinking).toEqual(thinking)
+  })
+
+  it("rejects Haiku 5.5 explicit off and omitted display before any SDK generation in both modes", async () => {
+    for (const stream of [false, true]) {
+      for (const thinking of [{ type: "disabled" }, { type: "adaptive", display: "omitted" }]) {
+        const response = await post(createTestApp(), { ...BASE_BODY, model: "claude-haiku-5-5", stream, thinking })
+        expect(response.status).toBe(400)
+        expect(await response.text()).toContain("cannot reliably honor")
+        expect(capturedOptions).toEqual({})
+      }
+    }
+  })
+
+  it("rejects Haiku 5.5 when an authoritative adapter setting disables thinking", async () => {
+    explicitThinking = "disabled"
+    const response = await post(createTestApp(), { ...BASE_BODY, model: "claude-haiku-5-5", thinking: { type: "adaptive" } })
+    expect(response.status).toBe(400)
+    expect(capturedOptions).toEqual({})
+  })
+
+  it("rejects Haiku 5.5 when beta stripping authoritatively disables thinking", async () => {
+    const saved = process.env.MERIDIAN_BETA_POLICY
+    try {
+      process.env.MERIDIAN_BETA_POLICY = "strip-all"
+      const response = await post(createTestApp(), { ...BASE_BODY, model: "claude-haiku-5-5", thinking: { type: "adaptive" } },
+        { "anthropic-beta": "interleaved-thinking-2025-05-14" })
+      expect(response.status).toBe(400)
+      expect(capturedOptions).toEqual({})
+    } finally {
+      if (saved === undefined) delete process.env.MERIDIAN_BETA_POLICY
+      else process.env.MERIDIAN_BETA_POLICY = saved
+    }
+  })
+
+  it("permits default/adaptive Haiku 5.5 and leaves explicit legacy off usable", async () => {
+    for (const request of [
+      { ...BASE_BODY, model: "claude-haiku-5-5" },
+      { ...BASE_BODY, model: "claude-haiku-5-5", thinking: { type: "adaptive", display: "summarized" } },
+      { ...BASE_BODY, thinking: { type: "disabled" } },
+    ]) {
+      const response = await post(createTestApp(), request)
+      expect(response.status).toBe(200)
+      expect(Object.keys(capturedOptions).length).toBeGreaterThan(0)
+    }
+  })
+
+  it("records effective Haiku pins without relabeling client aliases in both response modes", async () => {
+    const saved = process.env.ANTHROPIC_DEFAULT_HAIKU_MODEL
+    try {
+      for (const stream of [false, true]) {
+        for (const pin of ["claude-haiku-4-5", "claude-haiku-5-5"]) {
+          process.env.ANTHROPIC_DEFAULT_HAIKU_MODEL = pin
+          const response = await post(createTestApp(), { ...BASE_BODY, model: "haiku", stream })
+          expect(response.status).toBe(200)
+          await response.text()
+          const row = telemetryStore.getRecent({ limit: 1 })[0]!
+          expect(row.model).toBe("haiku")
+          expect(row.requestModel).toBe("haiku")
+          expect(row.resolvedModel).toBe(pin)
+        }
+      }
+    } finally {
+      if (saved === undefined) delete process.env.ANTHROPIC_DEFAULT_HAIKU_MODEL
+      else process.env.ANTHROPIC_DEFAULT_HAIKU_MODEL = saved
+    }
   })
 
   it("\"adaptive\" applies as a default only when the client sent nothing", async () => {

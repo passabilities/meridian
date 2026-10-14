@@ -45,7 +45,8 @@ CREATE TABLE IF NOT EXISTS metrics (
   route_kind           TEXT,
   route_group_id       TEXT,
   route_attempt        INTEGER,
-  route_refused_bucket TEXT
+  route_refused_bucket TEXT,
+  resolved_model       TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_metrics_ts    ON metrics(timestamp);
 CREATE INDEX IF NOT EXISTS idx_metrics_model ON metrics(model);
@@ -68,6 +69,7 @@ const METRICS_MIGRATIONS = [
   "ALTER TABLE metrics ADD COLUMN route_group_id TEXT",
   "ALTER TABLE metrics ADD COLUMN route_attempt INTEGER",
   "ALTER TABLE metrics ADD COLUMN route_refused_bucket TEXT",
+  "ALTER TABLE metrics ADD COLUMN resolved_model TEXT",
 ]
 
 const LOGS_SCHEMA = `
@@ -85,8 +87,21 @@ CREATE INDEX IF NOT EXISTS idx_logs_cat ON diagnostic_logs(category);
 
 const CLEANUP_INTERVAL = 1000
 
+/**
+ * How long a write waits for another connection's write lock. libsql's own
+ * default is zero, so a row recorded while anything else writes the file - a
+ * second process importing history, an operator's sqlite3 - fails at once and
+ * is dropped, and a migration below fails as if its column already existed.
+ * The driver is synchronous, so the wait blocks the event loop: long enough
+ * for another connection's ordinary transaction. This cap applies to each
+ * write, including diagnostic logs; a held lock can therefore stall every
+ * stream for one second per attempted write and still drop that write.
+ */
+const BUSY_TIMEOUT_MS = 1000
+
 function openDatabase(dbPath: string): Database.Database {
   const db = new Database(dbPath)
+  db.pragma(`busy_timeout = ${BUSY_TIMEOUT_MS}`)
   db.pragma("journal_mode = WAL")
   db.pragma("synchronous = NORMAL")
   db.exec(METRICS_SCHEMA)
@@ -115,7 +130,7 @@ class SqliteTelemetryStore implements ITelemetryStore {
 
     this.insertStmt = db.prepare(`
       INSERT INTO metrics (
-        request_id, timestamp, adapter, request_source, model, request_model, mode,
+        request_id, timestamp, adapter, request_source, model, request_model, resolved_model, mode,
         is_resume, is_passthrough, lineage_type,
         has_deferred_tools, deferred_tool_count, tool_count, discovered_tools, session_discovered_count,
         message_count, sdk_session_id,
@@ -125,7 +140,7 @@ class SqliteTelemetryStore implements ITelemetryStore {
         cache_creation_input_tokens, cache_hit_rate, profile_id, envelope_violations,
         route_kind, route_group_id, route_attempt, route_refused_bucket
       ) VALUES (
-        @requestId, @timestamp, @adapter, @requestSource, @model, @requestModel, @mode,
+        @requestId, @timestamp, @adapter, @requestSource, @model, @requestModel, @resolvedModel, @mode,
         @isResume, @isPassthrough, @lineageType,
         @hasDeferredTools, @deferredToolCount, @toolCount, @discoveredTools, @sessionDiscoveredCount,
         @messageCount, @sdkSessionId,
@@ -152,6 +167,7 @@ class SqliteTelemetryStore implements ITelemetryStore {
         requestSource: metric.requestSource ?? null,
         model: metric.model,
         requestModel: metric.requestModel ?? null,
+        resolvedModel: metric.resolvedModel ?? null,
         mode: metric.mode,
         isResume: metric.isResume ? 1 : 0,
         isPassthrough: metric.isPassthrough ? 1 : 0,
@@ -387,6 +403,7 @@ function rowToMetric(r: Record<string, unknown>): RequestMetric {
     requestSource: (r.request_source as string) ?? undefined,
     model: r.model as string,
     requestModel: (r.request_model as string) ?? undefined,
+    resolvedModel: (r.resolved_model as string) ?? undefined,
     mode: r.mode as RequestMetric["mode"],
     isResume: r.is_resume === 1,
     isPassthrough: r.is_passthrough === 1,

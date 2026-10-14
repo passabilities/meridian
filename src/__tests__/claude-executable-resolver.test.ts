@@ -7,9 +7,17 @@
  * Covers the issue space documented in #417 (Windows resolver) and #445
  * (postinstall-broken stub).
  */
-import { describe, it, expect } from "bun:test"
-import { join, dirname } from "path"
-import { resolveClaudeExecutable, resolveClaudeExecutableWithSource, resolveClaudeExecutableSync } from "../proxy/models"
+import { describe, it, expect, beforeAll, afterAll } from "bun:test"
+import { chmod, mkdir, mkdtemp, rm, writeFile } from "node:fs/promises"
+import { tmpdir } from "node:os"
+import { join, dirname, delimiter } from "path"
+import {
+  probeClaudeVersion,
+  probeClaudeVersionSync,
+  resolveClaudeExecutable,
+  resolveClaudeExecutableWithSource,
+  resolveClaudeExecutableSync,
+} from "../proxy/models"
 
 // `path.join` produces backslashed paths on Windows and slash-separated paths
 // on POSIX. Tests use `J(...)` and `BIN(pkgJson, ...rest)` everywhere a path
@@ -336,33 +344,96 @@ describe("resolveClaudeExecutable: legacy SDK cli.js (bun only)", () => {
 })
 
 describe("resolveClaudeExecutable: priority ordering", () => {
-  it("keeps the packaged fallback when the PATH entry cannot run Claude", async () => {
+  for (const sync of [false, true]) {
+    it(`shares the lookup/probe budget across Windows candidates (${sync ? "sync" : "async"})`, async () => {
+      let now = 0
+      const calls: Array<{ candidate: string; timeoutMs: number | undefined }> = []
+      const warnings: string[] = []
+      const output = "C:\\First\\claude.exe\nC:\\Second\\claude.exe\nC:\\Third\\claude.exe\n"
+      const lookup = () => { now += 2_000; return output }
+      const probe = (candidate: string, timeoutMs?: number) => {
+        calls.push({ candidate, timeoutMs })
+        now += calls.length === 1 ? 30_000 : (timeoutMs ?? 45_000)
+        return { usable: false as const, reason: "no answer" }
+      }
+      const deps = makeDeps({
+        platform: "win32", existsSync: () => true,
+        statSync: () => ({ size: 200_000_000 }),
+        resolvePackage: () => "/m/cc/package.json",
+        exec: async () => ({ stdout: lookup() }),
+        execLookupSync: lookup,
+        probeClaude: async (candidate, timeoutMs) => probe(candidate, timeoutMs),
+        probeClaudeSync: probe,
+        now: () => now,
+        warn: message => warnings.push(message),
+      })
+      const resolved = sync ? resolveClaudeExecutableSync(deps) : await resolveClaudeExecutableWithSource(deps)
+      expect(resolved?.source).toBe("bundled")
+      expect(calls).toEqual([
+        { candidate: "C:\\First\\claude.exe", timeoutMs: 43_000 },
+        { candidate: "C:\\Second\\claude.exe", timeoutMs: 13_000 },
+      ])
+      expect(now).toBe(45_000)
+      expect(warnings.at(-1)).toContain("45s PATH lookup/probe budget is exhausted")
+    })
+  }
+
+  it("keeps the packaged fallback when the PATH entry cannot run Claude, and says why", async () => {
     const bundledPkg = "/m/cc/package.json"
+    const warnings: string[] = []
+    const refused = { usable: false as const, reason: "`--version` exited with code 1" }
     const deps = makeDeps({
       existsSync: () => true,
       statSync: () => ({ size: 200_000_000 }),
       resolvePackage: () => bundledPkg,
       exec: async () => ({ stdout: "/mise/shims/claude\n" }),
       execLookupSync: () => "/mise/shims/claude\n",
-      probeClaude: async candidate => { expect(candidate).toBe("/mise/shims/claude"); return false },
-      probeClaudeSync: candidate => { expect(candidate).toBe("/mise/shims/claude"); return false },
+      probeClaude: async candidate => { expect(candidate).toBe("/mise/shims/claude"); return refused },
+      probeClaudeSync: candidate => { expect(candidate).toBe("/mise/shims/claude"); return refused },
+      warn: message => { warnings.push(message) },
     })
     const expected = { path: BIN(bundledPkg, "bin", "claude.exe"), source: "bundled" as const }
     expect(await resolveClaudeExecutableWithSource(deps)).toEqual(expected)
     expect(resolveClaudeExecutableSync(deps)).toEqual(expected)
+    const passedOver = "[PROXY] Not using the claude found on PATH at /mise/shims/claude: `--version` exited with code 1. " +
+      "Falling back to the next Claude Code installation; set MERIDIAN_CLAUDE_PATH to choose one explicitly."
+    expect(warnings).toEqual([passedOver, passedOver])
   })
 
   it("tries the next Windows PATH candidate after a broken launcher", async () => {
     const output = "C:\\Broken\\claude.cmd\r\nC:\\Native\\claude.exe\r\n"
+    const verdict = (candidate: string) => candidate.endsWith(".exe")
+      ? { usable: true as const }
+      : { usable: false as const, reason: "`--version` exited with code 1" }
     const deps = makeDeps({
       platform: "win32", existsSync: () => true,
       exec: async () => ({ stdout: output }), execLookupSync: () => output,
-      probeClaude: async candidate => candidate.endsWith(".exe"),
-      probeClaudeSync: candidate => candidate.endsWith(".exe"),
+      probeClaude: async candidate => verdict(candidate),
+      probeClaudeSync: verdict,
     })
     const expected = { path: "C:\\Native\\claude.exe", source: "path-lookup" as const }
     expect(await resolveClaudeExecutableWithSource(deps)).toEqual(expected)
     expect(resolveClaudeExecutableSync(deps)).toEqual(expected)
+  })
+
+  it("keeps a PATH entry that was slow to answer, and says how long it took", async () => {
+    const warnings: string[] = []
+    const slow = { usable: true as const, elapsedMs: 31_000 }
+    const deps = makeDeps({
+      existsSync: () => true,
+      statSync: () => ({ size: 200_000_000 }),
+      resolvePackage: () => "/m/cc/package.json",
+      exec: async () => ({ stdout: "/opt/homebrew/bin/claude\n" }),
+      execLookupSync: () => "/opt/homebrew/bin/claude\n",
+      probeClaude: async () => slow,
+      probeClaudeSync: () => slow,
+      warn: message => { warnings.push(message) },
+    })
+    const expected = { path: "/opt/homebrew/bin/claude", source: "path-lookup" as const }
+    expect(await resolveClaudeExecutableWithSource(deps)).toEqual(expected)
+    expect(resolveClaudeExecutableSync(deps)).toEqual(expected)
+    const tookLong = "[PROXY] The claude found on PATH at /opt/homebrew/bin/claude took 31.0s to answer `--version`, likely a cold start; using it."
+    expect(warnings).toEqual([tookLong, tookLong])
   })
 
   it("env override beats every other source", async () => {
@@ -418,6 +489,89 @@ describe("resolveClaudeExecutable: priority ordering", () => {
       exec: async () => ({ stdout: "" }),
     })
     expect(await resolveClaudeExecutable(deps)).toBeNull()
+  })
+})
+
+// ---------------------------------------------------------------------------
+// The operator's executable preference (Settings, Claude Code Executable).
+// System is the order above; bundled puts the packaged copy first; custom
+// runs a chosen path. Both resolvers must agree, so the profile CLI and the
+// server run the same binary.
+// ---------------------------------------------------------------------------
+
+describe("resolveClaudeExecutable: executable preference", () => {
+  const bundledPkg = "/m/cc/package.json"
+  const bundledBin = BIN(bundledPkg, "bin", "claude.exe")
+  const onPath = "/usr/local/bin/claude"
+  /** A real bundled binary and a usable `claude` on PATH, so only the preference decides. */
+  const bothAvailable = (overrides: Partial<NonNullable<Deps>> = {}) => makeDeps({
+    resolvePackage: (s) => {
+      if (s === "@anthropic-ai/claude-code/package.json") return bundledPkg
+      throw new Error("not configured")
+    },
+    existsSync: () => true,
+    statSync: () => ({ size: 213_404_000 }),
+    exec: async () => ({ stdout: `${onPath}\n` }),
+    execLookupSync: () => `${onPath}\n`,
+    ...overrides,
+  })
+
+  it("system, the default, prefers the PATH installation", async () => {
+    const expected = { path: onPath, source: "path-lookup" as const }
+    for (const deps of [bothAvailable(), bothAvailable({ preference: () => ({ mode: "system" }) })]) {
+      expect(await resolveClaudeExecutableWithSource(deps)).toEqual(expected)
+      expect(resolveClaudeExecutableSync(deps)).toEqual(expected)
+    }
+  })
+
+  it("bundled prefers the packaged copy over a usable PATH installation", async () => {
+    const deps = bothAvailable({ preference: () => ({ mode: "bundled" }) })
+    const expected = { path: bundledBin, source: "bundled" as const }
+    expect(await resolveClaudeExecutableWithSource(deps)).toEqual(expected)
+    expect(resolveClaudeExecutableSync(deps)).toEqual(expected)
+  })
+
+  it("bundled falls back to PATH when no packaged copy is installed", async () => {
+    const deps = bothAvailable({
+      preference: () => ({ mode: "bundled" }),
+      resolvePackage: () => { throw new Error("not installed") },
+    })
+    const expected = { path: onPath, source: "path-lookup" as const }
+    expect(await resolveClaudeExecutableWithSource(deps)).toEqual(expected)
+    expect(resolveClaudeExecutableSync(deps)).toEqual(expected)
+  })
+
+  it("custom runs the chosen path ahead of PATH and the packaged copy", async () => {
+    const deps = bothAvailable({ preference: () => ({ mode: "custom", customPath: "/opt/claude-next/claude" }) })
+    const expected = { path: "/opt/claude-next/claude", source: "custom" as const }
+    expect(await resolveClaudeExecutableWithSource(deps)).toEqual(expected)
+    expect(resolveClaudeExecutableSync(deps)).toEqual(expected)
+  })
+
+  it("a custom path that has gone falls back to the system order, and says so", async () => {
+    const warnings: string[] = []
+    const deps = bothAvailable({
+      preference: () => ({ mode: "custom", customPath: "/opt/removed/claude" }),
+      existsSync: p => p !== "/opt/removed/claude",
+      warn: message => warnings.push(message),
+    })
+    const expected = { path: onPath, source: "path-lookup" as const }
+    expect(await resolveClaudeExecutableWithSource(deps)).toEqual(expected)
+    expect(resolveClaudeExecutableSync(deps)).toEqual(expected)
+    expect(warnings).toHaveLength(2)
+    expect(warnings[0]).toContain("/opt/removed/claude")
+  })
+
+  it("MERIDIAN_CLAUDE_PATH outranks every preference", async () => {
+    for (const preference of [{ mode: "bundled" as const }, { mode: "custom" as const, customPath: "/opt/claude-next/claude" }]) {
+      const deps = bothAvailable({
+        preference: () => preference,
+        envGet: n => (n === "MERIDIAN_CLAUDE_PATH" ? "/explicit/claude" : undefined),
+      })
+      const expected = { path: "/explicit/claude", source: "env" as const }
+      expect(await resolveClaudeExecutableWithSource(deps)).toEqual(expected)
+      expect(resolveClaudeExecutableSync(deps)).toEqual(expected)
+    }
   })
 })
 
@@ -647,5 +801,66 @@ describe("resolveClaudeExecutableSync", () => {
       path: expectedBin,
       source: "bundled",
     })
+  })
+})
+
+// ---------------------------------------------------------------------------
+// PATH candidates that are real processes: what `--version` takes and says
+// ---------------------------------------------------------------------------
+
+describe.skipIf(process.platform === "win32")("PATH probe against a real binary", () => {
+  let dir = ""
+  beforeAll(async () => { dir = await mkdtemp(join(tmpdir(), "meridian-claude-probe-test-")) })
+  afterAll(async () => { await rm(dir, { recursive: true, force: true }) })
+
+  async function script(path: string, body: string, mode = 0o755): Promise<string> {
+    await writeFile(path, `#!/bin/sh\n${body}\n`)
+    await chmod(path, mode)
+    return path
+  }
+
+  it("keeps a claude on PATH that takes longer than 2s to answer --version, in both resolvers", async () => {
+    // A ~220 MB binary paging itself back in under memory pressure answers
+    // late but correctly; the installation chosen must not depend on that.
+    const binDir = join(dir, "cold-bin")
+    await mkdir(binDir)
+    const claude = await script(join(binDir, "claude"), 'sleep 2.5\necho "2.1.284 (Claude Code)"')
+    const savedPath = process.env.PATH
+    process.env.PATH = `${binDir}${delimiter}${savedPath ?? ""}`
+    try {
+      const expected = { path: claude, source: "path-lookup" as const }
+      expect(await resolveClaudeExecutableWithSource()).toEqual(expected)
+      expect(resolveClaudeExecutableSync()).toEqual(expected)
+    } finally {
+      process.env.PATH = savedPath
+    }
+  }, 20_000)
+
+  it("says why a candidate is passed over: no answer in time, a failed run, or output that is not Claude Code", async () => {
+    const hung = await script(join(dir, "hung"), "exec sleep 10")
+    const failing = await script(join(dir, "failing"), "exit 3")
+    const shim = await script(join(dir, "shim"), "echo 'mise ERROR no version is set for claude'")
+    const silent = await script(join(dir, "silent"), "true")
+    const notExecutable = await script(join(dir, "not-executable"), "true", 0o644)
+    const probes = [
+      probeClaudeVersion,
+      async (candidate: string, timeoutMs?: number) => probeClaudeVersionSync(candidate, timeoutMs),
+    ]
+    for (const probe of probes) {
+      expect(await probe(hung, 300)).toEqual({ usable: false, reason: "no answer to `--version` within 0.3s" })
+      expect(await probe(failing)).toEqual({ usable: false, reason: "`--version` exited with code 3" })
+      expect(await probe(shim)).toEqual({
+        usable: false,
+        reason: '`--version` printed "mise ERROR no version is set for claude", which is not a Claude Code version',
+      })
+      expect(await probe(silent)).toEqual({ usable: false, reason: "`--version` printed nothing" })
+      expect(await probe(notExecutable)).toEqual({ usable: false, reason: "it could not be run (EACCES)" })
+    }
+  })
+
+  it("accepts a candidate that answers like Claude Code and reports how long it took", async () => {
+    const claude = await script(join(dir, "claude-ok"), 'echo "2.1.284 (Claude Code)"')
+    expect(await probeClaudeVersion(claude)).toEqual({ usable: true, elapsedMs: expect.any(Number) })
+    expect(probeClaudeVersionSync(claude)).toEqual({ usable: true, elapsedMs: expect.any(Number) })
   })
 })

@@ -1,0 +1,284 @@
+{
+  "result": "PASS",
+  "scope": "Polytoken 0.8.21 / actual Haiku 4.5 / Darwin arm64; source build with maintainer title isolation",
+  "statuses": {
+    "200": 35,
+    "500": 3
+  },
+  "cancelledTitles": [
+    "owned-174bff24-ca34-4969-aa71-2751d759a290",
+    "owned-656c6556-ca75-4fbd-9a3a-a1d8c06caa59",
+    "owned-0366cc18-ebc4-4547-b6bb-e36a80b5c7b7"
+  ],
+  "conversations": [
+    {
+      "kind": "working",
+      "requests": 8,
+      "resumes": 7,
+      "sdkSessions": [
+        "046dd895-d2d6-4a36-aec3-047d7d34b9ec",
+        "256f6868-3c16-4d57-8026-c924992d3b63",
+        "2a07f1d4-cd61-4f45-9f42-d3cd40c7beea",
+        "3165f8cb-4d87-472a-92ab-95245ddf0f33",
+        "4a9879ef-51ad-43ba-b67c-58d3aeb637ad",
+        "85ed803d-1acf-460b-ba54-4f78919d43f1",
+        "e7c48422-f927-47e3-9ba4-1bfef675b7b9",
+        "faa2b9f8-240f-4654-9659-aa1cb996d370"
+      ]
+    },
+    {
+      "kind": "working",
+      "requests": 6,
+      "resumes": 5,
+      "sdkSessions": [
+        "030f4de2-9a3d-41bc-b3b0-f27bbd7a81f1",
+        "7533b29a-7975-47be-85f2-dbfca8cea9d1",
+        "8c622454-2396-480e-bca7-6c2e37ff229b",
+        "95d65d48-6329-478b-8c2c-30e3398d4a88",
+        "9c7a9bc8-555b-405a-8011-c2d03b6d0397",
+        "e04f048c-fb97-4db0-b09f-fa43bf101388"
+      ]
+    },
+    {
+      "kind": "native-title",
+      "requests": 2,
+      "resumes": 0,
+      "sdkSessions": [
+        "29256bc6-2ae7-44bf-bafd-b387dcee73cf",
+        "6be61062-e9c3-4770-b9b8-50b91c500dcc"
+      ]
+    },
+    {
+      "kind": "working",
+      "requests": 6,
+      "resumes": 5,
+      "sdkSessions": [
+        "a8ba78cd-5b7e-42a0-ab32-1cbf46985542",
+        "d256350e-9947-4362-8ece-30d1a4ac3a3a",
+        "d41de1a8-783f-4092-8cea-14ab544a5fcc",
+        "ed139b30-658d-4fbd-9eb5-f51aa1a27ddf",
+        "eee7cccf-5092-455f-afb2-e230bc8eb99e",
+        "fd6ec333-65cb-4e41-af1d-ba0667358dde"
+      ]
+    },
+    {
+      "kind": "working",
+      "requests": 5,
+      "resumes": 4,
+      "sdkSessions": [
+        "0c8c377a-d4b8-4906-bf75-97b4630bd51b",
+        "40a03002-e7f0-4381-bb3f-2277ef8b127f",
+        "84c67123-4161-4bcc-b208-7ed91543c02c",
+        "df98c2c0-66ea-4c67-a958-879455da8335",
+        "f34c10dc-b941-4150-8f57-2a26b5301535"
+      ]
+    },
+    {
+      "kind": "working",
+      "requests": 5,
+      "resumes": 4,
+      "sdkSessions": [
+        "116b9480-e8f2-4f17-ab97-6f3ceb2308e4",
+        "2279b18b-e47f-4e46-aedf-4f096daaed6b",
+        "3c6f3728-aa54-4c07-86b8-b50051ead524",
+        "d98b0fdf-6c65-4758-8454-9aa4e1f69bb3",
+        "fcc51711-f3fc-4baf-a7ec-40254c6d880f"
+      ]
+    },
+    {
+      "kind": "working",
+      "requests": 5,
+      "resumes": 4,
+      "sdkSessions": [
+        "26c4666d-9c03-4148-985c-0dd1ed23f9e2",
+        "407d70b7-ea71-4b0d-bc66-4558f2019e01",
+        "7f4c2b57-1bc4-4549-9799-055c115d9061",
+        "943f022d-c3f4-4d95-aba8-b4b3576d0521",
+        "9783a2c6-2329-46d9-807d-5126b6a17084"
+      ]
+    },
+    {
+      "kind": "native-title",
+      "requests": 1,
+      "resumes": 0,
+      "sdkSessions": [
+        "6438e51f-47a3-4c9a-99aa-1c6cfeca8921"
+      ]
+    }
+  ],
+  "joined": true,
+  "readTurns": [
+    3,
+    3,
+    3,
+    3,
+    3,
+    3
+  ],
+  "limitations": [
+    "Native title requests were cancelled by actual client; this does not prove completed title generation."
+  ],
+  "priorFailures": [
+    "Initial model execution spawned six children instead of four.",
+    "Two attempts received revoked-token 401; current access-only credential was re-read, never refreshed.",
+    "Observer data listener consumed request body; corrected to passive event observation.",
+    "Final-current-main attempt encountered revoked credential before model work.",
+    "Ambiguous batch prompt launched count=2 twice; corrected to two explicit count=1 calls.",
+    "Workers ended with text-only readiness after two reads; required explicit completion schema and uninterrupted tool rounds."
+  ],
+  "reportSha256": "8df7f55dfef7808db67fcca3ce4f5dc79a93b69eb8073b4ee54141ff07e80d84",
+  "final": {
+    "testedHead": "ccb16eb9",
+    "result": "PASS",
+    "clientExit": 0,
+    "joined": true,
+    "statuses": {
+      "200": 32,
+      "500": 2
+    },
+    "conversations": [
+      {
+        "kind": "working",
+        "requests": 6,
+        "resumes": 5,
+        "sdkSessions": [
+          "7d98aa7a-fc5d-4e61-8146-f78539f591a2",
+          "0c92dc10-f9db-4bdf-8d7b-f04ad390a9aa",
+          "b3ba0206-9b5d-49c4-a4f9-990d0d0d3d5b",
+          "0d11e1b6-ab2c-4d03-953a-48c00369e4a6",
+          "2b72e1bd-d2d6-4953-a873-f82b05463655",
+          "bdf8121f-3c83-40b5-8ded-7880230ada12"
+        ]
+      },
+      {
+        "kind": "working",
+        "requests": 6,
+        "resumes": 5,
+        "sdkSessions": [
+          "6e33d8c1-4c01-49ff-9114-3ebe9299ca09",
+          "079c4c64-9580-435d-a526-e032076e8f37",
+          "6f74b60d-2b49-4482-a84a-a05e254d8478",
+          "51357439-86b2-4858-9faf-81c2d7e49b13",
+          "9ef3d88b-a695-4313-a0fa-c93e8e85c332",
+          "1c904ed5-538b-4988-b557-349a7d7599b1"
+        ]
+      },
+      {
+        "kind": "working",
+        "requests": 5,
+        "resumes": 4,
+        "sdkSessions": [
+          "c1df15de-780a-4d3f-90bc-d68508a3f8a7",
+          "6333d7d2-b953-4c55-839c-239aa0defe68",
+          "d0bd9ea5-5951-4ce3-941b-fb905666ac31",
+          "928fbcf3-aa42-4c6e-ac31-46d665366a7c",
+          "83b8864f-c0e4-4cf1-b19c-32241551dc55"
+        ]
+      },
+      {
+        "kind": "working",
+        "requests": 5,
+        "resumes": 4,
+        "sdkSessions": [
+          "51a145ad-1661-4d72-95f3-57828d6ca0b9",
+          "ed36ead0-7b47-48ef-a76b-7702ea613114",
+          "79feab29-1c26-4c71-92fd-7e62c613feb7",
+          "7749d0fd-5b46-4dba-90ce-b7d147dc6f78",
+          "2fa6b45f-6675-45f2-a289-179ecf017aff"
+        ]
+      },
+      {
+        "kind": "working",
+        "requests": 5,
+        "resumes": 4,
+        "sdkSessions": [
+          "d5f54a1b-40f9-4538-ba35-4c4b51e3b1a1",
+          "06f367d3-5900-44db-8480-90208fe0ed0b",
+          "92a60207-4370-4632-931a-b0d9df724741",
+          "3e3d45a6-442a-4063-9d8e-3ce41826e2ad",
+          "73e449c1-c81e-4b68-9f6e-3e583a987dbf"
+        ]
+      },
+      {
+        "kind": "working",
+        "requests": 5,
+        "resumes": 4,
+        "sdkSessions": [
+          "b2f778b8-b470-47e6-982e-f5423993b95f",
+          "e78abcd3-a0ef-4dee-b294-67813ac05d70",
+          "05a7588f-7138-49e3-8c68-063373256f40",
+          "e2fead3c-44bd-4392-a583-4895e42f1085",
+          "4671a7c4-1735-4734-a28e-d89156a8284d"
+        ]
+      },
+      {
+        "kind": "native-title",
+        "requests": 1,
+        "resumes": 0,
+        "sdkSessions": [
+          "7c7f2f12-a1f3-4514-a151-996655a0a6e6"
+        ]
+      },
+      {
+        "kind": "native-title",
+        "requests": 1,
+        "resumes": 0,
+        "sdkSessions": [
+          "6cc2b1ea-7b89-44ed-a5b1-25b2bceaadd3"
+        ]
+      }
+    ],
+    "cancelledTitles": [
+      "owned-26ad888a-a023-4f42-909c-c6f798778e53",
+      "owned-f958ad89-32ae-4a19-a8c2-aba4d01a5727"
+    ],
+    "readEvidence": [
+      {
+        "session": "0dcypf-slit",
+        "transcript": "subagent-live-worker_session-a-beta.jsonl",
+        "read_turns": 3,
+        "successful_reads": 3
+      },
+      {
+        "session": "0dcypf-slit",
+        "transcript": "log.jsonl",
+        "read_turns": 3,
+        "successful_reads": 3
+      },
+      {
+        "session": "0dcypf-slit",
+        "transcript": "subagent-live-worker_session-a-alpha.jsonl",
+        "read_turns": 3,
+        "successful_reads": 3
+      },
+      {
+        "session": "0dcypf-wiry",
+        "transcript": "log.jsonl",
+        "read_turns": 3,
+        "successful_reads": 3
+      },
+      {
+        "session": "0dcypf-wiry",
+        "transcript": "subagent-live-worker_session-b-beta.jsonl",
+        "read_turns": 3,
+        "successful_reads": 3
+      },
+      {
+        "session": "0dcypf-wiry",
+        "transcript": "subagent-live-worker_session-b-alpha.jsonl",
+        "read_turns": 3,
+        "successful_reads": 3
+      }
+    ],
+    "fullLocal": {
+      "pass": 5622,
+      "skip": 35,
+      "fail": 0,
+      "typecheck": "PASS",
+      "build": "PASS"
+    },
+    "reportSha256": "584054f9d7f9544d7817a47e61d50fe3815b3fe3bd1b1bf13fecb0eedc889bd5",
+    "harnessSha256": "7bbe40895822eebdd26531e539b88bb956200db1f9546ad771a563189d79f1f8",
+    "clientHarnessSha256": "be271f7ddda87b90ce210ea9683a8ff0b47d702e7d1d2921011d9c4703ce2076"
+  }
+}

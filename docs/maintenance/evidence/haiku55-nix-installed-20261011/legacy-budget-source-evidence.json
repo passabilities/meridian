@@ -1,0 +1,9 @@
+{
+  "base": "e68b9bcadd7597d16724a3655b7322cd02a965ad",
+  "head": "34bcb02820c69fc8c3932c5974dbb457b53eb76d",
+  "unchangedSdkThinking": "export function sdkThinking(thinking: NonNullable<QueryContext[\"thinking\"]>): ThinkingConfig {\n  if (thinking.type === \"disabled\") return thinking\n  const { display, ...rest } = thinking\n  if (!isCliThinkingDisplay(display)) return rest\n  // NOTE: the SDK types `display` as summarized | omitted but forwards it to\n  // the CLI verbatim, and the bundled CLI also accepts \"highlights\".\n  return { ...rest, display } as ThinkingConfig\n}\n",
+  "unchangedHttpThinkingAssignment": "let thinking: QueryContext['thinking'] | undefined = body.thinking || undefined",
+  "baseQuerySha256": "c132905434af6a1a04174ba640df65bd9ace762876dbe3285e867e434b5bf09a",
+  "headQuerySha256": "65cb4d9be0a278863b5d640a6a8594ab9710fbe95b9bc519302254af62eaf49f",
+  "explanation": "HTTP thinking object is forwarded with no budget_tokens-to-budgetTokens translation at the unchanged builder boundary. SDK-supported budgetTokens=2048 is explicitly qualified by the final installed-native legacy control; snake_case preservation is NOT claimed."
+}

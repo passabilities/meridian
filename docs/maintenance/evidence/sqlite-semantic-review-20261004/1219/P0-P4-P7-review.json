@@ -1,0 +1,238 @@
+{
+  "source_head": "0bf16b0d83f2fcc8c9b55df06bf20f97d763a23f",
+  "current_main": "8e1c8bf738d7372ded01f28e99d6ec167acaf76f",
+  "coverage": [
+    {
+      "path": "scripts/e2e-sse-quota-failover-heartbeat.mjs",
+      "packet": "P0 parent SSE",
+      "patch": "diffs-github-base/012-scripts__e2e-sse-quota-failover-heartbeat.mjs.patch",
+      "status": "captured completely; packet-level review still required",
+      "source_sha256": "7600b6c7fa3c26dd0e69318a84847ee9031478c2bf05eadf14066db504b75ecf",
+      "review_status": "previous complete #1214 review plus exact parent/source delta review",
+      "proof_scope": "four files byte-equal to previously reviewed parent; sse-idle-relay 39-line negative control reviewed here; #1273 live gates still open"
+    },
+    {
+      "path": "src/__tests__/priority-routing-integration.test.ts",
+      "packet": "P0 parent SSE",
+      "patch": "diffs-github-base/082-src____tests____priority-routing-integration.test.ts.patch",
+      "status": "captured completely; packet-level review still required",
+      "source_sha256": "22310267990173153dec57c254a30e68e9b690deb76ceb2931748e61e395153c",
+      "review_status": "previous complete #1214 review plus exact parent/source delta review",
+      "proof_scope": "four files byte-equal to previously reviewed parent; sse-idle-relay 39-line negative control reviewed here; #1273 live gates still open"
+    },
+    {
+      "path": "src/__tests__/sse-failure-sniff.test.ts",
+      "packet": "P0 parent SSE",
+      "patch": "diffs-github-base/093-src____tests____sse-failure-sniff.test.ts.patch",
+      "status": "captured completely; packet-level review still required",
+      "source_sha256": "78d338043655812cc595d3a0378fce9c67e57f1b8b0e0a0da754e975ce717fe0",
+      "review_status": "previous complete #1214 review plus exact parent/source delta review",
+      "proof_scope": "four files byte-equal to previously reviewed parent; sse-idle-relay 39-line negative control reviewed here; #1273 live gates still open"
+    },
+    {
+      "path": "src/__tests__/sse-idle-relay.test.ts",
+      "packet": "P0 parent SSE",
+      "patch": "diffs-github-base/094-src____tests____sse-idle-relay.test.ts.patch",
+      "status": "captured completely; packet-level review still required",
+      "source_sha256": "74a8676e6c1f8523444d9291e5b04d7782c27381ab2f4eaa700eca1615296307",
+      "review_status": "previous complete #1214 review plus exact parent/source delta review",
+      "proof_scope": "four files byte-equal to previously reviewed parent; sse-idle-relay 39-line negative control reviewed here; #1273 live gates still open"
+    },
+    {
+      "path": "src/proxy/sseFailureSniff.ts",
+      "packet": "P0 parent SSE",
+      "patch": "diffs-github-base/175-src__proxy__sseFailureSniff.ts.patch",
+      "status": "captured completely; packet-level review still required",
+      "source_sha256": "fac2ab8fb2602f8262cd22d6d90ec8cc37aa3e8b43f0539431dffdff5f2a6199",
+      "review_status": "previous complete #1214 review plus exact parent/source delta review",
+      "proof_scope": "four files byte-equal to previously reviewed parent; sse-idle-relay 39-line negative control reviewed here; #1273 live gates still open"
+    },
+    {
+      "path": "src/proxy/server.ts",
+      "packet": "P4 server startup and embedding",
+      "patch": "diffs-github-base/097-src__proxy__server.ts.patch",
+      "status": "captured completely; packet-level review still required",
+      "source_sha256": "8dce4d5fe344799222ad0d19f3eaaad3a2c23018a7fa87a2b3d7e74c3c3d0be4",
+      "review_status": "complete semantic hunk review",
+      "proof_scope": "read-only source/callers and current-main comparison; runtime proof only where separately recorded"
+    },
+    {
+      "path": "src/proxy/session/bookkeeping/jsonAuthority.ts",
+      "packet": "P4 server startup and embedding",
+      "patch": "diffs-github-base/115-src__proxy__session__bookkeeping__jsonAuthority.ts.patch",
+      "status": "captured completely; packet-level review still required",
+      "source_sha256": "afae3a0c6ae9096edcd9d97b555be5cd687ffcbd7050495b9825ab4bc6126b58",
+      "review_status": "complete semantic hunk review",
+      "proof_scope": "read-only source/callers and current-main comparison; runtime proof only where separately recorded"
+    },
+    {
+      "path": "src/proxy/session/bookkeeping/runtime.ts",
+      "packet": "P4 server startup and embedding",
+      "patch": "diffs-github-base/149-src__proxy__session__bookkeeping__runtime.ts.patch",
+      "status": "captured completely; packet-level review still required",
+      "source_sha256": "7702fed0a2e4d7da406c493c566836e8ba52d54aa71b33b0eb21c6e0ba46e44b",
+      "review_status": "complete semantic hunk review",
+      "proof_scope": "read-only source/callers and current-main comparison; runtime proof only where separately recorded"
+    },
+    {
+      "path": "src/proxy/session/bookkeeping/startupMaintenance.ts",
+      "packet": "P4 server startup and embedding",
+      "patch": "diffs-github-base/153-src__proxy__session__bookkeeping__startupMaintenance.ts.patch",
+      "status": "captured completely; packet-level review still required",
+      "source_sha256": "1454824c5f8d64f8c0c671c3551688db75563f0bb1e40e292bf7018899f6439f",
+      "review_status": "complete semantic hunk review",
+      "proof_scope": "read-only source/callers and current-main comparison; runtime proof only where separately recorded"
+    },
+    {
+      "path": "src/proxy/session/cache.ts",
+      "packet": "P4 server startup and embedding",
+      "patch": "diffs-github-base/171-src__proxy__session__cache.ts.patch",
+      "status": "captured completely; packet-level review still required",
+      "source_sha256": "0b6cf6d71247c852971df2584f780aa5bd565bc2d6f833ca10ee99817f70ed65",
+      "review_status": "complete semantic hunk review",
+      "proof_scope": "read-only source/callers and current-main comparison; runtime proof only where separately recorded"
+    },
+    {
+      "path": ".gitignore",
+      "packet": "P7 packaging and documentation",
+      "patch": "diffs-github-base/001-.gitignore.patch",
+      "status": "captured completely; packet-level review still required",
+      "source_sha256": "d086a872a8bae21dd361d0164f80d9d969340b13b980e8a99d5de7494bc4b1c8",
+      "review_status": "complete semantic hunk review",
+      "proof_scope": "read-only source/callers and current-main comparison; runtime proof only where separately recorded"
+    },
+    {
+      "path": "ARCHITECTURE.md",
+      "packet": "P7 packaging and documentation",
+      "patch": "diffs-github-base/002-ARCHITECTURE.md.patch",
+      "status": "captured completely; packet-level review still required",
+      "source_sha256": "030f46b1b98c15eca45640aef33e6c84dad8612e74b8a2efa5719da336ed8300",
+      "review_status": "complete semantic hunk review",
+      "proof_scope": "read-only source/callers and current-main comparison; runtime proof only where separately recorded"
+    },
+    {
+      "path": "E2E.md",
+      "packet": "P7 packaging and documentation",
+      "patch": "diffs-github-base/003-E2E.md.patch",
+      "status": "captured completely; packet-level review still required",
+      "source_sha256": "e043e54a22ee072613ed8051ac497b5e959baa8c2cd3aa9196aaa00eb0ad9b4c",
+      "review_status": "complete semantic hunk review",
+      "proof_scope": "read-only source/callers and current-main comparison; runtime proof only where separately recorded"
+    },
+    {
+      "path": "bin/session-bookkeeping.ts",
+      "packet": "P7 packaging and documentation",
+      "patch": "diffs-github-base/004-bin__session-bookkeeping.ts.patch",
+      "status": "captured completely; packet-level review still required",
+      "source_sha256": "87958a53904677210016c987fd34f01a86047127923527805f43eaea1013a481",
+      "review_status": "complete semantic hunk review",
+      "proof_scope": "read-only source/callers and current-main comparison; runtime proof only where separately recorded"
+    },
+    {
+      "path": "docs/configuration.md",
+      "packet": "P7 packaging and documentation",
+      "patch": "diffs-github-base/005-docs__configuration.md.patch",
+      "status": "captured completely; packet-level review still required",
+      "source_sha256": "f52980071040b34a356368909551297aec037abe81bfc9171c65ab5ff9b30ccf",
+      "review_status": "complete semantic hunk review",
+      "proof_scope": "read-only source/callers and current-main comparison; runtime proof only where separately recorded"
+    },
+    {
+      "path": "package-lock.json",
+      "packet": "P7 packaging and documentation",
+      "patch": "diffs-github-base/006-package-lock.json.patch",
+      "status": "captured completely; packet-level review still required",
+      "source_sha256": "61adcb16f01bcb4985e23d6f71b9d9ae699f03c92c1ef5f57b0872e32ec5163d",
+      "review_status": "complete semantic hunk review",
+      "proof_scope": "read-only source/callers and current-main comparison; runtime proof only where separately recorded"
+    },
+    {
+      "path": "package.json",
+      "packet": "P7 packaging and documentation",
+      "patch": "diffs-github-base/007-package.json.patch",
+      "status": "captured completely; packet-level review still required",
+      "source_sha256": "da7bacb38d57cbbb2ea5e19d7eb35273a61b704ca44a6db874c980b5d7606120",
+      "review_status": "complete semantic hunk review",
+      "proof_scope": "read-only source/callers and current-main comparison; runtime proof only where separately recorded"
+    },
+    {
+      "path": "scripts/build.ts",
+      "packet": "P7 packaging and documentation",
+      "patch": "diffs-github-base/008-scripts__build.ts.patch",
+      "status": "captured completely; packet-level review still required",
+      "source_sha256": "8d2d7e25950d0a227ecdb82aa929d3256de60591b5a35318a4b9d9002563484b",
+      "review_status": "complete semantic hunk review",
+      "proof_scope": "read-only source/callers and current-main comparison; runtime proof only where separately recorded"
+    },
+    {
+      "path": "scripts/e2e-libsql-package.mjs",
+      "packet": "P7 packaging and documentation",
+      "patch": "diffs-github-base/009-scripts__e2e-libsql-package.mjs.patch",
+      "status": "captured completely; packet-level review still required",
+      "source_sha256": "d190ac2e1fbf18600c544f08a8248c7246c84632ecb02a48a856d5543c78c537",
+      "review_status": "complete semantic hunk review",
+      "proof_scope": "read-only source/callers and current-main comparison; runtime proof only where separately recorded"
+    },
+    {
+      "path": "scripts/e2e-session-bookkeeping-packaged.mjs",
+      "packet": "P7 packaging and documentation",
+      "patch": "diffs-github-base/010-scripts__e2e-session-bookkeeping-packaged.mjs.patch",
+      "status": "captured completely; packet-level review still required",
+      "source_sha256": "ba37b72051f6e67b2ff0a0ad1bf9ce8d91ffe6299cdd32f9448b64d22fe7d2eb",
+      "review_status": "complete semantic hunk review",
+      "proof_scope": "read-only source/callers and current-main comparison; runtime proof only where separately recorded"
+    },
+    {
+      "path": "scripts/e2e-session-gc-packaged.mjs",
+      "packet": "P7 packaging and documentation",
+      "patch": "diffs-github-base/011-scripts__e2e-session-gc-packaged.mjs.patch",
+      "status": "captured completely; packet-level review still required",
+      "source_sha256": "6141f0fa39cf65f54ca0ac5378c48220c1afc61e1ceef3031e0741361606ea7d",
+      "review_status": "complete semantic hunk review",
+      "proof_scope": "read-only source/callers and current-main comparison; runtime proof only where separately recorded"
+    },
+    {
+      "path": "scripts/fixtures/bookkeeping-package-legacy-writer.mjs",
+      "packet": "P7 packaging and documentation",
+      "patch": "diffs-github-base/013-scripts__fixtures__bookkeeping-package-legacy-writer.mjs.patch",
+      "status": "captured completely; packet-level review still required",
+      "source_sha256": "cd6edcae3f2e7142053d872be383dc70b7e520807218b695974fe351e85acb43",
+      "review_status": "complete semantic hunk review",
+      "proof_scope": "read-only source/callers and current-main comparison; runtime proof only where separately recorded"
+    },
+    {
+      "path": "scripts/fixtures/bookkeeping-package-server.mjs",
+      "packet": "P7 packaging and documentation",
+      "patch": "diffs-github-base/014-scripts__fixtures__bookkeeping-package-server.mjs.patch",
+      "status": "captured completely; packet-level review still required",
+      "source_sha256": "46bb1da742ae9d2cbe9d22a79072666f870df71ca699e2bbc3380f692ed76e36",
+      "review_status": "complete semantic hunk review",
+      "proof_scope": "read-only source/callers and current-main comparison; runtime proof only where separately recorded"
+    },
+    {
+      "path": "tsconfig.json",
+      "packet": "P7 packaging and documentation",
+      "patch": "diffs-github-base/176-tsconfig.json.patch",
+      "status": "captured completely; packet-level review still required",
+      "source_sha256": "279b39110448e87e152aed084e64bfa2f42a590b7761f075d0035eda31bbfd07",
+      "review_status": "complete semantic hunk review",
+      "proof_scope": "read-only source/callers and current-main comparison; runtime proof only where separately recorded"
+    }
+  ],
+  "material_findings": 4,
+  "no_model_calls": true,
+  "shutdown_probe": {
+    "status": "reproduced",
+    "result": "P4-shutdown-probe/result.json",
+    "controller": "P4-shutdown-probe/controller.json",
+    "fixture_correction": "P4-shutdown-probe/fixture-correction.json",
+    "sdk_query_counter_means": "one mocked invocation; zero real inference",
+    "limitations": [
+      "macOS arm64/Bun only",
+      "actual lease finalizer paused then unchanged SQL release joined",
+      "ownership retained for observed 1000ms after cleanup and cached close",
+      "no real credentials or SDK child"
+    ]
+  },
+  "native_engine_provenance": "../1243/review-report.md#engine-provenance-and-wal-reset-compatibility-gate"
+}

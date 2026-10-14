@@ -1,0 +1,82 @@
+name: Nix node_modules hash
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - bun.lock
+      - package.json
+      - flake.nix
+      - flake.lock
+      - nix/**
+      - .github/workflows/nix-node-modules.yml
+  push:
+    branches: [main]
+    paths:
+      - bun.lock
+      - package.json
+
+jobs:
+  verify:
+    if: github.event_name != 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+      - run: nix run --inputs-from . nixpkgs#nix-update -- --flake --version=skip --subpackage node_modules meridian
+      - run: |
+          git diff --exit-code nix/pkgs/meridian/node_modules.nix || {
+            echo "::error::the node_modules hash is out of date; run 'nix run --inputs-from . nixpkgs#nix-update -- --flake --version=skip --subpackage node_modules meridian' and commit the result"
+            exit 1
+          }
+
+  sync:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+      - run: nix run --inputs-from . nixpkgs#nix-update -- --flake --version=skip --subpackage node_modules meridian
+      - uses: peter-evans/create-pull-request@v7
+        with:
+          commit-message: "chore: update the nix node_modules hash"
+          title: "chore: update the nix node_modules hash"
+          body: Automated `nix-update` of the `node_modules` hash after a lockfile change.
+          branch: chore/update-nix-node-modules-hash
+          add-paths: nix/pkgs/meridian/node_modules.nix
+          delete-branch: true
+
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: DeterminateSystems/nix-installer-action@main
+      - uses: DeterminateSystems/magic-nix-cache-action@main
+        continue-on-error: true
+      - run: nix build --print-build-logs --no-update-lock-file .#meridian
+      - run: nix build --print-build-logs --no-update-lock-file --no-link --rebuild .#meridian.node_modules
+      - run: ./result/bin/meridian --version
+      - name: Installed macOS SDK and native HTTP compatibility
+        if: runner.os == 'macOS'
+        env:
+          E2E_OUTPUT_DIR: ${{ runner.temp }}/haiku55-nix-runtime
+        run: |
+          export E2E_NIX_OUT="$(realpath result)"
+          bash scripts/e2e-haiku55-nix-darwin.sh
+      - name: Upload installed macOS runtime evidence
+        if: always() && runner.os == 'macOS'
+        uses: actions/upload-artifact@v4
+        with:
+          name: haiku55-nix-darwin-runtime
+          retention-days: 30
+          if-no-files-found: error
+          path: |
+            ${{ runner.temp }}/haiku55-nix-runtime/report.json
+            ${{ runner.temp }}/haiku55-nix-runtime/harness.mjs

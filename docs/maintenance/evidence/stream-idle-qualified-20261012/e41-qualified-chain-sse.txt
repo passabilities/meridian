@@ -1,0 +1,29 @@
+[PROXY] CREDENTIALS READ-ONLY MODE (MERIDIAN_CREDENTIALS_READONLY): this instance will not refresh or write OAuth credentials. Token rotation is another instance's job; credentials are re-read from disk.
+  explicit isolated profile: default
+
+=== turn 1 (stream=true) http 200 ===
+  calls: read(a.txt)#DBUnXmbA
+  lineage: lineage=new session=new
+  usage: cache_read=763 cache_create=2034 input=2 (27% of 2799 input read from cache)
+
+=== turn 2 (stream=true) http 200 ===
+  calls: none
+  text: "A safety classifier stopped my last response, so I won't repeat that content or carry on with the file-read sequence. I won't finish reading a.txt, b.txt and c.txt or print their contents."
+  lineage: lineage=continuation session=fe29bd05
+  usage: cache_read=2797 cache_create=166 input=4 (94% of 2967 input read from cache)
+
+=== follow-up turn (stream=true) http 200 ===
+  lineage: lineage=continuation session=264c53d3
+  usage: cache_read=2963 cache_create=275 input=4 (91% of 3242 input read from cache)
+
+=== verdict (stream=true, parallel=false) ===
+  tool-call batches: 1   <-- WRONG TURN SHAPE
+  continuation session prefixes: fe29bd05 -> 264c53d3
+  final reply quotes 0/3 contents: none
+  active fork 07c55fd4-f554-4256-ae7a-efaa982d3cfd: exactly one real answer per delivered call
+  source history: 2 unchanged parents
+  saved-session follow-up: OK
+  actual assistant models: claude-opus-5-5
+  prompt cache: every continuation read the prior cached prefix
+  FAIL: tool batching, active history, and prompt-cache continuity
+

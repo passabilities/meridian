@@ -13,6 +13,7 @@ import { randomUUID } from "node:crypto"
 import type { ProxyConfig, ProxyServer } from "../types"
 import { buildRuntime } from "../buildRuntime"
 import { hasValidApiKey } from "../auth"
+import { headerSettingsResponse, healthHostname } from "../../headerSettings"
 import { AntigravityRuntime, type AntigravityRun } from "./antigravityRuntime"
 import { AntigravityError, forcedAgTool, toolChoiceInstruction, blocks, contractKey, historyKey, sameAgExecutionContract, parseAgRequest, type AgBlock, type AgResult, type AgRequest } from "./antigravityProtocol"
 
@@ -288,10 +289,11 @@ export function createAntigravityServer(config: ProxyConfig, runtime = new Antig
       ],
       activity: runtime.activity(), accounts: [{ id: 'Antigravity account', active: true, ...quota }] }
   }
-  const fetch = async (request: Request): Promise<Response> => {
+  const dispatch = async (request: Request): Promise<Response> => {
     try {
       const path = new URL(request.url).pathname
       if (!["/health", "/readyz", "/livez"].includes(path) && !hasValidApiKey(request.headers)) throw new AntigravityError("Invalid or missing API key", 401, "authentication_error")
+      if (["GET", "PUT"].includes(request.method) && path === "/settings/api/header") return headerSettingsResponse(request)
       if (request.method === "GET" && path === "/build-status") return buildRuntime.local ? Response.json(buildRuntime.status(), { headers: { "Cache-Control": "no-store" } }) : new Response("Not found", { status: 404 })
       if (request.method === 'GET' && ['/', '/providers'].includes(path)) return new Response(withSavedLayout(providerPageHtml), { headers: { 'content-type': 'text/html; charset=utf-8' } })
       if (request.method === 'GET' && path === ICON_PATH) { const icon = iconResponse(); if (icon) return icon }
@@ -360,6 +362,16 @@ export function createAntigravityServer(config: ProxyConfig, runtime = new Antig
       if (request.method === "POST" && ["/v1/messages", "/messages"].includes(path)) return await messages(request)
       return errorResponse(new AntigravityError("Endpoint unavailable on the Antigravity backend", 404, "not_found_error"))
     } catch (error) { return errorResponse(error) }
+  }
+  const fetch = async (request: Request): Promise<Response> => {
+    const response = await dispatch(request)
+    if (request.method !== "GET" || new URL(request.url).pathname !== "/health") return response
+    // Keep the provider's healthy/draining/error contract intact. Re-read
+    // consent after its asynchronous account check and JSON body have settled.
+    const payload = await response.json() as Record<string, unknown>
+    const headers = new Headers(response.headers)
+    headers.set("Cache-Control", "no-store")
+    return Response.json({ ...payload, ...healthHostname() }, { status: response.status, headers })
   }
   return {
     app: { fetch }, config, providerStatus,

@@ -1,0 +1,17 @@
+{
+  "harnessCommit": "932c8f92",
+  "harnessSha256": "7aa3b5a45f1de895d481e8808c1097d65505bf039d770400f0792fe75940fd63",
+  "candidatePackage": {
+    "filename": "rynfar-meridian-1.81.0.tgz",
+    "shasum": "f7f6b2ac8889b68187df4faaa953483e52ebde2f",
+    "integrity": "sha512-hDlaar9NYz+UDzCiCrla2OGcBI8cCc7PvV1gvZjKrDMXpifL/S5iEXu/SJQxfUnEMqR8NXUfZF2MFhj2ny72CA=="
+  },
+  "baselineSource": "6ef677ce3809c021e49f4fd925df5ac92c5fd213",
+  "candidateSource": "a9fece93ba9e0170ca611094f111c0fee464f05f",
+  "dockerNetwork": "none",
+  "platform": "linux/amd64 emulation on Darwin arm64",
+  "baselineSession": 94533,
+  "baselineExit": 1,
+  "candidateSession": 7573,
+  "candidateExit": 0
+}
