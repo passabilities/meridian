@@ -1,0 +1,69 @@
+{
+  "result": "FAIL",
+  "client": "opencode v2.0.16",
+  "meridian": "1.81.0",
+  "model": "claude-sonnet-5-5",
+  "fillChars": 300000,
+  "scrub": "@rynfar/meridian-plugin-opencode-scrub@0.2.3",
+  "platform": "darwin/arm64",
+  "checks": [
+    {
+      "ok": true,
+      "label": "the V2 plugin fetched the proxy model catalog"
+    },
+    {
+      "ok": true,
+      "label": "the replayed turn is a signed primary OpenCode request",
+      "detail": "{\"path\":\"/v1/messages\",\"proxy\":\"second\",\"model\":\"claude-sonnet-5-5\",\"bytes\":345589,\"messages\":3,\"session\":\"ses_ec9256a2dffeNMcNgADSJnMEBa\",\"agent\":\"build\",\"mode\":\"primary\",\"source\":null,\"attested\":true,\"hasAncient\":true}"
+    },
+    {
+      "ok": false,
+      "label": "Sonnet 5.5 is advertised with its native 1M window",
+      "detail": "context_window=200000"
+    },
+    {
+      "ok": false,
+      "label": "OpenCode did not compact the conversation below 1M",
+      "detail": "compaction requests=1"
+    },
+    {
+      "ok": true,
+      "label": "the client still sent the oldest archive on the replayed turn"
+    },
+    {
+      "ok": true,
+      "label": "Meridian did not trim the fresh replay",
+      "detail": "replay_trimmed logged=false"
+    },
+    {
+      "ok": false,
+      "label": "the replayed turn reached the model with more than 200k input tokens",
+      "detail": "input=128428"
+    }
+  ],
+  "plugin": "dist/meridian-v2",
+  "advertisedWindow": 200000,
+  "replay": {
+    "path": "/v1/messages",
+    "proxy": "second",
+    "model": "claude-sonnet-5-5",
+    "bytes": 345589,
+    "messages": 3,
+    "session": "ses_ec9256a2dffeNMcNgADSJnMEBa",
+    "agent": "build",
+    "mode": "primary",
+    "source": null,
+    "attested": true,
+    "hasAncient": true
+  },
+  "compactions": 1,
+  "usage": [
+    {
+      "model": "sonnet",
+      "requestModel": "claude-sonnet-5-5",
+      "status": 200,
+      "lineage": "new",
+      "input": 128428
+    }
+  ]
+}

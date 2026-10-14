@@ -1,0 +1,18 @@
+{
+  "scope": "New bounded harness and durable evidence only; existing product/core files unchanged",
+  "nativeNodeSyntaxCheck": "PASS: node --check scripts/e2e-haiku55-nix-compat.mjs",
+  "buildScriptShellSyntax": "PASS: sh -n docs/maintenance/evidence/haiku55-nix-installed-20261011/build.sh",
+  "trackedDiffWhitespace": "PASS: git diff --check",
+  "untrackedHarnessWhitespace": "No whitespace diagnostics from git diff --no-index --check /dev/null scripts/e2e-haiku55-nix-compat.mjs; exit 1 is the added-file diff status. An initial set -e wrapper stopped on that expected status; validation was then run explicitly and completed.",
+  "jsonParsing": "PASS: every JSON evidence file parses",
+  "localReadmeLinks": "PASS: every local README link resolves",
+  "executedHarnessHashes": "PASS: each historical report maps to the retained exact harness hash; final run matches repository script SHA-256 11defd43ce328ba318cf52a3377b225725b845c7a1e26909607f0c5a87b20276",
+  "sourceNarEquality": "PASS: archive source equals actual built derivation source",
+  "finalRun": "PASS: run-6.json, 10/10 cases; all nine original native actors joined; six original production SDK gates; zero synchronous subprocesses, failures or escalations",
+  "networkFence": "PASS: Docker networks empty before/after final run; actual runtime only lo and empty IPv4 routes",
+  "containerCleanup": "PASS: final native joins precede external idle-only process snapshot and owned-container stop; container/closure and fixtures retained, not deleted",
+  "npmFullSuiteRerun": false,
+  "npmFullSuiteExplanation": "This subtask adds only a manually executed JS harness and evidence. It does not alter the exact committed product head; parent owns final-head product/CI/release gates. The exact Nix package build itself ran its normal build/typecheck/Node entrypoint checks.",
+  "parentIndependentReview": "REQUIRED: this is a self-review, not external approval",
+  "fullFeatureOrReleaseAcceptance": false
+}

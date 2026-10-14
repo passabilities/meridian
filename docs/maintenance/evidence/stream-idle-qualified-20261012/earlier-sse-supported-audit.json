@@ -1,0 +1,317 @@
+[
+  {
+    "key": "probe-turns-stream-1",
+    "session": "07c55fd4-f554-4256-ae7a-efaa982d3cfd",
+    "messages": [
+      {
+        "type": "user",
+        "uuid": "0f17d099-bb16-4600-a334-9dea1a809266",
+        "timestamp": "2026-10-12T19:11:11.868Z",
+        "role": "user",
+        "rowKeys": [
+          "type",
+          "uuid",
+          "session_id",
+          "message",
+          "parent_tool_use_id",
+          "timestamp"
+        ],
+        "messageKeys": [
+          "role",
+          "content"
+        ],
+        "contentTypes": [
+          "text"
+        ],
+        "toolIds": []
+      },
+      {
+        "type": "assistant",
+        "uuid": "2b446b28-9d42-4f66-a970-b9aace7e7551",
+        "timestamp": "2026-10-12T19:11:13.943Z",
+        "model": "claude-opus-5-5",
+        "id": "msg_011CfxsZofwsfXTxM9wUe3YW",
+        "role": "assistant",
+        "stopReason": "tool_use",
+        "usage": {
+          "input_tokens": 2,
+          "cache_creation_input_tokens": 2034,
+          "cache_read_input_tokens": 763,
+          "output_tokens": 80,
+          "output_tokens_details": {
+            "thinking_tokens": 0
+          },
+          "server_tool_use": {
+            "web_search_requests": 0,
+            "web_fetch_requests": 0
+          },
+          "service_tier": "standard",
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 2034,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "inference_geo": "global",
+          "iterations": [],
+          "speed": "standard",
+          "fallback_credit": null
+        },
+        "rowKeys": [
+          "type",
+          "uuid",
+          "session_id",
+          "message",
+          "parent_tool_use_id",
+          "timestamp"
+        ],
+        "messageKeys": [
+          "model",
+          "id",
+          "type",
+          "role",
+          "content",
+          "container",
+          "stop_reason",
+          "stop_sequence",
+          "stop_details",
+          "usage",
+          "input_transformations",
+          "diagnostics",
+          "context_management"
+        ],
+        "contentTypes": [
+          "tool_use"
+        ],
+        "toolIds": [
+          {
+            "type": "tool_use",
+            "id": "toolu_01Aw2wkcg15USCZzDBUnXmbA",
+            "name": "mcp__oc__read"
+          }
+        ]
+      },
+      {
+        "type": "user",
+        "uuid": "43c46ee4-fc5c-40bd-a8a5-5fc9aabcec2c",
+        "timestamp": "2026-10-12T19:11:20.874Z",
+        "role": "user",
+        "rowKeys": [
+          "type",
+          "uuid",
+          "session_id",
+          "message",
+          "parent_tool_use_id",
+          "timestamp"
+        ],
+        "messageKeys": [
+          "role",
+          "content"
+        ],
+        "contentTypes": [
+          "tool_result"
+        ],
+        "toolIds": [
+          {
+            "type": "tool_result",
+            "id": "toolu_01Aw2wkcg15USCZzDBUnXmbA"
+          }
+        ]
+      },
+      {
+        "type": "assistant",
+        "uuid": "c393142f-e576-46e4-b427-e361c2a751ca",
+        "timestamp": "2026-10-12T19:11:29.083Z",
+        "model": "claude-opus-5-5",
+        "id": "msg_011Cfxsan4Ud5Ayqa5RnTrhQ",
+        "role": "assistant",
+        "stopReason": "end_turn",
+        "usage": {
+          "input_tokens": 4,
+          "cache_creation_input_tokens": 166,
+          "cache_read_input_tokens": 2797,
+          "output_tokens": 261,
+          "output_tokens_details": {
+            "thinking_tokens": 197
+          },
+          "server_tool_use": {
+            "web_search_requests": 0,
+            "web_fetch_requests": 0
+          },
+          "service_tier": "standard",
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 166,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "inference_geo": "global",
+          "iterations": [],
+          "speed": "standard",
+          "fallback_credit": null
+        },
+        "rowKeys": [
+          "type",
+          "uuid",
+          "session_id",
+          "message",
+          "parent_tool_use_id",
+          "timestamp"
+        ],
+        "messageKeys": [
+          "model",
+          "id",
+          "type",
+          "role",
+          "content",
+          "container",
+          "stop_reason",
+          "stop_sequence",
+          "stop_details",
+          "usage",
+          "input_transformations",
+          "diagnostics",
+          "context_management"
+        ],
+        "contentTypes": [
+          "thinking"
+        ],
+        "toolIds": []
+      },
+      {
+        "type": "assistant",
+        "uuid": "99e2911d-8e43-4ba5-b052-402725100b1c",
+        "timestamp": "2026-10-12T19:11:29.104Z",
+        "model": "claude-opus-5-5",
+        "id": "msg_011Cfxsan4Ud5Ayqa5RnTrhQ",
+        "role": "assistant",
+        "stopReason": "end_turn",
+        "usage": {
+          "input_tokens": 4,
+          "cache_creation_input_tokens": 166,
+          "cache_read_input_tokens": 2797,
+          "output_tokens": 261,
+          "output_tokens_details": {
+            "thinking_tokens": 197
+          },
+          "server_tool_use": {
+            "web_search_requests": 0,
+            "web_fetch_requests": 0
+          },
+          "service_tier": "standard",
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 166,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "inference_geo": "global",
+          "iterations": [],
+          "speed": "standard",
+          "fallback_credit": null
+        },
+        "rowKeys": [
+          "type",
+          "uuid",
+          "session_id",
+          "message",
+          "parent_tool_use_id",
+          "timestamp"
+        ],
+        "messageKeys": [
+          "model",
+          "id",
+          "type",
+          "role",
+          "content",
+          "container",
+          "stop_reason",
+          "stop_sequence",
+          "stop_details",
+          "usage",
+          "input_transformations",
+          "diagnostics",
+          "context_management"
+        ],
+        "contentTypes": [
+          "text"
+        ],
+        "toolIds": []
+      },
+      {
+        "type": "user",
+        "uuid": "94d2d6d2-d295-4b16-a180-b6ab0ec34cb7",
+        "timestamp": "2026-10-12T19:11:34.013Z",
+        "role": "user",
+        "rowKeys": [
+          "type",
+          "uuid",
+          "session_id",
+          "message",
+          "parent_tool_use_id",
+          "timestamp"
+        ],
+        "messageKeys": [
+          "role",
+          "content"
+        ],
+        "contentTypes": [
+          "text"
+        ],
+        "toolIds": []
+      },
+      {
+        "type": "assistant",
+        "uuid": "7f86db3f-d8df-415e-ae1b-a5d1fc77430f",
+        "timestamp": "2026-10-12T19:11:35.413Z",
+        "model": "claude-opus-5-5",
+        "id": "msg_011CfxsbSVXVoXo6de5nQn7n",
+        "role": "assistant",
+        "stopReason": "end_turn",
+        "usage": {
+          "input_tokens": 4,
+          "cache_creation_input_tokens": 275,
+          "cache_read_input_tokens": 2963,
+          "output_tokens": 4,
+          "output_tokens_details": {
+            "thinking_tokens": 0
+          },
+          "server_tool_use": {
+            "web_search_requests": 0,
+            "web_fetch_requests": 0
+          },
+          "service_tier": "standard",
+          "cache_creation": {
+            "ephemeral_1h_input_tokens": 275,
+            "ephemeral_5m_input_tokens": 0
+          },
+          "inference_geo": "global",
+          "iterations": [],
+          "speed": "standard",
+          "fallback_credit": null
+        },
+        "rowKeys": [
+          "type",
+          "uuid",
+          "session_id",
+          "message",
+          "parent_tool_use_id",
+          "timestamp"
+        ],
+        "messageKeys": [
+          "model",
+          "id",
+          "type",
+          "role",
+          "content",
+          "container",
+          "stop_reason",
+          "stop_sequence",
+          "stop_details",
+          "usage",
+          "input_transformations",
+          "diagnostics",
+          "context_management"
+        ],
+        "contentTypes": [
+          "text"
+        ],
+        "toolIds": []
+      }
+    ]
+  }
+]

@@ -1449,6 +1449,19 @@ describe("createSseTranslator", () => {
 // ---------------------------------------------------------------------------
 
 describe("buildModelList", () => {
+  it("advertises Haiku 5.5 native 1M context and adaptive-only thinking on every plan", () => {
+    for (const extended of [false, true]) {
+      const models = buildModelList(extended)
+      const model = models.find(m => m.id === "claude-haiku-5-5")
+      expect(model?.display_name).toBe("Claude Haiku 5.5")
+      expect(model?.context_window).toBe(1_000_000)
+      expect(model?.capabilities?.thinking.types.adaptive.supported).toBe(true)
+      expect(model?.capabilities?.thinking.types.enabled.supported).toBe(false)
+      expect(model?.capabilities?.effort.xhigh.supported).toBe(true)
+      expect(model?.capabilities?.effort.max.supported).toBe(true)
+      expect(models.filter(m => m.id === "claude-haiku-5-5")).toHaveLength(1)
+    }
+  })
   it("advertises Opus 5.5 adaptive thinking and plan-appropriate context", () => {
     for (const extended of [false, true]) {
       const model = buildModelList(extended).find(m => m.id === "claude-opus-5-5")!
@@ -1458,18 +1471,19 @@ describe("buildModelList", () => {
       expect(model.capabilities!.thinking.types.enabled.supported).toBe(false)
     }
   })
-  it("advertises Sonnet 5.5 and plan-appropriate context", () => {
+  it("advertises Sonnet 5.5 with its native 1M context on every plan (#1212)", () => {
     for (const extended of [false, true]) {
       const model = buildModelList(extended).find(m => m.id === "claude-sonnet-5-5")!
       expect(model.display_name).toBe("Claude Sonnet 5.5")
-      expect(model.context_window).toBe(200_000)
+      expect(model.context_window).toBe(1_000_000)
+      expect(buildModelList(extended).find(m => m.id === "claude-sonnet-5")!.context_window).toBe(1_000_000)
       expect(model.capabilities!.thinking.types.adaptive.supported).toBe(true)
       expect(model.capabilities!.thinking.types.enabled.supported).toBe(true)
     }
   })
-  it("returns 11 models", () => {
-    expect(buildModelList(true).length).toBe(11)
-    expect(buildModelList(false).length).toBe(11)
+  it("returns 12 models", () => {
+    expect(buildModelList(true).length).toBe(12)
+    expect(buildModelList(false).length).toBe(12)
   })
 
   it("includes current and legacy Fable plus the supported Sonnet and Opus models for UI pickers", () => {
@@ -1550,7 +1564,7 @@ describe("buildModelList", () => {
     expect(caps.thinking.types.enabled.supported).toBe(true)
   })
 
-  it("haiku is always 200k regardless of subscription", () => {
+  it("legacy Haiku 4.5 is always 200k regardless of subscription", () => {
     expect(buildModelList(true).find(m => m.id === "claude-haiku-4-5")!.context_window).toBe(200_000)
     expect(buildModelList(false).find(m => m.id === "claude-haiku-4-5")!.context_window).toBe(200_000)
   })

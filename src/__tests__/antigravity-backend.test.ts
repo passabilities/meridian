@@ -329,11 +329,16 @@ describe.skipIf(process.platform === "win32")("Antigravity HTTP/CLI integration"
     expect(sse).not.toContain("event: message_stop")
   })
   it("bounds pending tool lifetime and recovers completed history without repeating a call", async () => {
-    const { send, runtime } = fixture({ pendingToolTimeoutMs: 40 })
+    const { send, runtime } = fixture({ pendingToolTimeoutMs: 40, idleConversationMs: 3000 })
     const request = initial()
     const first = await decode(await send(request))
     const run = [...runtime.runs.values()][0]!
-    await run.settled
+    let timer: ReturnType<typeof setTimeout> | undefined
+    try {
+      await Promise.race([run.settled, new Promise((_, reject) => {
+        timer = setTimeout(() => reject(new Error("Completed-conversation retention extended the pending-tool deadline")), 1000)
+      })])
+    } finally { clearTimeout(timer) }
     expect(runtime.runs.size).toBe(0)
     const response = await send({ ...request, messages: [...request.messages, { role: "assistant", content: first.content }, { role: "user", content: [{ type: "tool_result", tool_use_id: first.content[0]!.id, content: "late" }] }] })
     expect(response.status).toBe(200)

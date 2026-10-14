@@ -1,0 +1,41 @@
+bun test v1.3.11 (af24e281)
+
+src/__tests__/proxy-sdk-params.test.ts:
+[PROXY] 18379d2d-5857-415d-bb94-8f68f6865b70 adapter=opencode model=haiku stream=false tools=0 lineage=new session=new diverged=not-found sdkActive=0/10 sdkQueued=0 sessionWait=0ms msgCount=5 msgs=user[text,image] → assistant[tool_use] → user[tool_result] → assistant[string] → user[string]
+[PROXY] 18379d2d-5857-415d-bb94-8f68f6865b70 usage: input=10 output=50 cache=0%
+134 |     if (!capturedPrompt || typeof capturedPrompt === "string") throw new Error("Expected structured SDK input")
+135 |     const inputs: unknown[]=[]
+136 |     for await (const message of capturedPrompt) inputs.push(message)
+137 |     const serialized=JSON.stringify(inputs)
+138 |     expect(inputs).toHaveLength(1)
+139 |     expect(serialized.split(JSON.stringify(image)).length-1).toBe(1)
+                                                                   ^
+error: expect(received).toBe(expected)
+
+Expected: 1
+Received: 2
+
+      at <anonymous> (/Users/rynfar/repos/meridian-sse-baseline-1214-20261012/src/__tests__/proxy-sdk-params.test.ts:139:62)
+(fail) Claude Code live prompt with trailing system metadata > deduplicates historical image read-back at the SDK boundary (stream=%s) [459.33ms]
+[PROXY] 5c5c2024-e259-4b62-801f-4445facb6de1 adapter=opencode model=haiku stream=true tools=0 lineage=new session=new diverged=not-found sdkActive=0/10 sdkQueued=0 sessionWait=0ms msgCount=5 msgs=user[text,image] → assistant[tool_use] → user[tool_result] → assistant[string] → user[string]
+[PROXY] 5c5c2024-e259-4b62-801f-4445facb6de1 usage: input=10 output=50 cache=0%
+134 |     if (!capturedPrompt || typeof capturedPrompt === "string") throw new Error("Expected structured SDK input")
+135 |     const inputs: unknown[]=[]
+136 |     for await (const message of capturedPrompt) inputs.push(message)
+137 |     const serialized=JSON.stringify(inputs)
+138 |     expect(inputs).toHaveLength(1)
+139 |     expect(serialized.split(JSON.stringify(image)).length-1).toBe(1)
+                                                                   ^
+error: expect(received).toBe(expected)
+
+Expected: 1
+Received: 2
+
+      at <anonymous> (/Users/rynfar/repos/meridian-sse-baseline-1214-20261012/src/__tests__/proxy-sdk-params.test.ts:139:62)
+(fail) Claude Code live prompt with trailing system metadata > deduplicates historical image read-back at the SDK boundary (stream=%s) [72.86ms]
+
+ 0 pass
+ 42 filtered out
+ 2 fail
+ 6 expect() calls
+Ran 2 tests across 1 file. [1274.00ms]

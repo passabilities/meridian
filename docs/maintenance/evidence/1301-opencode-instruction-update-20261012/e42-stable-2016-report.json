@@ -1,0 +1,391 @@
+{
+  "root": "/var/folders/ks/xnz659y11jl44j80b_lfws6r0000gn/T/meridian-qualified-e42-9NfQSy",
+  "result": "PASS",
+  "actors": [
+    {
+      "pid": 10572,
+      "command": "bun",
+      "close": true,
+      "stdoutClose": true,
+      "stderrClose": true,
+      "code": 0,
+      "signal": null
+    },
+    {
+      "pid": 10627,
+      "command": "/bin/sh",
+      "close": true,
+      "stdoutClose": true,
+      "stderrClose": true,
+      "code": 0,
+      "signal": null
+    },
+    {
+      "pid": 10630,
+      "command": "/bin/sh",
+      "close": true,
+      "stdoutClose": true,
+      "stderrClose": true,
+      "code": 0,
+      "signal": null
+    },
+    {
+      "pid": 10806,
+      "command": "/bin/sh",
+      "close": true,
+      "stdoutClose": true,
+      "stderrClose": true,
+      "code": 0,
+      "signal": null
+    },
+    {
+      "pid": 10821,
+      "command": "/bin/sh",
+      "close": true,
+      "stdoutClose": true,
+      "stderrClose": true,
+      "code": 0,
+      "signal": null
+    },
+    {
+      "pid": 11296,
+      "command": "/bin/sh",
+      "close": true,
+      "stdoutClose": true,
+      "stderrClose": true,
+      "code": 0,
+      "signal": null
+    },
+    {
+      "pid": 11301,
+      "command": "/bin/sh",
+      "close": true,
+      "stdoutClose": true,
+      "stderrClose": true,
+      "code": 0,
+      "signal": null
+    },
+    {
+      "pid": 11507,
+      "command": "/bin/sh",
+      "close": true,
+      "stdoutClose": true,
+      "stderrClose": true,
+      "code": 0,
+      "signal": null
+    },
+    {
+      "pid": 11511,
+      "command": "/bin/sh",
+      "close": true,
+      "stdoutClose": true,
+      "stderrClose": true,
+      "code": 1,
+      "signal": null
+    },
+    {
+      "pid": 11587,
+      "command": "/bin/sh",
+      "close": true,
+      "stdoutClose": true,
+      "stderrClose": true,
+      "code": 0,
+      "signal": null
+    },
+    {
+      "pid": 11638,
+      "command": "/bin/sh",
+      "close": true,
+      "stdoutClose": true,
+      "stderrClose": true,
+      "code": 0,
+      "signal": null
+    },
+    {
+      "pid": 11693,
+      "command": "/bin/sh",
+      "close": true,
+      "stdoutClose": true,
+      "stderrClose": true,
+      "code": 0,
+      "signal": null
+    },
+    {
+      "pid": 11793,
+      "command": "/bin/sh",
+      "close": true,
+      "stdoutClose": true,
+      "stderrClose": true,
+      "code": 0,
+      "signal": null
+    },
+    {
+      "pid": 11869,
+      "command": "/bin/sh",
+      "close": true,
+      "stdoutClose": true,
+      "stderrClose": true,
+      "code": 0,
+      "signal": null
+    }
+  ],
+  "client": "2.0.16",
+  "model": "claude-haiku-5-5",
+  "scope": "Installed stable E42 with external access-only proxy and verified server scrub",
+  "scrubPreflight": {
+    "path": "/private/tmp/meridian-scrub-preflight-package-20261012/node_modules/@rynfar/meridian-plugin-opencode-scrub/dist/index.js",
+    "packageName": "@rynfar/meridian-plugin-opencode-scrub",
+    "packageVersion": "0.2.3",
+    "sha256": "4ab89412e6a59fad812a3f6e5500c84f3bdfc41863320bc794f5274a251da656",
+    "runtimeVersion": "0.2.3",
+    "invocations": 0,
+    "errors": 0
+  },
+  "exit": 0,
+  "clientResult": {
+    "result": "PASS",
+    "root": "/private/tmp/meridian-opencode-v2-stable-t4d3Hu",
+    "client": "2.0.16",
+    "meridian": "1.81.0",
+    "model": "claude-haiku-5-5",
+    "requests": 14,
+    "primary": [
+      {
+        "path": "/v1/messages",
+        "model": "claude-haiku-5-5",
+        "systemBlockLengths": [
+          1773,
+          91,
+          10450,
+          238
+        ],
+        "session": "ses_ece092bbfffeKErC69Z7luPnt2",
+        "agent": "build",
+        "mode": "primary",
+        "source": null,
+        "attested": true,
+        "hasMarker": true,
+        "hasVariantMarker": false,
+        "hasFileReceipt": false,
+        "hasForkMarker": false,
+        "hasGenerateMarker": false,
+        "hasToolUse": false,
+        "hasToolResult": false
+      },
+      {
+        "path": "/v1/messages",
+        "model": "claude-haiku-5-5",
+        "systemBlockLengths": [
+          1773,
+          91,
+          10450,
+          238
+        ],
+        "session": "ses_ece092bbfffeKErC69Z7luPnt2",
+        "agent": "build",
+        "mode": "primary",
+        "source": null,
+        "attested": true,
+        "hasMarker": true,
+        "hasVariantMarker": false,
+        "hasFileReceipt": false,
+        "hasForkMarker": false,
+        "hasGenerateMarker": false,
+        "hasToolUse": false,
+        "hasToolResult": false
+      },
+      {
+        "path": "/v1/messages",
+        "model": "claude-haiku-5-5",
+        "effort": "xhigh",
+        "systemBlockLengths": [
+          1773,
+          91,
+          10450,
+          238
+        ],
+        "session": "ses_ece09107cffeIRSWx4tmYbGkf4",
+        "agent": "build",
+        "mode": "primary",
+        "source": null,
+        "attested": true,
+        "hasMarker": false,
+        "hasVariantMarker": true,
+        "hasFileReceipt": false,
+        "hasForkMarker": false,
+        "hasGenerateMarker": false,
+        "hasToolUse": false,
+        "hasToolResult": false
+      },
+      {
+        "path": "/v1/messages",
+        "model": "claude-haiku-5-5",
+        "systemBlockLengths": [
+          1773,
+          91,
+          10450,
+          238
+        ],
+        "session": "ses_ece0906ebffeWf2Gd04Xq8csaM",
+        "agent": "build",
+        "mode": "primary",
+        "source": null,
+        "attested": true,
+        "hasMarker": false,
+        "hasVariantMarker": false,
+        "hasFileReceipt": false,
+        "hasForkMarker": false,
+        "hasGenerateMarker": false,
+        "hasToolUse": false,
+        "hasToolResult": false
+      },
+      {
+        "path": "/v1/messages",
+        "model": "claude-haiku-5-5",
+        "systemBlockLengths": [
+          1773,
+          91,
+          10450,
+          238
+        ],
+        "session": "ses_ece0906ebffeWf2Gd04Xq8csaM",
+        "agent": "build",
+        "mode": "primary",
+        "source": null,
+        "attested": true,
+        "hasMarker": false,
+        "hasVariantMarker": false,
+        "hasFileReceipt": true,
+        "hasForkMarker": false,
+        "hasGenerateMarker": false,
+        "hasToolUse": true,
+        "hasToolResult": true
+      },
+      {
+        "path": "/v1/messages",
+        "model": "claude-haiku-5-5",
+        "systemBlockLengths": [
+          1773,
+          91,
+          10450,
+          238
+        ],
+        "session": "ses_ece08f9c7ffeGI4Tb1qVVDFl4P",
+        "agent": "build",
+        "mode": "primary",
+        "source": null,
+        "attested": false,
+        "hasMarker": true,
+        "hasVariantMarker": false,
+        "hasFileReceipt": false,
+        "hasForkMarker": true,
+        "hasGenerateMarker": false,
+        "hasToolUse": false,
+        "hasToolResult": false
+      },
+      {
+        "path": "/v1/messages",
+        "model": "claude-haiku-5-5",
+        "systemBlockLengths": [
+          1773,
+          91,
+          10450,
+          238
+        ],
+        "session": "ses_ece092bbfffeKErC69Z7luPnt2",
+        "agent": "build",
+        "mode": "primary",
+        "source": null,
+        "attested": true,
+        "hasMarker": true,
+        "hasVariantMarker": false,
+        "hasFileReceipt": false,
+        "hasForkMarker": false,
+        "hasGenerateMarker": false,
+        "hasToolUse": false,
+        "hasToolResult": false
+      },
+      {
+        "path": "/v1/messages",
+        "model": "claude-haiku-5-5",
+        "systemBlockLengths": [
+          1773,
+          91,
+          10450,
+          238
+        ],
+        "session": "ses_ece092bbfffeKErC69Z7luPnt2",
+        "agent": "build",
+        "mode": "primary",
+        "source": "subagent-compaction",
+        "attested": false,
+        "hasMarker": true,
+        "hasVariantMarker": false,
+        "hasFileReceipt": false,
+        "hasForkMarker": false,
+        "hasGenerateMarker": false,
+        "hasToolUse": false,
+        "hasToolResult": false
+      }
+    ],
+    "auxiliary": [
+      {
+        "path": "/v1/messages",
+        "model": "claude-haiku-5-5",
+        "systemBlockLengths": [
+          1773,
+          91,
+          10450,
+          238
+        ],
+        "session": null,
+        "agent": "generate",
+        "mode": "subagent",
+        "source": "subagent-generate",
+        "attested": false,
+        "hasMarker": true,
+        "hasVariantMarker": false,
+        "hasFileReceipt": false,
+        "hasForkMarker": false,
+        "hasGenerateMarker": true,
+        "hasToolUse": false,
+        "hasToolResult": false
+      },
+      {
+        "path": "/v1/messages",
+        "model": "claude-haiku-5-5",
+        "systemBlockLengths": [
+          1773,
+          91,
+          10450,
+          238
+        ],
+        "session": "ses_ece092bbfffeKErC69Z7luPnt2",
+        "agent": "build",
+        "mode": "primary",
+        "source": "subagent-compaction",
+        "attested": false,
+        "hasMarker": true,
+        "hasVariantMarker": false,
+        "hasFileReceipt": false,
+        "hasForkMarker": false,
+        "hasGenerateMarker": false,
+        "hasToolUse": false,
+        "hasToolResult": false
+      }
+    ]
+  },
+  "scrubFinal": {
+    "path": "/private/tmp/meridian-scrub-preflight-package-20261012/node_modules/@rynfar/meridian-plugin-opencode-scrub/dist/index.js",
+    "packageName": "@rynfar/meridian-plugin-opencode-scrub",
+    "packageVersion": "0.2.3",
+    "sha256": "4ab89412e6a59fad812a3f6e5500c84f3bdfc41863320bc794f5274a251da656",
+    "runtimeVersion": "0.2.3",
+    "invocations": 14,
+    "errors": 0
+  },
+  "observedModels": [
+    "claude-haiku-5-5"
+  ],
+  "joined": true
+}

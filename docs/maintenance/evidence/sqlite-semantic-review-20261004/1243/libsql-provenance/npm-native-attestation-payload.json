@@ -1,0 +1,47 @@
+{
+  "_type": "https://in-toto.io/Statement/v1",
+  "subject": [
+    {
+      "name": "pkg:npm/%40libsql/darwin-arm64@0.5.29",
+      "digest": {
+        "sha512": "2bed91201d4e1853d841b7dacb8f066a42e1a9fdc0adc6c7a8f16eec466269471180571dc3c46896db0ccaf6e3e62c767d8d075774372286bf072bd075a48cd0"
+      }
+    }
+  ],
+  "predicateType": "https://slsa.dev/provenance/v1",
+  "predicate": {
+    "buildDefinition": {
+      "buildType": "https://slsa-framework.github.io/github-actions-buildtypes/workflow/v1",
+      "externalParameters": {
+        "workflow": {
+          "ref": "refs/tags/v0.5.29",
+          "repository": "https://github.com/tursodatabase/libsql-js",
+          "path": ".github/workflows/CI.yml"
+        }
+      },
+      "internalParameters": {
+        "github": {
+          "event_name": "push",
+          "repository_id": "667804383",
+          "repository_owner_id": "139391156"
+        }
+      },
+      "resolvedDependencies": [
+        {
+          "uri": "git+https://github.com/tursodatabase/libsql-js@refs/tags/v0.5.29",
+          "digest": {
+            "gitCommit": "55bee86d1c284f1ddf2b9e280e870d2b6cef884a"
+          }
+        }
+      ]
+    },
+    "runDetails": {
+      "builder": {
+        "id": "https://github.com/actions/runner/github-hosted"
+      },
+      "metadata": {
+        "invocationId": "https://github.com/tursodatabase/libsql-js/actions/runs/23531631405/attempts/1"
+      }
+    }
+  }
+}

@@ -1,0 +1,429 @@
+{
+  "schema": 1,
+  "result": "PASS",
+  "acceptance": false,
+  "scope": "Exact-archive built/installed Nix Linux ARM64 wrapper-selected native CLI + actual installed public SDK + production HTTP/process gate; credentialless scripted loopback, NOT real provider/Pi/model/macOS or registry acceptance",
+  "revision": "34bcb02820c69fc8c3932c5974dbb457b53eb76d",
+  "base": "e68b9bcadd7597d16724a3655b7322cd02a965ad",
+  "draftPR": 1337,
+  "archiveSha256": "2e613f740aa07f6ad2944b2afb2510c7cbb6e338f73364fa428e260059a53f5b",
+  "archiveNarHash": "sha256-J8Aobc/KJydqjZwHgc7MiZnudEpaPrgKrro0j7/gh4Q=",
+  "buildSourceNarHash": "sha256-J8Aobc/KJydqjZwHgc7MiZnudEpaPrgKrro0j7/gh4Q=",
+  "buildSourceStorePath": "/nix/store/c4xn5mfwxwr1py6gy62ixrx7mlkm3vla-source",
+  "drvPath": "/nix/store/i3dmzwz0myg0b9cxkk0bm8xif76420gw-meridian-1.80.0.drv",
+  "outPath": "/nix/store/hqps475ckwynap87p9g62ij784qq9d8d-meridian-1.80.0",
+  "nixpkgsRevision": "6510408d147d8c5e6d76043e899e9251756f6a75",
+  "nixVersion": "2.35.2",
+  "image": "nixos/nix@sha256:7a007c766426c1877758ddc5cb87a965ac131fc78c582ce0083d922d51ae945c",
+  "imageId": "sha256:4eaa024b3c11ce1e29a610b0daf31828d37dd9a2174623bea280538a8ac6c919",
+  "containerName": "meridian-haiku55-nix-installed-20261011",
+  "containerId": "466b46e63ac90bf99021b1e3bd3f91edc33ad0d40c00f8e86911eb90ac544675",
+  "resources": {
+    "cpus": 2,
+    "memoryBytes": 4294967296,
+    "memorySwapBytes": 4294967296,
+    "pidsLimit": 256
+  },
+  "build": {
+    "exitCode": 0,
+    "started": "2026-10-11T16:56:21Z",
+    "finished": "2026-10-11T16:58:28Z",
+    "unchangedLock": true,
+    "lockUpdate": false,
+    "substituters": [
+      "https://cache.nixos.org"
+    ],
+    "hostNixInstalled": false
+  },
+  "versions": {
+    "meridian": "1.80.0",
+    "wrapper": "1.80.0",
+    "native": "2.1.295 (Claude Code)",
+    "sdk": "0.2.141"
+  },
+  "node": "v22.23.3",
+  "nodeExecutable": "/nix/store/nzb2gysid9hh6xcl9ac0iv6g3p9b570b-nodejs-slim-22.23.3/bin/node",
+  "wrapperWitness": {
+    "selected": "/nix/store/s1jz9vfr84mwya1mkr70dib6j89zml32-claude-code-2.1.295/bin/claude",
+    "node": "v22.23.3",
+    "execPath": "/nix/store/nzb2gysid9hh6xcl9ac0iv6g3p9b570b-nodejs-slim-22.23.3/bin/node"
+  },
+  "identities": {
+    "ownedMachineIdSha256": "59f7b2da87d58724e2e0f780f7b6b2839dc53efcf6eeb421aaa850f6bc4de9a7",
+    "coreutilsBin": "/nix/store/k3spppdnjvj3cp9fg2904ylm7gf68hls-coreutils-full-9.11/bin",
+    "packageSha256": "52d46f7561d74d3377042c9e279b97e705b0ada273a8c7f807567dde83186621",
+    "serverSha256": "de8c2974ea71cd71b0e77c23005f6716fe6b75865414bf789cae972d5bc87ac9",
+    "wrapperSha256": "3da72c9c7d0999f90f4996d9e6eaa390e95fa8622315ce8b911708360afcd661",
+    "wrapperText": "#! /nix/store/mwhkh9l5j5z6mkk83k22rjhx6lxgqh85-bash-5.3p15/bin/bash -e\nexport MERIDIAN_CLAUDE_PATH=${MERIDIAN_CLAUDE_PATH-'/nix/store/s1jz9vfr84mwya1mkr70dib6j89zml32-claude-code-2.1.295/bin/claude'}\nexec \"/nix/store/1nzpiv2idya913acb1wd1ydxvd2dw0pz-nodejs-22.23.3/bin/node\"  /nix/store/hqps475ckwynap87p9g62ij784qq9d8d-meridian-1.80.0/lib/meridian/dist/cli.js \"$@\" \n",
+    "removedBundledNativePackages": [],
+    "selectedNative": "/nix/store/s1jz9vfr84mwya1mkr70dib6j89zml32-claude-code-2.1.295/bin/claude",
+    "selectedNativeRealpath": "/nix/store/s1jz9vfr84mwya1mkr70dib6j89zml32-claude-code-2.1.295/bin/claude",
+    "selectedNativeSha256": "3e32e7c8bd2529933c428b642274364eb687e9935be2d1a599a4d283a64ed982",
+    "sdkEntry": "/nix/store/hqps475ckwynap87p9g62ij784qq9d8d-meridian-1.80.0/lib/meridian/node_modules/@anthropic-ai/claude-agent-sdk/sdk.mjs",
+    "sdkEntrySha256": "0c7a10e370441e9d7c7c90f7b32592dcc10e76f387bbe6ba25e6ce8a7d8de2e8"
+  },
+  "finalHarnessSha256": "11defd43ce328ba318cf52a3377b225725b845c7a1e26909607f0c5a87b20276",
+  "finalRun": "run-6.json",
+  "cases": [
+    {
+      "name": "alias-default-json",
+      "model": "haiku",
+      "expected": "claude-haiku-5-5",
+      "result": "PASS",
+      "httpStatus": 200,
+      "responseSha256": "ddf44b8d4f09d05f7b66e4625c669e3465ac1adf49099d6b2d768096485dee37",
+      "telemetry": {
+        "model": "haiku",
+        "resolvedModel": "claude-haiku-5-5",
+        "sdkSessionId": "3f68daec-6f0b-4089-97d2-8f4d50299361",
+        "status": 200,
+        "adapter": "opencode"
+      },
+      "history": {
+        "materialized": true,
+        "observedModels": [
+          "claude-haiku-5-5"
+        ],
+        "sha256": "ce73d81536af2ac0a74e72b40b1f1c419f9ab72262cd1dd2cbca84a8734848a1"
+      }
+    },
+    {
+      "name": "alias-default-sse",
+      "model": "haiku",
+      "expected": "claude-haiku-5-5",
+      "stream": true,
+      "result": "PASS",
+      "httpStatus": 200,
+      "responseSha256": "86a848b58fa9d866b4cbd1fc81201d655f9573897c54632bd494498b90f5d5b8",
+      "telemetry": {
+        "model": "haiku",
+        "resolvedModel": "claude-haiku-5-5",
+        "sdkSessionId": "81b95672-c22f-44ab-85db-99334fde2617",
+        "status": 200,
+        "adapter": "opencode"
+      },
+      "history": {
+        "materialized": true,
+        "observedModels": [
+          "claude-haiku-5-5"
+        ],
+        "sha256": "0e8df90071c8d7313e17eb8dcb054a70d5f767a663ca96b03d1d0dbbb39f0b47"
+      }
+    },
+    {
+      "name": "explicit55-enabled-budget",
+      "model": "claude-haiku-5-5",
+      "expected": "claude-haiku-5-5",
+      "thinking": {
+        "type": "enabled",
+        "budgetTokens": 2048
+      },
+      "result": "PASS",
+      "httpStatus": 200,
+      "responseSha256": "f668d4c63d9cb892917def570eda0e77722de04e0bae1315c1c66c0102411d10",
+      "telemetry": {
+        "model": "haiku",
+        "resolvedModel": "claude-haiku-5-5",
+        "sdkSessionId": "94290acf-6ee6-4fff-970b-ca0642d9e1c3",
+        "status": 200,
+        "adapter": "opencode"
+      },
+      "history": {
+        "materialized": true,
+        "observedModels": [
+          "claude-haiku-5-5"
+        ],
+        "sha256": "6ec12e823b3f2d3229caf25024f3979c8a0cb8b0292775efe93a0a5a44515837"
+      }
+    },
+    {
+      "name": "alias-enabled-budget-summarized",
+      "model": "haiku",
+      "expected": "claude-haiku-5-5",
+      "stream": true,
+      "thinking": {
+        "type": "enabled",
+        "budgetTokens": 2048,
+        "display": "summarized"
+      },
+      "effort": "medium",
+      "result": "PASS",
+      "httpStatus": 200,
+      "responseSha256": "1ccc1f23e11f1cb3545dfe97543d2e0ff738aaadbe434443a4a8e36e14fa5795",
+      "telemetry": {
+        "model": "haiku",
+        "resolvedModel": "claude-haiku-5-5",
+        "sdkSessionId": "61586a95-a2a1-4657-a54f-2156c7765026",
+        "status": 200,
+        "adapter": "opencode"
+      },
+      "history": {
+        "materialized": true,
+        "observedModels": [
+          "claude-haiku-5-5"
+        ],
+        "sha256": "bce59525efcf066cb849b33d73fb60c65d2284dd0d2a12777a6a51dd65c13475"
+      }
+    },
+    {
+      "name": "explicit55-adaptive-summarized",
+      "model": "claude-haiku-5-5",
+      "expected": "claude-haiku-5-5",
+      "thinking": {
+        "type": "adaptive",
+        "display": "summarized"
+      },
+      "effort": "high",
+      "result": "PASS",
+      "httpStatus": 200,
+      "responseSha256": "738b5048910684d873af34217819310a2ffffdc66ef20d36c119658bb66e6386",
+      "telemetry": {
+        "model": "haiku",
+        "resolvedModel": "claude-haiku-5-5",
+        "sdkSessionId": "9f60a1f8-b15e-492f-af95-4f971a5433bf",
+        "status": 200,
+        "adapter": "opencode"
+      },
+      "history": {
+        "materialized": true,
+        "observedModels": [
+          "claude-haiku-5-5"
+        ],
+        "sha256": "7c50816fc5a67ddb174da1349f0f045ff39049a8486bbee7bc272a7180401d24"
+      }
+    },
+    {
+      "name": "explicit45-enabled-control",
+      "model": "claude-haiku-4-5-20251001",
+      "expected": "claude-haiku-4-5-20251001",
+      "thinking": {
+        "type": "enabled",
+        "budgetTokens": 2048
+      },
+      "result": "PASS",
+      "httpStatus": 200,
+      "responseSha256": "a009f5d1ff58171778ea1cbe64362e1b5eba3b81d59fda79fc98ee145856c9f7",
+      "telemetry": {
+        "model": "haiku",
+        "resolvedModel": "claude-haiku-4-5-20251001",
+        "sdkSessionId": "8d5cf77a-e4c3-4624-9558-2a1b3501dd2d",
+        "status": 200,
+        "adapter": "opencode"
+      },
+      "history": {
+        "materialized": true,
+        "observedModels": [
+          "claude-haiku-4-5-20251001"
+        ],
+        "sha256": "0b7cb164e4f90cde77a49c52e5d3eece5c74ab1134b0c8d0a6887ec241eb5af2"
+      }
+    },
+    {
+      "name": "explicit55-disabled-json",
+      "model": "claude-haiku-5-5",
+      "stream": false,
+      "thinking": {
+        "type": "disabled"
+      },
+      "reject": true,
+      "result": "PASS",
+      "httpStatus": 400,
+      "responseSha256": "ac1b0c0a6a46717a70e8777a15b28add6542a415cb0b7b13f0bbac0c1ad4c6b9",
+      "rejectedBeforeQuery": true,
+      "error": {
+        "type": "invalid_request_error",
+        "message": "Claude Haiku 5.5 through the Claude Code SDK cannot reliably honor thinking: disabled. Use adaptive thinking with effort, or explicitly select claude-haiku-4-5."
+      }
+    },
+    {
+      "name": "alias-adaptive-omitted-json",
+      "model": "haiku",
+      "stream": false,
+      "thinking": {
+        "type": "adaptive",
+        "display": "omitted"
+      },
+      "reject": true,
+      "result": "PASS",
+      "httpStatus": 400,
+      "responseSha256": "1ad8f09358109a8233e449abdc2eaf733539d20da280144a66eb8f2e5f4b2437",
+      "rejectedBeforeQuery": true,
+      "error": {
+        "type": "invalid_request_error",
+        "message": "Claude Haiku 5.5 through the Claude Code SDK cannot reliably honor thinking.display: omitted. Omit display or use summarized, or explicitly select claude-haiku-4-5."
+      }
+    },
+    {
+      "name": "explicit55-disabled-sse",
+      "model": "claude-haiku-5-5",
+      "stream": true,
+      "thinking": {
+        "type": "disabled"
+      },
+      "reject": true,
+      "result": "PASS",
+      "httpStatus": 400,
+      "responseSha256": "ac1b0c0a6a46717a70e8777a15b28add6542a415cb0b7b13f0bbac0c1ad4c6b9",
+      "rejectedBeforeQuery": true,
+      "error": {
+        "type": "invalid_request_error",
+        "message": "Claude Haiku 5.5 through the Claude Code SDK cannot reliably honor thinking: disabled. Use adaptive thinking with effort, or explicitly select claude-haiku-4-5."
+      }
+    },
+    {
+      "name": "alias-adaptive-omitted-sse",
+      "model": "haiku",
+      "stream": true,
+      "thinking": {
+        "type": "adaptive",
+        "display": "omitted"
+      },
+      "reject": true,
+      "result": "PASS",
+      "httpStatus": 400,
+      "responseSha256": "1ad8f09358109a8233e449abdc2eaf733539d20da280144a66eb8f2e5f4b2437",
+      "rejectedBeforeQuery": true,
+      "error": {
+        "type": "invalid_request_error",
+        "message": "Claude Haiku 5.5 through the Claude Code SDK cannot reliably honor thinking.display: omitted. Omit display or use summarized, or explicitly select claude-haiku-4-5."
+      }
+    }
+  ],
+  "cleanup": {
+    "fixtureRetained": true,
+    "joined": true,
+    "nativeActorCount": 9,
+    "productionGateCount": 6,
+    "proxyListenerClose": true,
+    "fixtureListenerClose": true,
+    "activeHandlers": 0,
+    "sockets": [
+      {
+        "label": "fixture",
+        "close": true
+      },
+      {
+        "label": "proxy",
+        "close": true
+      },
+      {
+        "label": "proxy",
+        "close": true
+      },
+      {
+        "label": "fixture",
+        "close": true
+      },
+      {
+        "label": "fixture",
+        "close": true
+      },
+      {
+        "label": "fixture",
+        "close": true
+      },
+      {
+        "label": "fixture",
+        "close": true
+      },
+      {
+        "label": "fixture",
+        "close": true
+      },
+      {
+        "label": "fixture",
+        "close": true
+      }
+    ]
+  },
+  "synchronousSubprocesses": [],
+  "qualificationsBefore": {
+    "actualInstalledNixClosure": false,
+    "actualSelectedCliVersion": false,
+    "selectedCliInstalledSdkLaunch": false,
+    "note": "Prior native loopback evidence used npm Darwin 2.1.296; CI build/version and evaluator receipts alone were not installed SDK qualification. This task did not rerun the baseline."
+  },
+  "attempts": [
+    {
+      "run": "run-1.json",
+      "result": "FAIL",
+      "harnessSha256": "73bd0dedd306b27ea588c4549182809ea628683aaca6dfeb6ac4f6bb8663d330"
+    },
+    {
+      "run": "run-2.json",
+      "result": "FAIL",
+      "harnessSha256": "73bd0dedd306b27ea588c4549182809ea628683aaca6dfeb6ac4f6bb8663d330"
+    },
+    {
+      "run": "run-3.json",
+      "result": "FAIL",
+      "harnessSha256": "f67367a69d896f5d9ba8c12598672e336de6e50541c1094708691e7e2295d87e"
+    },
+    {
+      "run": "run-4.json",
+      "result": "PASS",
+      "harnessSha256": "17c45cc7a365b176f49c31ae353722de07e55e19019c282402ec7e8e3e7d95f3"
+    },
+    {
+      "run": "run-5.json",
+      "result": "PASS",
+      "harnessSha256": "250b62094991939221a6957bd777505cc27ea30debd92b7170321354b3326960"
+    },
+    {
+      "run": "run-6.json",
+      "result": "PASS",
+      "harnessSha256": "11defd43ce328ba318cf52a3377b225725b845c7a1e26909607f0c5a87b20276"
+    }
+  ],
+  "failedAttemptExplanations": {
+    "run-1": "Nix minimal image lacked /etc/machine-id; generated a random task-owned real machine-id in ONLY the new container. No bypass; this initial failure precedes the later explicit machine-id preflight. CLI versions joined.",
+    "run-2": "Fixture route erroneously rejected legitimate /v1/messages?beta=true; sanitized PATH omitted real coreutils sleep needed by production gate. Fixed fixture routing and included public container coreutils directory. No product/core/Nix change. All nine original actors joined.",
+    "run-3": "Unsupported extra assumption: legacy API snake_case budget_tokens=2048 was passed through unchanged and ignored by SDK, yielding native default31999. Existing production expects SDK budgetTokens; unchanged base has same lack of translation. Legacy model/manual-thinking still worked. Retained failure, no snake_case preservation claim.",
+    "run-4": "10/10 pass after selecting existing supported legacy budgetTokens control; final self-review added synchronous-subprocess detection so hidden sync actors cannot evade original close/pipe custody.",
+    "run-5": "10/10 pass with no sync subprocesses; final self-review then strengthened both5.5 manual budget inputs to actual SDK-supported budgetTokens, not an ignored snake_case budget.",
+    "run-6": "Final stronger SDK budgetTokens=2048 manual inputs for both alias/explicit5.5 plus sync detector: 10/10 pass; nine original actors/six production gates exit0/close/bothpipes; listeners/sockets/handlers joined."
+  },
+  "adjacentLimitations": [
+    {
+      "name": "legacy snake_case budget_tokens preservation",
+      "status": "not-qualified; observed native budget31999 rather than requested2048",
+      "introducedByHaikuChange": false,
+      "sourceEvidence": "legacy-budget-source-evidence.json",
+      "coreModified": false,
+      "releaseJudgment": "Parent must retain this limitation; credentialless compatibility PASS is not a broad HTTP-thinking-contract or full release claim."
+    }
+  ],
+  "realProviderCalls": 0,
+  "ownerCredentialsRead": false,
+  "accountsOrAuthModified": false,
+  "containerFinalState": {
+    "Status": "exited",
+    "Running": false,
+    "Paused": false,
+    "Restarting": false,
+    "OOMKilled": false,
+    "Dead": false,
+    "Pid": 0,
+    "ExitCode": 137,
+    "Error": "",
+    "StartedAt": "2026-10-11T17:09:09.398412403Z",
+    "FinishedAt": "2026-10-11T17:11:39.715950357Z"
+  },
+  "containerDeleted": false,
+  "fixturesDeleted": false,
+  "missingGates": [
+    "Actual authorized Haiku5.5/Pi provider flow and its independent installed-package flow",
+    "Nix macOS installed SDK/native execution (CI build is not this Linux ARM64 execution)",
+    "Fresh registry install/provider acceptance, publication/provenance/tag/Docker release verification",
+    "Parent independent review of the final new harness/evidence; no landing/release authorization inferred"
+  ],
+  "qualificationFinished": "2026-10-11T17:11:39Z",
+  "ownerRootCheckoutModified": false,
+  "existingCoreFilesModified": false,
+  "ownedNewRepositoryPaths": [
+    "scripts/e2e-haiku55-nix-compat.mjs",
+    "docs/maintenance/evidence/haiku55-nix-installed-20261011/"
+  ],
+  "containerStopExplanation": "Both owned-container stops followed complete original native joins and an external process snapshot showing ONLY idle PID1 sleep. Docker stop -t5 escalated that idle sleep (container exit137, no OOM); no native actor was running. Container/closure and all fixtures retained. Only this NEW task-owned disconnected container was restarted for final harness refinement; unrelated existing verification container was never accessed.",
+  "manualBudgetQualification": "Final run6 uses SDK-supported budgetTokens=2048 for both5.5 manual inputs and legacy4.5; Haiku5.5 native wire adaptive/no budget; legacy wire enabled/budget2048. Snake_case legacy preservation remains unqualified."
+}

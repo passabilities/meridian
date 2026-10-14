@@ -1,0 +1,33 @@
+[
+  {
+    "mode": "codec-order",
+    "exit": 0,
+    "stdout": "P1-P2-codec-order.stdout.json",
+    "stderr": "P1-P2-codec-order.stderr.log"
+  },
+  {
+    "mode": "profile-prune",
+    "exit": 0,
+    "stdout": "P1-P2-profile-prune.stdout.json",
+    "stderr": "P1-P2-profile-prune.stderr.log"
+  },
+  {
+    "mode": "runtime-truncate",
+    "exit": 1,
+    "stdout": "P1-P2-runtime-truncate.stdout.json",
+    "stderr": "P1-P2-runtime-truncate.stderr.log"
+  },
+  {
+    "mode": "failed-open",
+    "exit": 0,
+    "stdout": "P1-P2-failed-open.stdout.json",
+    "stderr": "P1-P2-failed-open.stderr.log"
+  },
+  {
+    "mode": "runtime-truncate-corrected",
+    "exit": 0,
+    "stdout": "P1-P2-runtime-truncate-corrected.stdout.json",
+    "stderr": "P1-P2-runtime-truncate-corrected.stderr.log",
+    "harnessCorrection": "close borrowed main handle before extra guard lease; product unchanged"
+  }
+]

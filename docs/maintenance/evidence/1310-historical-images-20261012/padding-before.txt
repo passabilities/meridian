@@ -1,0 +1,45 @@
+47 |     const malformed = {...image,source:{...image.source,data:image.source.data.slice(0,-1)}}
+48 |     const source=[entry([image,malformed,malformed]),entry("current")]
+49 |     expect(imageBlocks(frameStructuredReplay(source))).toEqual([image,malformed,malformed])
+                                                            ^
+error: expect(received).toEqual(expected)
+
+  [
+    {
+      "source": {
+        "data": "aGlzdG9yaWNhbA==",
+        "media_type": "image/png",
+        "type": "base64",
+      },
+      "type": "image",
+    },
+-   {
+-     "source": {
+-       "data": "aGlzdG9yaWNhbA=",
+-       "media_type": "image/png",
+-       "type": "base64",
+-     },
+-     "type": "image",
+-   },
+-   {
+-     "source": {
+-       "data": "aGlzdG9yaWNhbA=",
+-       "media_type": "image/png",
+-       "type": "base64",
+-     },
+-     "type": "image",
+-   },
+  ]
+
+- Expected  - 16
++ Received  + 0
+
+      at <anonymous> (/Users/rynfar/repos/meridian-historical-images-1310-20261012/src/__tests__/replay-image-dedup.test.ts:49:56)
+(fail) historical image replay deduplication > does not hide malformed padding behind an otherwise matching valid image [2.48ms]
+(pass) historical image replay deduplication > also deduplicates history when replay ends in an assistant context turn [0.34ms]
+(pass) historical image replay deduplication > leaves native checkpoint results and ordinary resume coalescing unchanged [0.08ms]
+
+ 5 pass
+ 1 fail
+ 16 expect() calls
+Ran 6 tests across 1 file. [204.00ms]

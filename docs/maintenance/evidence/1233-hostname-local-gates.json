@@ -1,0 +1,67 @@
+{
+  "date": "2026-10-04",
+  "head": "f33f93a1acfd93fdd73db89b3b1f05ac7a91b65e",
+  "base": "9d77d8e282cb9c58d99b8962b900777e9f4b0803",
+  "sourceDelivery": "ae6bf5e4441d31c872315de11bb2e7a71e6782bb",
+  "productCorrection": "a6be2cd3d5c3a168610c5a94a67adfa1d1dabba7",
+  "platform": "darwin/arm64",
+  "bun": "1.3.14",
+  "node": "v22.22.3",
+  "gates": [
+    {
+      "command": "npm test",
+      "exit": 0,
+      "pretestTypecheck": true,
+      "pass": 5333,
+      "skip": 35,
+      "fail": 0,
+      "stages": 19,
+      "assertions": 26558
+    },
+    {
+      "command": "npm run typecheck",
+      "exit": 0
+    },
+    {
+      "command": "npm run build",
+      "exit": 0,
+      "result": "Node bundles/exports checked; local build certified"
+    }
+  ],
+  "CI": "Required final delivery head CI pending; local checks do not replace it",
+  "liveModelCalls": false,
+  "postRebase": {
+    "verifiedHead": "a4c60935eb239ac9c008b753f41cdae49cdc8bb4",
+    "base": "5bd6b765fc7507780e1e9238b6d48a99f3d44810",
+    "sourceDelivery": "3055d6b3ac988807316d14735a3c761966d4871a",
+    "productCorrection": "6fb37564d4b7c141ded9d7751670eb522d25d592",
+    "boundedHarness": "2fa3ce708eee87d5b81cac967dbcfd09f7385bd0",
+    "productAndHarnessBlobsUnchangedFrom": "f33f93a1acfd93fdd73db89b3b1f05ac7a91b65e",
+    "gates": [
+      {
+        "command": "bun test --timeout 30000 src/__tests__/header-settings-routes.test.ts",
+        "exit": 0,
+        "pass": 24,
+        "fail": 0,
+        "assertions": 240
+      },
+      {
+        "command": "bun test --timeout 30000 src/__tests__/preload-tmp-cleanup.test.ts src/__tests__/site-header.test.ts src/__tests__/host-label.test.ts src/__tests__/build-badge.test.ts",
+        "exit": 0,
+        "pass": 76,
+        "fail": 0,
+        "assertions": 306
+      },
+      {
+        "command": "npm run typecheck",
+        "exit": 0
+      },
+      {
+        "command": "npm run build",
+        "exit": 0
+      }
+    ],
+    "fullSuiteRerun": false,
+    "fullSuiteProvenance": "Recorded above at exact f33f93a1; final head CI still required"
+  }
+}

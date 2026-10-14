@@ -1,0 +1,130 @@
+{
+  "schema": 1,
+  "result": "FAIL",
+  "acceptance": false,
+  "scope": "Exact-archive built/installed Nix Linux ARM64 wrapper-selected native CLI + actual installed public SDK + production HTTP/process gate; credentialless scripted loopback, NOT real provider/Pi/model/macOS or registry acceptance",
+  "outPath": "/nix/store/hqps475ckwynap87p9g62ij784qq9d8d-meridian-1.80.0",
+  "platform": "linux/arm64",
+  "node": "v22.23.3",
+  "nodeExecutable": "/nix/store/nzb2gysid9hh6xcl9ac0iv6g3p9b570b-nodejs-slim-22.23.3/bin/node",
+  "harnessSha256": "73bd0dedd306b27ea588c4549182809ea628683aaca6dfeb6ac4f6bb8663d330",
+  "network": {
+    "fence": "Docker owned container disconnected from all networks before execution",
+    "interfaces": [
+      {
+        "name": "lo",
+        "address": "127.0.0.1",
+        "internal": true
+      },
+      {
+        "name": "lo",
+        "address": "::1",
+        "internal": true
+      }
+    ],
+    "routeTable": "Iface\tDestination\tGateway \tFlags\tRefCnt\tUse\tMetric\tMask\t\tMTU\tWindow\tIRTT                                                       \n",
+    "generation": "owned 127.0.0.1 fake Anthropic only",
+    "sandboxExec": false
+  },
+  "versions": {
+    "meridian": "1.80.0",
+    "wrapper": "1.80.0",
+    "native": "2.1.295 (Claude Code)",
+    "sdk": "0.2.141"
+  },
+  "identities": {
+    "packageSha256": "52d46f7561d74d3377042c9e279b97e705b0ada273a8c7f807567dde83186621",
+    "serverSha256": "de8c2974ea71cd71b0e77c23005f6716fe6b75865414bf789cae972d5bc87ac9",
+    "wrapperSha256": "3da72c9c7d0999f90f4996d9e6eaa390e95fa8622315ce8b911708360afcd661",
+    "wrapperText": "#! /nix/store/mwhkh9l5j5z6mkk83k22rjhx6lxgqh85-bash-5.3p15/bin/bash -e\nexport MERIDIAN_CLAUDE_PATH=${MERIDIAN_CLAUDE_PATH-'/nix/store/s1jz9vfr84mwya1mkr70dib6j89zml32-claude-code-2.1.295/bin/claude'}\nexec \"/nix/store/1nzpiv2idya913acb1wd1ydxvd2dw0pz-nodejs-22.23.3/bin/node\"  /nix/store/hqps475ckwynap87p9g62ij784qq9d8d-meridian-1.80.0/lib/meridian/dist/cli.js \"$@\" \n",
+    "removedBundledNativePackages": [],
+    "selectedNative": "/nix/store/s1jz9vfr84mwya1mkr70dib6j89zml32-claude-code-2.1.295/bin/claude",
+    "selectedNativeRealpath": "/nix/store/s1jz9vfr84mwya1mkr70dib6j89zml32-claude-code-2.1.295/bin/claude",
+    "selectedNativeSha256": "3e32e7c8bd2529933c428b642274364eb687e9935be2d1a599a4d283a64ed982",
+    "sdkEntry": "/nix/store/hqps475ckwynap87p9g62ij784qq9d8d-meridian-1.80.0/lib/meridian/node_modules/@anthropic-ai/claude-agent-sdk/sdk.mjs",
+    "sdkEntrySha256": "0c7a10e370441e9d7c7c90f7b32592dcc10e76f387bbe6ba25e6ce8a7d8de2e8"
+  },
+  "wrapperWitness": {
+    "selected": "/nix/store/s1jz9vfr84mwya1mkr70dib6j89zml32-claude-code-2.1.295/bin/claude",
+    "node": "v22.23.3",
+    "execPath": "/nix/store/nzb2gysid9hh6xcl9ac0iv6g3p9b570b-nodejs-slim-22.23.3/bin/node"
+  },
+  "cases": [],
+  "requests": [
+    {
+      "case": "setup",
+      "path": "/v1/messages",
+      "bodySha256": "25efa16aa6fe5cec361498b893db3f7f8eacfbbab354136fc8e369d9783fc075",
+      "bodyBytes": 79,
+      "model": "claude-haiku-5-5",
+      "thinking": {
+        "type": "enabled",
+        "budget_tokens": 2048
+      },
+      "outputConfig": null,
+      "stream": false,
+      "rejected": true,
+      "headers": {
+        "user-agent": "node"
+      }
+    }
+  ],
+  "actors": [
+    {
+      "label": "setup",
+      "command": "/nix/store/hqps475ckwynap87p9g62ij784qq9d8d-meridian-1.80.0/bin/meridian",
+      "pid": 16739,
+      "sdkGate": false,
+      "gatePublished": false,
+      "nativeExecObserved": false,
+      "exit": true,
+      "close": true,
+      "stdoutClose": true,
+      "stderrClose": true,
+      "code": 0,
+      "signal": null,
+      "errors": [],
+      "stderr": "",
+      "escalations": []
+    },
+    {
+      "label": "setup",
+      "command": "/nix/store/s1jz9vfr84mwya1mkr70dib6j89zml32-claude-code-2.1.295/bin/claude",
+      "pid": 16746,
+      "sdkGate": false,
+      "gatePublished": false,
+      "nativeExecObserved": false,
+      "exit": true,
+      "close": true,
+      "stdoutClose": true,
+      "stderrClose": true,
+      "code": 0,
+      "signal": null,
+      "errors": [],
+      "stderr": "",
+      "escalations": []
+    }
+  ],
+  "failures": [
+    "Error: [PROXY] Refusing to start: cannot capture a process incarnation on this host, so no request that touches a session could be served.\n  platform: linux\n  cause: no readable /etc/machine-id or /var/lib/dbus/machine-id, or /proc is not mounted. Distroless, scratch, chroot and gVisor images commonly lack machine-id: generate one (`dbus-uuidgen > /etc/machine-id`) or bind-mount the host's.\n  Set MERIDIAN_ALLOW_MISSING_BOOT_IDENTITY=1 to start anyway (requests will still fail)."
+  ],
+  "cleanup": {
+    "fixtureRetained": true,
+    "joined": true,
+    "nativeActorCount": 2,
+    "productionGateCount": 0,
+    "proxyListenerClose": true,
+    "fixtureListenerClose": true,
+    "activeHandlers": 0,
+    "sockets": [
+      {
+        "label": "fixture",
+        "close": true
+      }
+    ]
+  },
+  "fixtureNegativeControl": {
+    "status": 400,
+    "manual55Rejected": true
+  }
+}

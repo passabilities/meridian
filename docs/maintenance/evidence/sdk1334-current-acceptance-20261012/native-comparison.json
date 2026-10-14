@@ -1,0 +1,121 @@
+[
+  {
+    "arm": "before",
+    "exit": 1,
+    "report": {
+      "result": "FAIL",
+      "error": "exit without owned pipe-close must not authorize join\n\ntrue !== false\n",
+      "scope": "production SDK process gate with controlled actual Node children; no SDK query/model/Claude CLI",
+      "platform": "darwin",
+      "arch": "arm64",
+      "driver": "v22.22.3",
+      "bun": null,
+      "nodeChild": "v22.22.3",
+      "artifactSha256": "370e3a76f3751ce04c9fd5402903e135c5d21e239949f6fc81e101908f23274f",
+      "fixtureRemoved": true,
+      "facts": [
+        {
+          "mode": "ordinary-exit",
+          "budgetMs": 1000,
+          "joined": true,
+          "closeAtVerdict": true,
+          "exitAtVerdict": true,
+          "ignoredTerm": false,
+          "exitCodeAtVerdict": 0,
+          "signalAtVerdict": null,
+          "elapsedMs": 3,
+          "cleanupVerdict": true,
+          "finalJoin": true,
+          "originalCloseJoined": true
+        },
+        {
+          "mode": "delayed-pipes",
+          "budgetMs": 100,
+          "joined": true,
+          "closeAtVerdict": false,
+          "exitAtVerdict": true,
+          "ignoredTerm": false,
+          "exitCodeAtVerdict": 0,
+          "signalAtVerdict": null,
+          "elapsedMs": 0,
+          "cleanupVerdict": true,
+          "finalJoin": true,
+          "originalCloseJoined": true
+        },
+        {
+          "mode": "resists-term",
+          "budgetMs": 1000,
+          "joined": false,
+          "closeAtVerdict": false,
+          "exitAtVerdict": false,
+          "ignoredTerm": true,
+          "exitCodeAtVerdict": null,
+          "signalAtVerdict": null,
+          "elapsedMs": 1001,
+          "cleanupVerdict": true,
+          "finalJoin": true,
+          "originalCloseJoined": true
+        }
+      ]
+    }
+  },
+  {
+    "arm": "after",
+    "exit": 0,
+    "report": {
+      "result": "PASS",
+      "scope": "production SDK process gate with controlled actual Node children; no SDK query/model/Claude CLI",
+      "platform": "darwin",
+      "arch": "arm64",
+      "driver": "v22.22.3",
+      "bun": null,
+      "nodeChild": "v22.22.3",
+      "artifactSha256": "6c988280c69db46736dad799cf9966331be036d5ff253b1958f9c6fe011f4d57",
+      "fixtureRemoved": true,
+      "facts": [
+        {
+          "mode": "ordinary-exit",
+          "budgetMs": 1000,
+          "joined": true,
+          "closeAtVerdict": true,
+          "exitAtVerdict": true,
+          "ignoredTerm": false,
+          "exitCodeAtVerdict": 0,
+          "signalAtVerdict": null,
+          "elapsedMs": 3,
+          "cleanupVerdict": true,
+          "finalJoin": true,
+          "originalCloseJoined": true
+        },
+        {
+          "mode": "delayed-pipes",
+          "budgetMs": 100,
+          "joined": false,
+          "closeAtVerdict": false,
+          "exitAtVerdict": true,
+          "ignoredTerm": false,
+          "exitCodeAtVerdict": 0,
+          "signalAtVerdict": null,
+          "elapsedMs": 101,
+          "cleanupVerdict": true,
+          "finalJoin": true,
+          "originalCloseJoined": true
+        },
+        {
+          "mode": "resists-term",
+          "budgetMs": 1000,
+          "joined": true,
+          "closeAtVerdict": true,
+          "exitAtVerdict": true,
+          "ignoredTerm": true,
+          "exitCodeAtVerdict": null,
+          "signalAtVerdict": "SIGKILL",
+          "elapsedMs": 628,
+          "cleanupVerdict": true,
+          "finalJoin": true,
+          "originalCloseJoined": true
+        }
+      ]
+    }
+  }
+]

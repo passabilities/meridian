@@ -78,6 +78,26 @@ const BILLING_SIGNALS: readonly RegExp[] = [
   /^\s*(?:(?:error|api error|claude code returned an error result|subprocess stderr):\s*)*your (?:group|organization|org)(?:'|’)s usage limit is set to \$\d/m,
 ]
 
+const EXTRA_USAGE_REFUSAL = /^(?:(?:you(?:'|’)re|you are) out of(?: your)? extra usage\b|third-party apps(?: now)? draws? from(?: your)? extra usage\b)/i
+const ERROR_WRAPPERS = /^\s*(?:(?:error|api error|claude code returned an error result|subprocess stderr):\s*)*(?:\d{3}\s+)?/i
+const MAX_QUOTED_REFUSAL = 300
+
+/** Anthropic's own sentence for an Extra Usage refusal, without the SDK's
+ *  wrappers, or null when the error is some other billing refusal.
+ *
+ *  These refusals ("You're out of extra usage", "Third-party apps now draw
+ *  from extra usage, not plan limits") say which pool a request was charged
+ *  to and what to do about it. Answered with the generic subscription text,
+ *  they read as a lapsed subscription on an account that is in good standing. */
+function extraUsageRefusal(errMsg: string): string | null {
+  // Only the primary recognized refusal supplies client-facing provider text.
+  // A different billing failure can include tool output or diagnostic context
+  // that merely mentions Extra Usage; none of that establishes its cause.
+  const sentence = errMsg.replace(ERROR_WRAPPERS, "").trimStart().split(/\r?\n/, 1)[0]!.trim()
+  if (!EXTRA_USAGE_REFUSAL.test(sentence)) return null
+  return sentence.length > MAX_QUOTED_REFUSAL ? `${sentence.slice(0, MAX_QUOTED_REFUSAL)}…` : sentence
+}
+
 /** The org-admin entitlement switch: "Your organization has disabled Claude
  *  subscription access for Claude Code · Use an Anthropic API key instead, or
  *  ask your admin to enable access". Observed live on a Max profile that
@@ -371,6 +391,14 @@ export function classifyError(errMsg: string, model?: string): ClassifiedError {
   // isAccountFailoverError started keying on it (#796) — at which point an
   // MCP server's stderr could mark every profile in the pool exhausted.
   if (BILLING_SIGNALS.some(rx => rx.test(lower))) {
+    const extraUsage = extraUsageRefusal(errMsg)
+    if (extraUsage) {
+      return {
+        status: 402,
+        type: "billing_error",
+        message: `Claude returned an Extra Usage refusal: "${extraUsage}"`
+      }
+    }
     return {
       status: 402,
       type: "billing_error",
@@ -397,9 +425,9 @@ export function classifyError(errMsg: string, model?: string): ClassifiedError {
   }
 
   // The resolved CLI predates the requested model. A correct package.json floor
-  // does not prevent this: MERIDIAN_CLAUDE_PATH is step 0 of
-  // resolveClaudeExecutableWithSource, so an env-pointed CLI outranks the
-  // bundled binary the floor governs (#932).
+  // does not prevent this: the floor governs only the bundled binary, and the
+  // resolver may run another - the `claude` on PATH (the default), a path
+  // chosen in Settings, or MERIDIAN_CLAUDE_PATH, which outranks both (#932).
   //
   // 400 for the same reason as context overflow above — upgrading the CLI is
   // the only fix, so every retry fails identically, and the default 500 reads
@@ -414,7 +442,7 @@ export function classifyError(errMsg: string, model?: string): ClassifiedError {
     return {
       status: 400,
       type: "invalid_request_error",
-      message: `${errMsg.trim()} (Meridian: the Claude Code CLI it resolved is older than the requested model. If MERIDIAN_CLAUDE_PATH is set it overrides the bundled CLI, so update that binary or unset the variable.)`
+      message: `${errMsg.trim()} (Meridian: the Claude Code CLI it resolved is older than the requested model. Update that installation, or choose a newer one under Settings, Claude Code Executable. MERIDIAN_CLAUDE_PATH, when set, overrides that choice.)`
     }
   }
 

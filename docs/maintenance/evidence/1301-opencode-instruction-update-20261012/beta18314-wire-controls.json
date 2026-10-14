@@ -1,0 +1,112 @@
+[
+  {
+    "control": "warm-wire-control-known-initial",
+    "exit": 1,
+    "scope": "Credentialless actual beta18314 warm host; wire-shape diagnostic, not full E42 acceptance",
+    "probe": {
+      "variantProbe": {
+        "model": "anthropic/claude-haiku-5-5#xhigh",
+        "selected": true,
+        "errors": [],
+        "efforts": [
+          "low",
+          "xhigh"
+        ],
+        "completed": false,
+        "answered": false
+      },
+      "wireControl": [
+        {
+          "model": "claude-haiku-4-5",
+          "fields": {}
+        },
+        {
+          "model": "claude-haiku-4-5-20251001",
+          "fields": {}
+        },
+        {
+          "model": "claude-haiku-4-5-20251001",
+          "fields": {}
+        },
+        {
+          "model": "claude-haiku-4-5-20251001",
+          "fields": {}
+        },
+        {
+          "model": "claude-haiku-5-5",
+          "effort": "low",
+          "fields": {
+            "top": "low"
+          }
+        },
+        {
+          "model": "claude-haiku-5-5",
+          "effort": "xhigh",
+          "fields": {
+            "top": "xhigh"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "control": "warm-wire-control-live-catalog",
+    "exit": 1,
+    "scope": "Credentialless actual beta18314 warm host; wire-shape diagnostic, not full E42 acceptance",
+    "probe": {
+      "variantProbe": {
+        "model": "anthropic/claude-haiku-5-5#xhigh",
+        "selected": true,
+        "errors": [],
+        "efforts": [
+          null,
+          null
+        ],
+        "completed": true,
+        "answered": false
+      },
+      "wireControl": [
+        {
+          "model": "claude-haiku-5-5",
+          "fields": {
+            "thinking": {
+              "type": "disabled"
+            }
+          }
+        },
+        {
+          "model": "claude-haiku-4-5-20251001",
+          "fields": {}
+        },
+        {
+          "model": "claude-haiku-4-5-20251001",
+          "fields": {}
+        },
+        {
+          "model": "claude-haiku-4-5-20251001",
+          "fields": {}
+        },
+        {
+          "model": "claude-haiku-5-5",
+          "fields": {
+            "thinking": {
+              "type": "disabled"
+            }
+          }
+        },
+        {
+          "model": "claude-haiku-5-5",
+          "fields": {
+            "output": {
+              "effort": "xhigh"
+            },
+            "thinking": {
+              "type": "adaptive",
+              "display": "summarized"
+            }
+          }
+        }
+      ]
+    }
+  }
+]

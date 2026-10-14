@@ -1,0 +1,49 @@
+{
+  "date": "2026-10-04",
+  "baseline": "9d77d8e282cb9c58d99b8962b900777e9f4b0803",
+  "productHead": "a6be2cd3d5c3a168610c5a94a67adfa1d1dabba7",
+  "harnessHead": "f33f93a1acfd93fdd73db89b3b1f05ac7a91b65e",
+  "video": {
+    "width": 750,
+    "height": 1600,
+    "durationSeconds": 2.952,
+    "inspectedFrames": "Mac visible -> hidden -> Mac visible",
+    "actualCurrentRows": "shown/checked -> hidden/unchecked -> shown/checked",
+    "consentOffAfter": true
+  },
+  "captures": "Matching native 375px application frames; outer wrapper horizontal scrollbar is not an application overflow assertion; unsettled/blank preliminary captures excluded",
+  "artifacts": [
+    {
+      "kind": "before-375-frame",
+      "localPath": "/Users/rynfar/.t3/userdata/browser-artifacts/browser-screenshot-127-0-0-1-muuc7yss-437f302a.png",
+      "bytes": 440708,
+      "sha256": "8187148600987502045d3dcc971d2c65b81ee97d27bd08a6a2924ab80bc20a5d",
+      "inspection": "Queue owner visually inspected final media; no secrets",
+      "availability": "Local native userdata artifact; no PR/CI upload facility available"
+    },
+    {
+      "kind": "after-375-frame",
+      "localPath": "/Users/rynfar/.t3/userdata/browser-artifacts/browser-screenshot-127-0-0-1-muuc82b1-bd5268be.png",
+      "bytes": 442263,
+      "sha256": "9e34faac2ea3f58deef4331f79ab8881e91c81fca7759c22e5c37c488b201e12",
+      "inspection": "Queue owner visually inspected final media; no secrets",
+      "availability": "Local native userdata artifact; no PR/CI upload facility available"
+    },
+    {
+      "kind": "current-row-shown",
+      "localPath": "/Users/rynfar/.t3/userdata/browser-artifacts/browser-screenshot-127-0-0-1-muuc9myn-73c0cfd8.png",
+      "bytes": 481474,
+      "sha256": "3726bfa4e3edb440fd4d5198624aa67c1833cb2260217d9227c21a015202c5e4",
+      "inspection": "Queue owner visually inspected final media; no secrets",
+      "availability": "Local native userdata artifact; no PR/CI upload facility available"
+    },
+    {
+      "kind": "native-toggle-video",
+      "localPath": "/Users/rynfar/.t3/userdata/attachments/904e96b4-f8b6-4089-8241-764841d8fcb7-2c09ef64-a595-4574-b3e8-440d2b18caba-mp4.mp4",
+      "bytes": 553975,
+      "sha256": "043f87a498fbb5f43acf8d242a2e9a76cbbbe925705e7ef63752198010430f1b",
+      "inspection": "Queue owner visually inspected final media; no secrets",
+      "availability": "Local native userdata artifact; no PR/CI upload facility available"
+    }
+  ]
+}

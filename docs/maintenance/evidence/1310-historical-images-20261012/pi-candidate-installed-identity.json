@@ -1,0 +1,18 @@
+{
+  "source": "local",
+  "kind": "artifact",
+  "version": "1.81.0",
+  "releaseVersion": "1.81.0",
+  "sha": "b6624d9fa958f0849a65493babc0f748f705d623",
+  "branch": "codex/historical-images-1310-20261012",
+  "dirty": false,
+  "sourceHash": "1bed6eddc63e8eecb7f52521600c4a73de4f16a93065e27566cefc1fb427e2f6",
+  "branchUrl": "https://github.com/rynfar/meridian/tree/codex%2Fhistorical-images-1310-20261012",
+  "commitUrl": "https://github.com/rynfar/meridian/commit/b6624d9fa958f0849a65493babc0f748f705d623",
+  "counter": 2,
+  "counterScope": "15b979e8-1bc1-4d03-8cbc-992030f32262",
+  "attemptId": "c8722aa1-3c02-4af3-85ca-4479f7aee608",
+  "builtAt": "2026-10-12T20:04:24.271Z",
+  "displayVersion": "v1.81.0-2-codex/historical-images-1310-20261012-b6624d9f",
+  "certification": "verified"
+}

@@ -1,0 +1,29 @@
+[PROXY] CREDENTIALS READ-ONLY MODE (MERIDIAN_CREDENTIALS_READONLY): this instance will not refresh or write OAuth credentials. Token rotation is another instance's job; credentials are re-read from disk.
+{"mode":"failover","status":200,"refusedCalls":4,"headerMs":80657.75403299999,"rows":[{"profile":"working","status":200,"error":null},{"profile":"refused","status":429,"error":"rate_limit_error"}],"answered":true}
+[e2e-sse-quota-failover] assertion/runtime failure: AssertionError [ERR_ASSERTION]: SSE headers took 335.1ms; expected less than 100ms
+    at file:///opt/sse-probe/e2e-sse-quota-failover-heartbeat.mjs:216:17
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: false,
+  expected: true,
+  operator: '==',
+  diff: 'simple'
+}
+{"root":"/tmp/meridian-sse-quota-failover-uy2Vt4","result":"FAIL","joined":true}
+node:internal/modules/run_main:123
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: SSE headers took 335.1ms; expected less than 100ms
+    at file:///opt/sse-probe/e2e-sse-quota-failover-heartbeat.mjs:216:17
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: false,
+  expected: true,
+  operator: '==',
+  diff: 'simple'
+}
+
+Node.js v22.23.3

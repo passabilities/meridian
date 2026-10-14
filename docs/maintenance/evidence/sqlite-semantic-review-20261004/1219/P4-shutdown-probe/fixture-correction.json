@@ -1,0 +1,6 @@
+{
+  "originalScriptSha256": "5471015eec53ec00d7e79eb82d75c0ecfb00c4550a98b241d5941824e803372e",
+  "correctedScriptSha256": "c82b6bbffcb3146053f480ef4c1212679057c7751316f39faf207437bf4105df",
+  "correction": "Canonicalize the owned sessions directory in the identity assertion. Production source and all shutdown/guard/finalizer assertions are unchanged.",
+  "preservedFirstFailure": "initial-identity-failure/result.json"
+}

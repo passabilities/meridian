@@ -1,0 +1,44 @@
+{
+  "result": "FAIL",
+  "root": "/var/folders/ks/xnz659y11jl44j80b_lfws6r0000gn/T/meridian-opencode-instruction-update-HvxprP",
+  "expected": "baseline",
+  "model": "claude-haiku-5-5",
+  "idleMs": 15000,
+  "platform": "darwin/arm64",
+  "node": "v22.22.3",
+  "environment": "unspecified",
+  "actors": [
+    {
+      "command": "/tmp/meridian-1301-opencode-20261012/node_modules/.bin/opencode",
+      "pid": 43387,
+      "close": true,
+      "stdoutClose": true,
+      "stderrClose": true,
+      "code": 0,
+      "signal": null
+    },
+    {
+      "command": "/Users/rynfar/.hermes/node/bin/node",
+      "pid": 43395,
+      "close": true,
+      "stdoutClose": true,
+      "stderrClose": true,
+      "code": 1,
+      "signal": null
+    }
+  ],
+  "requests": [],
+  "harnessSha256": "ebed9e7a063447e08ed73a9f47823adbf7cae9fac32a7f938d7c424e8c12e0b4",
+  "client": "opencode v2.0.21",
+  "scrubPreflight": {
+    "path": "/private/tmp/meridian-scrub-preflight-package-20261012/node_modules/@rynfar/meridian-plugin-opencode-scrub/dist/index.js",
+    "packageName": "@rynfar/meridian-plugin-opencode-scrub",
+    "packageVersion": "0.2.3",
+    "sha256": "4ab89412e6a59fad812a3f6e5500c84f3bdfc41863320bc794f5274a251da656",
+    "runtimeVersion": "0.2.3",
+    "invocations": 0,
+    "errors": 0
+  },
+  "failure": "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n\n1 !== 0\n",
+  "joined": true
+}

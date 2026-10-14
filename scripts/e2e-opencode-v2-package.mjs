@@ -45,7 +45,7 @@ async function startMeridian() {
   let ready
   let rejectReady
   const readiness = new Promise((resolve, reject) => { ready = resolve; rejectReady = reject })
-  const child = Bun.spawn([process.execPath, join(import.meta.dir, 'e2e-opencode-proxy-host.mjs')], {
+  const child = Bun.spawn([process.execPath, join(import.meta.dir, 'e2e-qualified-opencode-proxy-host.mjs')], {
     cwd: root, env: { ...process.env, E2E_PROXY_MODULE: pathToFileURL(join(repo, 'dist/server.js')).href },
     stdout: 'pipe', stderr: 'pipe', ipc(message) { if (message.port) ready(message.port) },
   })
@@ -135,7 +135,7 @@ const endpoint = Bun.serve({ hostname: '127.0.0.1', port: 0, async fetch(request
   const systemText = typeof body.system === 'string' ? body.system : (body.system ?? []).map(block => block.text ?? '').join('\n')
   const clientCwd = systemText.match(/Working directory:\s*([^\n]+)/i)?.[1]?.trim()
   const clientSystemHash = createHash('sha256').update(JSON.stringify(body.system ?? null)).digest('hex')
-  const row = { clientSystemHash, clientCwd, requestId: crypto.randomUUID(), path: new URL(request.url).pathname, model: body.model, effort: body.effort, headers, hasForkMarker: JSON.stringify(body.messages).includes(forkMarker),
+  const row = { clientSystemHash, clientCwd, requestId: crypto.randomUUID(), path: new URL(request.url).pathname, model: body.model, effort: body.effort || body.output_config?.effort, effortFields: {top:body.effort, output:body.output_config, thinking:body.thinking}, headers, hasForkMarker: JSON.stringify(body.messages).includes(forkMarker),
     hasUndoMarker: JSON.stringify(body.messages).includes(undoMarker), hasSummaryMarker: JSON.stringify(body.messages).includes(summaryMarker), startedAt: Date.now() }
   requests.push(row)
   if (live) {
@@ -243,8 +243,24 @@ try {
   if (v1) data.provider = { anthropic: { options: provider.settings } }
   else data.providers = { anthropic: provider }
   writeFileSync(path, JSON.stringify(data, null, 2))
-  if (extended) await startClientServer()
-  const base = [client, 'run', ...(extended ? ['--server', serverUrl] : v1 ? [] : ['--standalone']), '--format', 'json', '--model', 'anthropic/claude-haiku-4-5-20251001']
+  if (extended) {
+    await startClientServer()
+    if (live) {
+      // This is the warm-server gate. HTTP readiness precedes the asynchronous
+      // catalog reload for models newer than the pinned client. The separate
+      // --standalone probe below still tests cold cache seeding.
+      let ready = false
+      for (let attempt = 0; attempt < 150; attempt++) {
+        const catalog = await api('/api/model')
+        ready = catalog.data.some(model => model.providerID === 'anthropic' && model.id === 'claude-haiku-5-5')
+        if (ready) break
+        await Bun.sleep(100)
+      }
+      assert(ready, 'Warm client catalog never exposed claude-haiku-5-5')
+      console.log(JSON.stringify({ warmCatalogReady: true, model: 'claude-haiku-5-5' }))
+    }
+  }
+  const base = [client, 'run', ...(extended ? ['--server', serverUrl] : v1 ? [] : ['--standalone']), '--format', 'json', '--model', live ? 'anthropic/claude-haiku-5-5' : 'anthropic/claude-haiku-4-5-20251001']
   const initial = await run([...base, `Read ${fixturePath} using the read tool. Return only its receipt text. Do not inspect other files or run commands.`])
   const parse = text => text.split('\n').filter(line => line.startsWith('{')).map(line => JSON.parse(line))
   const first = parse(initial)
@@ -269,14 +285,12 @@ try {
     assert(restarted.some(event => event.type === 'text' && event.part?.text.includes(receipt)), 'Restart lost the receipt')
     verifyResume(priorTelemetry, await latestPrimaryTelemetry(session), 'process restart')
   }
-  // #1004's user-visible payoff: an effort variant that only Meridian advertises
-  // must become selectable, and the effort must reach the proxy. Verified live on
-  // beta-18866: `#xhigh` is `provider.no-route` without discovery, so a pass here
-  // can only come from the applied catalog. This needs the warm server `extended`
-  // starts — a one-shot client process outruns the catalog reload (#1008).
+  // Warm-host selection must send the selected effort through the actual client.
+  // The offline fixture separately proves Meridian-only catalog discovery;
+  // current live Haiku variants can also exist in the client's native catalog.
   let variantProbe
   if (extended && discovery && !v1) {
-    const variantModel = 'anthropic/claude-haiku-4-5#xhigh'
+    const variantModel = live ? 'anthropic/claude-haiku-5-5#xhigh' : 'anthropic/claude-haiku-4-5#xhigh'
     const modelIndex = base.lastIndexOf('--model')
     const variantArgs = [...base.slice(0, modelIndex), '--model', variantModel,
       'Reply with exactly VARIANT_OK and nothing else. Do not call tools.']
@@ -285,12 +299,17 @@ try {
     const events = parse(output)
     const errors = events.filter(event => event.type === 'error').map(event => event.error?.type ?? 'unknown')
     const served = requests.slice(before)
+    // Detached title requests can outlive the primary answer. Qualify the selected
+    // primary variant and retain every request in the trace.
+    const primaryVariant = served.filter(row => row.headers?.['x-opencode-agent-mode'] === 'primary'
+      && !row.headers?.['x-meridian-source'])
     variantProbe = {
       model: variantModel,
       selected: errors.length === 0,
       errors,
-      efforts: served.map(row => row.effort ?? null),
-      completed: served.filter(row => row.effort === 'xhigh').every(row => typeof row.completedAt === 'number'),
+      efforts: primaryVariant.map(row => row.effort ?? null),
+      completed: primaryVariant.some(row => row.effort === 'xhigh')
+        && primaryVariant.filter(row => row.effort === 'xhigh').every(row => typeof row.completedAt === 'number'),
       // Recorded, not asserted: the wording the model chooses varies between runs.
       answered: events.some(event => event.type === 'text' && event.part?.text.includes('VARIANT_OK')),
     }
@@ -307,7 +326,7 @@ try {
   let coldStartProbe
   if (!v1 && discovery) {
     const coldArgs = [client, 'run', '--standalone', '--format', 'json',
-      '--model', 'anthropic/claude-haiku-4-5#xhigh',
+      '--model', live ? 'anthropic/claude-haiku-5-5#xhigh' : 'anthropic/claude-haiku-4-5#xhigh',
       'Reply with exactly COLD_OK and nothing else. Do not call tools.']
     const before = requests.length
     const output = await run(coldArgs, { allowFailure: true })
@@ -410,11 +429,11 @@ try {
       assert(served.length > 0, 'No discovery request ever completed')
       const payload = JSON.parse(served[0].body)
       assert(Array.isArray(payload.data) && payload.data.length > 0, 'Discovery response carried no catalog')
-      const haiku = payload.data.find(model => model.id === 'claude-haiku-4-5')
-      assert(haiku, `Catalog omitted claude-haiku-4-5: ${JSON.stringify(payload.data.map(model => model.id))}`)
+      const haiku = payload.data.find(model => model.id === (live ? 'claude-haiku-5-5' : 'claude-haiku-4-5'))
+      assert(haiku, `Catalog omitted the selected Haiku model: ${JSON.stringify(payload.data.map(model => model.id))}`)
       // The two values OpenCode's own entry gets wrong, and the reason applying
       // the catalog has to overwrite rather than skip an existing model.
-      assert.equal(haiku.context_window, 200_000, 'Catalog advertised an unexpected Haiku context window')
+      assert.equal(haiku.context_window, live ? 1_000_000 : 200_000, 'Catalog advertised an unexpected Haiku context window')
       assert.equal(haiku.capabilities?.effort?.xhigh?.supported, true, 'Catalog did not advertise the xhigh effort')
     } else {
       assert(catalogHits.every(row => row.status === 404), 'Negative control served a catalog')
@@ -437,7 +456,7 @@ try {
     repointed.providers = { anthropic: { settings: { apiKey: 'local-fixture-key', baseURL: 'https://meridian-repointed.invalid/v1' } } }
     writeFileSync(path, JSON.stringify(repointed, null, 2))
     const variantArgs = ['run', '--standalone', '--format', 'json',
-      '--model', 'anthropic/claude-haiku-4-5#xhigh', 'Reply with exactly REPOINTED and nothing else.']
+      '--model', live ? 'anthropic/claude-haiku-5-5#xhigh' : 'anthropic/claude-haiku-4-5#xhigh', 'Reply with exactly REPOINTED and nothing else.']
     const firstOutput = await run([client, ...variantArgs], { allowFailure: true })
     const cacheDropped = !existsSync(cachePath)
     const secondOutput = await run([client, ...variantArgs], { allowFailure: true })

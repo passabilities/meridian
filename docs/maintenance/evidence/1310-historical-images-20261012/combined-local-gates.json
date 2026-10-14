@@ -1,0 +1,16 @@
+{
+  "source": "bf87468d1ba7525bd3b497ec7b0f58c49ddd9965",
+  "main": "8edccd790f56fdee72a20b71337eef8ab6dec1ed",
+  "session": 32853,
+  "exit": 0,
+  "pass": 5681,
+  "skip": 35,
+  "fail": 0,
+  "commands": [
+    "npm test",
+    "npm run typecheck",
+    "npm run build"
+  ],
+  "buildDirty": true,
+  "dirtyReason": "New uncommitted Pi harness during build; require clean rebuild/package after commit"
+}

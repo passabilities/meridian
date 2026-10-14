@@ -27,6 +27,12 @@ const server = Bun.serve({ hostname: "127.0.0.1", port: Number(process.env.E2E_H
   if (!allowed.has(selected)) return new Response("Unknown fixture state", { status: 400 })
   scenario = selected
   observations = 0
-  return new Response(`<!doctype html><html><head><meta name="viewport" content="width=device-width, initial-scale=1"><title>Meridian build header fixture</title><style>${themeCss}${profileBarCss}</style></head><body>${profileBarHtml}<main style="padding:24px;color:var(--text);font-family:system-ui"><h1>Build header verification</h1><p>Synthetic ${scenario} state; no credentials or model calls.</p></main><script>${profileBarJs}</script></body></html>`, { headers: { "Content-Type": "text/html" } })
+  // Reproduce #1262's before-code paint while keeping all other header markup,
+  // responsive fitting and link behavior identical to the current source.
+  const beforeSeparator = url.searchParams.get("separator") === "before"
+  const headerCss = beforeSeparator
+    ? profileBarCss.replace('content: "·"; display: inline-block;', 'content: "·";')
+    : profileBarCss
+  return new Response(`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Meridian build header fixture</title><style>${themeCss}${headerCss}</style></head><body>${profileBarHtml}<main style="padding:24px;color:var(--text);font-family:system-ui"><h1>Build header verification</h1><p>Synthetic ${scenario} state; ${beforeSeparator ? "before-code" : "current"} separators; no credentials or model calls.</p></main><script>${profileBarJs}</script></body></html>`, { headers: { "Content-Type": "text/html; charset=utf-8" } })
 } })
 console.log(JSON.stringify({ fixture: "build-header", port: server.port, synthetic: true }))

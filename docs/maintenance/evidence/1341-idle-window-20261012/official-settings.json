@@ -1,0 +1,77 @@
+{
+  "platform": "darwin",
+  "arch": "arm64",
+  "node": "v22.22.3",
+  "initialBinaryHash": "8c01ef82307dc01455418eb2e6e82f2989a3fa8b815c4b192efaaa89a55bef8d",
+  "updateDisabled": "AGY_CLI_DISABLE_AUTO_UPDATE=true",
+  "nativeVersion": "1.2.7",
+  "commands": [
+    {
+      "args": [
+        "--version"
+      ],
+      "pid": 59762,
+      "code": 0,
+      "signal": null,
+      "failure": null,
+      "elapsedMs": 1158,
+      "stdoutBytes": 6,
+      "stderrBytes": 0,
+      "childCloseObserved": true,
+      "stdoutClosed": true,
+      "stderrClosed": true,
+      "stdoutEof": true,
+      "stderrEof": true,
+      "cleanupIncomplete": false,
+      "descendantCensus": "NOT_AUDITED",
+      "beforeHash": "8c01ef82307dc01455418eb2e6e82f2989a3fa8b815c4b192efaaa89a55bef8d",
+      "afterHash": "8c01ef82307dc01455418eb2e6e82f2989a3fa8b815c4b192efaaa89a55bef8d"
+    },
+    {
+      "args": [
+        "-p",
+        "/config",
+        "--output-format",
+        "json"
+      ],
+      "pid": 59803,
+      "code": 0,
+      "signal": null,
+      "failure": null,
+      "elapsedMs": 3618,
+      "stdoutBytes": 5929,
+      "stderrBytes": 0,
+      "childCloseObserved": true,
+      "stdoutClosed": true,
+      "stderrClosed": true,
+      "stdoutEof": true,
+      "stderrEof": true,
+      "cleanupIncomplete": false,
+      "descendantCensus": "NOT_AUDITED",
+      "beforeHash": "8c01ef82307dc01455418eb2e6e82f2989a3fa8b815c4b192efaaa89a55bef8d",
+      "afterHash": "8c01ef82307dc01455418eb2e6e82f2989a3fa8b815c4b192efaaa89a55bef8d"
+    }
+  ],
+  "result": "TYPED_EFFECTIVE_SETTINGS_OBSERVED",
+  "fields": {
+    "customModelsConfig": {
+      "present": true,
+      "type": "null"
+    },
+    "modelProvider": {
+      "present": true,
+      "type": "string",
+      "empty": true
+    },
+    "useG1Credits": {
+      "present": true,
+      "type": "boolean",
+      "enabled": false
+    },
+    "gcp": {
+      "present": true,
+      "type": "null"
+    }
+  },
+  "modelCommands": 0
+}

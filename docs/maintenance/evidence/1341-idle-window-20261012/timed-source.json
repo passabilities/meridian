@@ -1,0 +1,244 @@
+{
+  "label": "timed-candidate-0b080b02",
+  "result": "PASS",
+  "model": "gemini-3.8-flash-low",
+  "platform": "darwin",
+  "arch": "arm64",
+  "node": "v22.22.3",
+  "nativeHash": "8c01ef82307dc01455418eb2e6e82f2989a3fa8b815c4b192efaaa89a55bef8d",
+  "pluginHash": "0b40c022e3883332b39ad5bc6411033f0d836dc3bd303476d4bfe7226cc77e8e",
+  "toolMs": 1000,
+  "idleMs": 10000,
+  "pauseMs": 1600,
+  "clientPreflight": true,
+  "metrics": [
+    {
+      "model": "gemini-3.8-flash-low",
+      "status": 200,
+      "continuation": "new",
+      "conversationId": "c4798a66-ca95-47fa-acbb-3ad1de67421f",
+      "inputTokens": 14332,
+      "outputTokens": 10,
+      "observedAtMs": 16645.386291
+    },
+    {
+      "model": "gemini-3.8-flash-low",
+      "status": 200,
+      "continuation": "live",
+      "conversationId": "c4798a66-ca95-47fa-acbb-3ad1de67421f",
+      "inputTokens": 14897,
+      "outputTokens": 7,
+      "observedAtMs": 22892.628333
+    },
+    {
+      "model": "gemini-3.8-flash-low",
+      "status": 200,
+      "continuation": "new",
+      "conversationId": "9aaff5b5-a42a-448f-99f6-ea6f71bfcd26",
+      "inputTokens": 14434,
+      "outputTokens": 10,
+      "observedAtMs": 56682.036
+    }
+  ],
+  "requests": [
+    {
+      "model": "gemini-3.8-flash-low",
+      "id": "d5289381-9e8e-4f8a-bf33-431b130da1d3",
+      "messageCount": 1
+    },
+    {
+      "model": "gemini-3.8-flash-low",
+      "id": "3f9051ab-14a1-4251-a622-a0ffae06cd53",
+      "messageCount": 3
+    },
+    {
+      "model": "gemini-3.8-flash-low",
+      "id": "a339998d-5674-41f6-a94b-f5f1a76c8b82",
+      "messageCount": 5
+    }
+  ],
+  "health": [
+    {
+      "processes": 0,
+      "active": 0,
+      "pending": 0,
+      "reused": 1,
+      "completed": 2,
+      "failed": 0
+    },
+    {
+      "processes": 0,
+      "active": 0,
+      "pending": 0,
+      "reused": 1,
+      "completed": 2,
+      "failed": 0
+    },
+    {
+      "processes": 1,
+      "active": 0,
+      "pending": 0,
+      "reused": 1,
+      "completed": 3,
+      "failed": 0
+    }
+  ],
+  "children": [
+    {
+      "pid": 48801,
+      "close": true,
+      "stdoutEof": true,
+      "stderrEof": true,
+      "code": 143,
+      "signal": null
+    },
+    {
+      "pid": 48873,
+      "close": true,
+      "stdoutEof": true,
+      "stderrEof": true,
+      "code": 0,
+      "signal": null
+    },
+    {
+      "pid": 48888,
+      "close": true,
+      "stdoutEof": true,
+      "stderrEof": true,
+      "code": 0,
+      "signal": null
+    },
+    {
+      "pid": 51125,
+      "close": true,
+      "stdoutEof": true,
+      "stderrEof": true,
+      "code": 0,
+      "signal": null
+    },
+    {
+      "pid": 51316,
+      "close": true,
+      "stdoutEof": true,
+      "stderrEof": true,
+      "code": 143,
+      "signal": null
+    },
+    {
+      "pid": 51331,
+      "close": true,
+      "stdoutEof": true,
+      "stderrEof": true,
+      "code": 0,
+      "signal": null
+    },
+    {
+      "pid": 51332,
+      "close": true,
+      "stdoutEof": true,
+      "stderrEof": true,
+      "code": 0,
+      "signal": null
+    },
+    {
+      "pid": 51354,
+      "close": true,
+      "stdoutEof": true,
+      "stderrEof": true,
+      "code": 1,
+      "signal": null
+    },
+    {
+      "pid": 51531,
+      "close": true,
+      "stdoutEof": true,
+      "stderrEof": true,
+      "code": 0,
+      "signal": null
+    },
+    {
+      "pid": 51532,
+      "close": true,
+      "stdoutEof": true,
+      "stderrEof": true,
+      "code": 0,
+      "signal": null
+    },
+    {
+      "pid": 51621,
+      "close": true,
+      "stdoutEof": true,
+      "stderrEof": true,
+      "code": 0,
+      "signal": null
+    },
+    {
+      "pid": 51622,
+      "close": true,
+      "stdoutEof": true,
+      "stderrEof": true,
+      "code": 0,
+      "signal": null
+    },
+    {
+      "pid": 51724,
+      "close": true,
+      "stdoutEof": true,
+      "stderrEof": true,
+      "code": 0,
+      "signal": null
+    },
+    {
+      "pid": 51725,
+      "close": true,
+      "stdoutEof": true,
+      "stderrEof": true,
+      "code": 0,
+      "signal": null
+    },
+    {
+      "pid": 51731,
+      "close": true,
+      "stdoutEof": true,
+      "stderrEof": true,
+      "code": 0,
+      "signal": null
+    },
+    {
+      "pid": 51732,
+      "close": true,
+      "stdoutEof": true,
+      "stderrEof": true,
+      "code": 0,
+      "signal": null
+    },
+    {
+      "pid": 51736,
+      "close": true,
+      "stdoutEof": true,
+      "stderrEof": true,
+      "code": 1,
+      "signal": null
+    },
+    {
+      "pid": 52474,
+      "close": true,
+      "stdoutEof": true,
+      "stderrEof": true,
+      "code": 0,
+      "signal": null
+    },
+    {
+      "pid": 52475,
+      "close": true,
+      "stdoutEof": true,
+      "stderrEof": true,
+      "code": 0,
+      "signal": null
+    }
+  ],
+  "joined": true,
+  "actualPauseMs": 1604,
+  "nextDispatchAfterCompletionMs": 1610.236334000001,
+  "finalNativeHash": "8c01ef82307dc01455418eb2e6e82f2989a3fa8b815c4b192efaaa89a55bef8d"
+}

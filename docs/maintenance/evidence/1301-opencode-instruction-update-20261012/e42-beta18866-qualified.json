@@ -1,0 +1,842 @@
+{
+  "exit": 0,
+  "joined": true,
+  "workers": [
+    {
+      "pid": 80335,
+      "result": "PASS",
+      "children": [
+        {
+          "exitSeen": true,
+          "closeSeen": true,
+          "stdoutClosed": true,
+          "stderrClosed": true,
+          "spawnFailed": false,
+          "exitCode": 0,
+          "exitSignal": null,
+          "joined": true,
+          "termSent": false,
+          "killSent": false,
+          "signalFailure": null
+        },
+        {
+          "exitSeen": true,
+          "closeSeen": true,
+          "stdoutClosed": true,
+          "stderrClosed": true,
+          "spawnFailed": false,
+          "exitCode": 0,
+          "exitSignal": null,
+          "joined": true,
+          "termSent": false,
+          "killSent": false,
+          "signalFailure": null
+        },
+        {
+          "exitSeen": true,
+          "closeSeen": true,
+          "stdoutClosed": true,
+          "stderrClosed": true,
+          "spawnFailed": false,
+          "exitCode": 0,
+          "exitSignal": null,
+          "joined": true,
+          "termSent": false,
+          "killSent": false,
+          "signalFailure": null
+        },
+        {
+          "exitSeen": true,
+          "closeSeen": true,
+          "stdoutClosed": true,
+          "stderrClosed": true,
+          "spawnFailed": false,
+          "exitCode": 0,
+          "exitSignal": null,
+          "joined": true,
+          "termSent": false,
+          "killSent": false,
+          "signalFailure": null
+        },
+        {
+          "exitSeen": true,
+          "closeSeen": true,
+          "stdoutClosed": true,
+          "stderrClosed": true,
+          "spawnFailed": false,
+          "exitCode": 0,
+          "exitSignal": null,
+          "joined": true,
+          "termSent": false,
+          "killSent": false,
+          "signalFailure": null
+        },
+        {
+          "exitSeen": true,
+          "closeSeen": true,
+          "stdoutClosed": true,
+          "stderrClosed": true,
+          "spawnFailed": false,
+          "exitCode": 0,
+          "exitSignal": null,
+          "joined": true,
+          "termSent": false,
+          "killSent": false,
+          "signalFailure": null
+        },
+        {
+          "exitSeen": true,
+          "closeSeen": true,
+          "stdoutClosed": true,
+          "stderrClosed": true,
+          "spawnFailed": false,
+          "exitCode": 0,
+          "exitSignal": null,
+          "joined": true,
+          "termSent": false,
+          "killSent": false,
+          "signalFailure": null
+        },
+        {
+          "exitSeen": true,
+          "closeSeen": true,
+          "stdoutClosed": true,
+          "stderrClosed": true,
+          "spawnFailed": false,
+          "exitCode": 0,
+          "exitSignal": null,
+          "joined": true,
+          "termSent": false,
+          "killSent": false,
+          "signalFailure": null
+        },
+        {
+          "exitSeen": true,
+          "closeSeen": true,
+          "stdoutClosed": true,
+          "stderrClosed": true,
+          "spawnFailed": false,
+          "exitCode": 0,
+          "exitSignal": null,
+          "joined": true,
+          "termSent": false,
+          "killSent": false,
+          "signalFailure": null
+        },
+        {
+          "exitSeen": true,
+          "closeSeen": true,
+          "stdoutClosed": true,
+          "stderrClosed": true,
+          "spawnFailed": false,
+          "exitCode": 1,
+          "exitSignal": null,
+          "joined": true,
+          "termSent": false,
+          "killSent": false,
+          "signalFailure": null
+        },
+        {
+          "exitSeen": true,
+          "closeSeen": true,
+          "stdoutClosed": true,
+          "stderrClosed": true,
+          "spawnFailed": false,
+          "exitCode": 0,
+          "exitSignal": null,
+          "joined": true,
+          "termSent": false,
+          "killSent": false,
+          "signalFailure": null
+        },
+        {
+          "exitSeen": true,
+          "closeSeen": true,
+          "stdoutClosed": true,
+          "stderrClosed": true,
+          "spawnFailed": false,
+          "exitCode": 0,
+          "exitSignal": null,
+          "joined": true,
+          "termSent": false,
+          "killSent": false,
+          "signalFailure": null
+        },
+        {
+          "exitSeen": true,
+          "closeSeen": true,
+          "stdoutClosed": true,
+          "stderrClosed": true,
+          "spawnFailed": false,
+          "exitCode": 1,
+          "exitSignal": null,
+          "joined": true,
+          "termSent": false,
+          "killSent": false,
+          "signalFailure": null
+        },
+        {
+          "exitSeen": true,
+          "closeSeen": true,
+          "stdoutClosed": true,
+          "stderrClosed": true,
+          "spawnFailed": false,
+          "exitCode": 0,
+          "exitSignal": null,
+          "joined": true,
+          "termSent": false,
+          "killSent": false,
+          "signalFailure": null
+        },
+        {
+          "exitSeen": true,
+          "closeSeen": true,
+          "stdoutClosed": true,
+          "stderrClosed": true,
+          "spawnFailed": false,
+          "exitCode": 0,
+          "exitSignal": null,
+          "joined": true,
+          "termSent": false,
+          "killSent": false,
+          "signalFailure": null
+        },
+        {
+          "exitSeen": true,
+          "closeSeen": true,
+          "stdoutClosed": true,
+          "stderrClosed": true,
+          "spawnFailed": false,
+          "exitCode": 0,
+          "exitSignal": null,
+          "joined": true,
+          "termSent": false,
+          "killSent": false,
+          "signalFailure": null
+        },
+        {
+          "exitSeen": true,
+          "closeSeen": true,
+          "stdoutClosed": true,
+          "stderrClosed": true,
+          "spawnFailed": false,
+          "exitCode": 0,
+          "exitSignal": null,
+          "joined": true,
+          "termSent": false,
+          "killSent": false,
+          "signalFailure": null
+        },
+        {
+          "exitSeen": true,
+          "closeSeen": true,
+          "stdoutClosed": true,
+          "stderrClosed": true,
+          "spawnFailed": false,
+          "exitCode": 0,
+          "exitSignal": null,
+          "joined": true,
+          "termSent": false,
+          "killSent": false,
+          "signalFailure": null
+        },
+        {
+          "exitSeen": true,
+          "closeSeen": true,
+          "stdoutClosed": true,
+          "stderrClosed": true,
+          "spawnFailed": false,
+          "exitCode": 0,
+          "exitSignal": null,
+          "joined": true,
+          "termSent": false,
+          "killSent": false,
+          "signalFailure": null
+        }
+      ],
+      "scrubPreflight": {
+        "path": "/private/tmp/meridian-scrub-preflight-package-20261012/node_modules/@rynfar/meridian-plugin-opencode-scrub/dist/index.js",
+        "packageName": "@rynfar/meridian-plugin-opencode-scrub",
+        "packageVersion": "0.2.3",
+        "sha256": "4ab89412e6a59fad812a3f6e5500c84f3bdfc41863320bc794f5274a251da656",
+        "runtimeVersion": "0.2.3",
+        "invocations": 0,
+        "errors": 0
+      },
+      "observedModels": [
+        "claude-haiku-5-5"
+      ],
+      "scrubFinal": {
+        "path": "/private/tmp/meridian-scrub-preflight-package-20261012/node_modules/@rynfar/meridian-plugin-opencode-scrub/dist/index.js",
+        "packageName": "@rynfar/meridian-plugin-opencode-scrub",
+        "packageVersion": "0.2.3",
+        "sha256": "4ab89412e6a59fad812a3f6e5500c84f3bdfc41863320bc794f5274a251da656",
+        "runtimeVersion": "0.2.3",
+        "invocations": 18,
+        "errors": 0
+      },
+      "joined": true
+    },
+    {
+      "pid": 78906,
+      "result": "PASS",
+      "children": [
+        {
+          "exitSeen": true,
+          "closeSeen": true,
+          "stdoutClosed": true,
+          "stderrClosed": true,
+          "spawnFailed": false,
+          "exitCode": 0,
+          "exitSignal": null,
+          "joined": true,
+          "termSent": false,
+          "killSent": false,
+          "signalFailure": null
+        },
+        {
+          "exitSeen": true,
+          "closeSeen": true,
+          "stdoutClosed": true,
+          "stderrClosed": true,
+          "spawnFailed": false,
+          "exitCode": 1,
+          "exitSignal": null,
+          "joined": true,
+          "termSent": false,
+          "killSent": false,
+          "signalFailure": null
+        },
+        {
+          "exitSeen": true,
+          "closeSeen": true,
+          "stdoutClosed": true,
+          "stderrClosed": true,
+          "spawnFailed": false,
+          "exitCode": 0,
+          "exitSignal": null,
+          "joined": true,
+          "termSent": false,
+          "killSent": false,
+          "signalFailure": null
+        },
+        {
+          "exitSeen": true,
+          "closeSeen": true,
+          "stdoutClosed": true,
+          "stderrClosed": true,
+          "spawnFailed": false,
+          "exitCode": 0,
+          "exitSignal": null,
+          "joined": true,
+          "termSent": false,
+          "killSent": false,
+          "signalFailure": null
+        },
+        {
+          "exitSeen": true,
+          "closeSeen": true,
+          "stdoutClosed": true,
+          "stderrClosed": true,
+          "spawnFailed": false,
+          "exitCode": 0,
+          "exitSignal": null,
+          "joined": true,
+          "termSent": false,
+          "killSent": false,
+          "signalFailure": null
+        }
+      ],
+      "scrubPreflight": {
+        "path": "/private/tmp/meridian-scrub-preflight-package-20261012/node_modules/@rynfar/meridian-plugin-opencode-scrub/dist/index.js",
+        "packageName": "@rynfar/meridian-plugin-opencode-scrub",
+        "packageVersion": "0.2.3",
+        "sha256": "4ab89412e6a59fad812a3f6e5500c84f3bdfc41863320bc794f5274a251da656",
+        "runtimeVersion": "0.2.3",
+        "invocations": 0,
+        "errors": 0
+      },
+      "observedModels": [
+        "claude-haiku-5-5"
+      ],
+      "scrubFinal": {
+        "path": "/private/tmp/meridian-scrub-preflight-package-20261012/node_modules/@rynfar/meridian-plugin-opencode-scrub/dist/index.js",
+        "packageName": "@rynfar/meridian-plugin-opencode-scrub",
+        "packageVersion": "0.2.3",
+        "sha256": "4ab89412e6a59fad812a3f6e5500c84f3bdfc41863320bc794f5274a251da656",
+        "runtimeVersion": "0.2.3",
+        "invocations": 5,
+        "errors": 0
+      },
+      "joined": true
+    }
+  ],
+  "result": {
+    "result": "PASS",
+    "version": "opencode2 v0.0.0-beta-18866",
+    "source": false,
+    "live": true,
+    "extended": true,
+    "discovery": true,
+    "root": "/private/var/folders/ks/xnz659y11jl44j80b_lfws6r0000gn/T/meridian-v2-package-k19YhU",
+    "session": "ses_ecdf6c43dffepcdL07ZmkF6bf3",
+    "requests": [
+      {
+        "clientSystemHash": "dd9d0034ce3c78cfe8a4f4c9925d2f7b19829c6dbdc6a9edb05a223f1c0c628a",
+        "requestId": "755e1f72-a9f6-417c-a0c1-4701ea2de152",
+        "path": "/v1/messages",
+        "model": "claude-haiku-5-5",
+        "effortFields": {
+          "thinking": {
+            "type": "disabled"
+          }
+        },
+        "hasForkMarker": false,
+        "hasUndoMarker": false,
+        "hasSummaryMarker": false,
+        "startedAt": 1791840828911,
+        "completedAt": 1791840829120,
+        "identity": {
+          "x-meridian-source": "subagent-title",
+          "x-opencode-agent-mode": "subagent",
+          "x-opencode-agent-name": "title"
+        }
+      },
+      {
+        "clientSystemHash": "71cf42c26d2a74ae5305155c2b84f3b0530da98020c262606fbd605483ced339",
+        "clientCwd": "/private/var/folders/ks/xnz659y11jl44j80b_lfws6r0000gn/T/meridian-v2-package-k19YhU",
+        "requestId": "1bb121c8-6c0e-4bc2-a50e-3e33a4052ce8",
+        "path": "/v1/messages",
+        "model": "claude-haiku-5-5",
+        "effortFields": {},
+        "hasForkMarker": false,
+        "hasUndoMarker": false,
+        "hasSummaryMarker": false,
+        "startedAt": 1791840828911,
+        "completedAt": 1791840832402,
+        "identity": {
+          "x-opencode-agent-mode": "primary",
+          "x-opencode-agent-name": "build"
+        }
+      },
+      {
+        "clientSystemHash": "dd9d0034ce3c78cfe8a4f4c9925d2f7b19829c6dbdc6a9edb05a223f1c0c628a",
+        "requestId": "388ddf1a-d5af-46f6-b0c1-8e4052e0430e",
+        "path": "/v1/messages",
+        "model": "claude-haiku-5-5",
+        "effortFields": {},
+        "hasForkMarker": false,
+        "hasUndoMarker": false,
+        "hasSummaryMarker": false,
+        "startedAt": 1791840829125,
+        "completedAt": 1791840832640,
+        "identity": {
+          "x-meridian-source": "subagent-title",
+          "x-opencode-agent-mode": "subagent",
+          "x-opencode-agent-name": "title"
+        }
+      },
+      {
+        "clientSystemHash": "71cf42c26d2a74ae5305155c2b84f3b0530da98020c262606fbd605483ced339",
+        "clientCwd": "/private/var/folders/ks/xnz659y11jl44j80b_lfws6r0000gn/T/meridian-v2-package-k19YhU",
+        "requestId": "b2ff0b35-5a65-482c-8b36-3a84ac0519cf",
+        "path": "/v1/messages",
+        "model": "claude-haiku-5-5",
+        "effortFields": {},
+        "hasForkMarker": false,
+        "hasUndoMarker": false,
+        "hasSummaryMarker": false,
+        "startedAt": 1791840832429,
+        "completedAt": 1791840834470,
+        "identity": {
+          "x-opencode-agent-mode": "primary",
+          "x-opencode-agent-name": "build"
+        }
+      },
+      {
+        "clientSystemHash": "71cf42c26d2a74ae5305155c2b84f3b0530da98020c262606fbd605483ced339",
+        "clientCwd": "/private/var/folders/ks/xnz659y11jl44j80b_lfws6r0000gn/T/meridian-v2-package-k19YhU",
+        "requestId": "24ad644f-aea3-4bf6-a633-cf405532b973",
+        "path": "/v1/messages",
+        "model": "claude-haiku-5-5",
+        "effortFields": {},
+        "hasForkMarker": false,
+        "hasUndoMarker": false,
+        "hasSummaryMarker": false,
+        "startedAt": 1791840834674,
+        "completedAt": 1791840836643,
+        "identity": {
+          "x-opencode-agent-mode": "primary",
+          "x-opencode-agent-name": "build"
+        }
+      },
+      {
+        "clientSystemHash": "71cf42c26d2a74ae5305155c2b84f3b0530da98020c262606fbd605483ced339",
+        "clientCwd": "/private/var/folders/ks/xnz659y11jl44j80b_lfws6r0000gn/T/meridian-v2-package-k19YhU",
+        "requestId": "58dc96f4-b4d7-4f66-82ad-0bc6b4693784",
+        "path": "/v1/messages",
+        "model": "claude-haiku-5-5",
+        "effortFields": {},
+        "hasForkMarker": false,
+        "hasUndoMarker": false,
+        "hasSummaryMarker": false,
+        "startedAt": 1791840837073,
+        "completedAt": 1791840839241,
+        "identity": {
+          "x-opencode-agent-mode": "primary",
+          "x-opencode-agent-name": "build"
+        }
+      },
+      {
+        "clientSystemHash": "dd9d0034ce3c78cfe8a4f4c9925d2f7b19829c6dbdc6a9edb05a223f1c0c628a",
+        "requestId": "c5bac971-da03-48e8-bf25-5d97af84a896",
+        "path": "/v1/messages",
+        "model": "claude-haiku-5-5",
+        "effort": "low",
+        "effortFields": {
+          "top": "low"
+        },
+        "hasForkMarker": false,
+        "hasUndoMarker": false,
+        "hasSummaryMarker": false,
+        "startedAt": 1791840839449,
+        "completedAt": 1791840842173,
+        "identity": {
+          "x-meridian-source": "subagent-title",
+          "x-opencode-agent-mode": "subagent",
+          "x-opencode-agent-name": "title"
+        }
+      },
+      {
+        "clientSystemHash": "f129aa8ae73ac133d78a5ac12b07f4960e5d34f6f04ef40a5eb66a4f6459dba1",
+        "clientCwd": "/private/var/folders/ks/xnz659y11jl44j80b_lfws6r0000gn/T/meridian-v2-package-k19YhU",
+        "requestId": "67af318b-e5f4-4675-9ab6-1be753cd8a73",
+        "path": "/v1/messages",
+        "model": "claude-haiku-5-5",
+        "effort": "xhigh",
+        "effortFields": {
+          "top": "xhigh"
+        },
+        "hasForkMarker": false,
+        "hasUndoMarker": false,
+        "hasSummaryMarker": false,
+        "startedAt": 1791840839449,
+        "completedAt": 1791840840702,
+        "identity": {
+          "x-opencode-agent-mode": "primary",
+          "x-opencode-agent-name": "build"
+        }
+      },
+      {
+        "clientSystemHash": "dd9d0034ce3c78cfe8a4f4c9925d2f7b19829c6dbdc6a9edb05a223f1c0c628a",
+        "requestId": "e1f0ab11-aac9-45b2-9f55-629b512c82d4",
+        "path": "/v1/messages",
+        "model": "claude-haiku-5-5",
+        "effort": "low",
+        "effortFields": {
+          "top": "low"
+        },
+        "hasForkMarker": false,
+        "hasUndoMarker": false,
+        "hasSummaryMarker": false,
+        "startedAt": 1791840841928,
+        "identity": {
+          "x-meridian-source": "subagent-title",
+          "x-opencode-agent-mode": "subagent",
+          "x-opencode-agent-name": "title"
+        }
+      },
+      {
+        "clientSystemHash": "16772710a359d28abf2269617631be8756cc811af220da88d1d5af65983d4e50",
+        "clientCwd": "/private/var/folders/ks/xnz659y11jl44j80b_lfws6r0000gn/T/meridian-v2-package-k19YhU",
+        "requestId": "c5535b3d-204e-470c-9623-e4c08287465e",
+        "path": "/v1/messages",
+        "model": "claude-haiku-5-5",
+        "effort": "xhigh",
+        "effortFields": {
+          "top": "xhigh"
+        },
+        "hasForkMarker": false,
+        "hasUndoMarker": false,
+        "hasSummaryMarker": false,
+        "startedAt": 1791840841929,
+        "completedAt": 1791840843193,
+        "identity": {
+          "x-opencode-agent-mode": "primary",
+          "x-opencode-agent-name": "build"
+        }
+      },
+      {
+        "clientSystemHash": "596d3a83b2aaf794cfd24dca9284d0e246db097adba980aec3c4bc42a81b831e",
+        "clientCwd": "/private/var/folders/ks/xnz659y11jl44j80b_lfws6r0000gn/T/meridian-v2-package-k19YhU",
+        "requestId": "3cb7d229-30eb-4629-b737-1c47b776bd0e",
+        "path": "/v1/messages",
+        "model": "claude-haiku-5-5",
+        "effortFields": {},
+        "hasForkMarker": false,
+        "hasUndoMarker": false,
+        "hasSummaryMarker": true,
+        "startedAt": 1791840843481,
+        "completedAt": 1791840846067,
+        "identity": {
+          "x-meridian-source": "subagent-summary",
+          "x-opencode-agent-mode": "subagent",
+          "x-opencode-agent-name": "summary"
+        }
+      },
+      {
+        "clientSystemHash": "71cf42c26d2a74ae5305155c2b84f3b0530da98020c262606fbd605483ced339",
+        "clientCwd": "/private/var/folders/ks/xnz659y11jl44j80b_lfws6r0000gn/T/meridian-v2-package-k19YhU",
+        "requestId": "6e27224f-4c1c-4161-af10-43dbc7d36288",
+        "path": "/v1/messages",
+        "model": "claude-haiku-5-5",
+        "effortFields": {},
+        "hasForkMarker": true,
+        "hasUndoMarker": false,
+        "hasSummaryMarker": false,
+        "startedAt": 1791840846403,
+        "completedAt": 1791840848784,
+        "identity": {
+          "x-opencode-agent-mode": "primary",
+          "x-opencode-agent-name": "build"
+        }
+      },
+      {
+        "clientSystemHash": "71cf42c26d2a74ae5305155c2b84f3b0530da98020c262606fbd605483ced339",
+        "clientCwd": "/private/var/folders/ks/xnz659y11jl44j80b_lfws6r0000gn/T/meridian-v2-package-k19YhU",
+        "requestId": "53eb1cdb-28a0-4f75-ac28-ed3d0979ddb2",
+        "path": "/v1/messages",
+        "model": "claude-haiku-5-5",
+        "effortFields": {},
+        "hasForkMarker": false,
+        "hasUndoMarker": false,
+        "hasSummaryMarker": false,
+        "startedAt": 1791840849692,
+        "completedAt": 1791840851324,
+        "identity": {
+          "x-opencode-agent-mode": "primary",
+          "x-opencode-agent-name": "build"
+        }
+      },
+      {
+        "clientSystemHash": "71cf42c26d2a74ae5305155c2b84f3b0530da98020c262606fbd605483ced339",
+        "clientCwd": "/private/var/folders/ks/xnz659y11jl44j80b_lfws6r0000gn/T/meridian-v2-package-k19YhU",
+        "requestId": "75b26475-aae8-4399-9b13-d3f03a5e3faa",
+        "path": "/v1/messages",
+        "model": "claude-haiku-5-5",
+        "effortFields": {},
+        "hasForkMarker": false,
+        "hasUndoMarker": false,
+        "hasSummaryMarker": false,
+        "startedAt": 1791840851601,
+        "completedAt": 1791840853492,
+        "identity": {
+          "x-opencode-agent-mode": "primary",
+          "x-opencode-agent-name": "build"
+        }
+      },
+      {
+        "clientSystemHash": "71cf42c26d2a74ae5305155c2b84f3b0530da98020c262606fbd605483ced339",
+        "clientCwd": "/private/var/folders/ks/xnz659y11jl44j80b_lfws6r0000gn/T/meridian-v2-package-k19YhU",
+        "requestId": "04ca4e35-6289-427e-8f1b-b2537467f6f8",
+        "path": "/v1/messages",
+        "model": "claude-haiku-5-5",
+        "effortFields": {},
+        "hasForkMarker": false,
+        "hasUndoMarker": true,
+        "hasSummaryMarker": false,
+        "startedAt": 1791840853513,
+        "completedAt": 1791840854866,
+        "identity": {
+          "x-opencode-agent-mode": "primary",
+          "x-opencode-agent-name": "build"
+        }
+      },
+      {
+        "clientSystemHash": "71cf42c26d2a74ae5305155c2b84f3b0530da98020c262606fbd605483ced339",
+        "clientCwd": "/private/var/folders/ks/xnz659y11jl44j80b_lfws6r0000gn/T/meridian-v2-package-k19YhU",
+        "requestId": "a1a0d6c6-7855-4a1c-9142-8ae6a0ad20b8",
+        "path": "/v1/messages",
+        "model": "claude-haiku-5-5",
+        "effortFields": {},
+        "hasForkMarker": false,
+        "hasUndoMarker": false,
+        "hasSummaryMarker": false,
+        "startedAt": 1791840855168,
+        "completedAt": 1791840856908,
+        "identity": {
+          "x-opencode-agent-mode": "primary",
+          "x-opencode-agent-name": "build"
+        }
+      },
+      {
+        "clientSystemHash": "71cf42c26d2a74ae5305155c2b84f3b0530da98020c262606fbd605483ced339",
+        "clientCwd": "/private/var/folders/ks/xnz659y11jl44j80b_lfws6r0000gn/T/meridian-v2-package-k19YhU",
+        "requestId": "7762aaf4-4b2d-47cd-a9d7-7b53ceb3aadd",
+        "path": "/v1/messages",
+        "model": "claude-haiku-5-5",
+        "effortFields": {},
+        "hasForkMarker": false,
+        "hasUndoMarker": false,
+        "hasSummaryMarker": false,
+        "startedAt": 1791840857194,
+        "completedAt": 1791840859733,
+        "identity": {
+          "x-opencode-agent-mode": "primary",
+          "x-opencode-agent-name": "build"
+        }
+      },
+      {
+        "clientSystemHash": "2f21631adc1319c77ffc55213455bb371b9bab0d07bbb62f760e659d7164098a",
+        "clientCwd": "/private/var/folders/ks/xnz659y11jl44j80b_lfws6r0000gn/T/meridian-v2-package-k19YhU",
+        "requestId": "3af55054-d192-4078-bae2-9a1328258cc7",
+        "path": "/v1/messages",
+        "model": "claude-haiku-5-5",
+        "effortFields": {},
+        "hasForkMarker": false,
+        "hasUndoMarker": false,
+        "hasSummaryMarker": false,
+        "startedAt": 1791840859311,
+        "completedAt": 1791840860805,
+        "identity": {
+          "x-opencode-agent-mode": "subagent",
+          "x-opencode-agent-name": "general"
+        }
+      },
+      {
+        "clientSystemHash": "b9f08cefc1d94ad690420da5bac10979edf194d1a75af6768906c29751f77d17",
+        "clientCwd": "/private/var/folders/ks/xnz659y11jl44j80b_lfws6r0000gn/T/meridian-v2-package-k19YhU",
+        "requestId": "097a8270-bcec-4160-909f-eaa81e423ac6",
+        "path": "/v1/messages",
+        "model": "claude-haiku-5-5",
+        "effortFields": {},
+        "hasForkMarker": false,
+        "hasUndoMarker": false,
+        "hasSummaryMarker": false,
+        "startedAt": 1791840859669,
+        "completedAt": 1791840861254,
+        "identity": {
+          "x-opencode-agent-mode": "subagent",
+          "x-opencode-agent-name": "general"
+        }
+      },
+      {
+        "clientSystemHash": "71cf42c26d2a74ae5305155c2b84f3b0530da98020c262606fbd605483ced339",
+        "clientCwd": "/private/var/folders/ks/xnz659y11jl44j80b_lfws6r0000gn/T/meridian-v2-package-k19YhU",
+        "requestId": "bf905aed-3d34-44de-8b99-a34b20583e5a",
+        "path": "/v1/messages",
+        "model": "claude-haiku-5-5",
+        "effortFields": {},
+        "hasForkMarker": false,
+        "hasUndoMarker": false,
+        "hasSummaryMarker": false,
+        "startedAt": 1791840861290,
+        "completedAt": 1791840862963,
+        "identity": {
+          "x-opencode-agent-mode": "primary",
+          "x-opencode-agent-name": "build"
+        }
+      },
+      {
+        "clientSystemHash": "71cf42c26d2a74ae5305155c2b84f3b0530da98020c262606fbd605483ced339",
+        "clientCwd": "/private/var/folders/ks/xnz659y11jl44j80b_lfws6r0000gn/T/meridian-v2-package-k19YhU",
+        "requestId": "7c578d88-b55a-46e0-b0f1-09c8949a29f4",
+        "path": "/v1/messages",
+        "model": "claude-haiku-5-5",
+        "effortFields": {},
+        "hasForkMarker": false,
+        "hasUndoMarker": false,
+        "hasSummaryMarker": false,
+        "startedAt": 1791840863306,
+        "completedAt": 1791840866473,
+        "identity": {
+          "x-opencode-agent-mode": "primary",
+          "x-opencode-agent-name": "build"
+        }
+      },
+      {
+        "clientSystemHash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b",
+        "requestId": "94a8d52c-30e5-4f89-8cd6-504ba3c45b9d",
+        "path": "/v1/messages",
+        "model": "claude-haiku-5-5",
+        "effortFields": {},
+        "hasForkMarker": false,
+        "hasUndoMarker": false,
+        "hasSummaryMarker": false,
+        "startedAt": 1791840866516,
+        "completedAt": 1791840872294,
+        "identity": {
+          "x-meridian-source": "subagent-compaction",
+          "x-opencode-agent-mode": "primary",
+          "x-opencode-agent-name": "compaction"
+        }
+      },
+      {
+        "clientSystemHash": "71cf42c26d2a74ae5305155c2b84f3b0530da98020c262606fbd605483ced339",
+        "clientCwd": "/private/var/folders/ks/xnz659y11jl44j80b_lfws6r0000gn/T/meridian-v2-package-k19YhU",
+        "requestId": "5bc36037-e53d-477e-bf1e-2903d00ce7dc",
+        "path": "/v1/messages",
+        "model": "claude-haiku-5-5",
+        "effortFields": {},
+        "hasForkMarker": false,
+        "hasUndoMarker": false,
+        "hasSummaryMarker": false,
+        "startedAt": 1791840873082,
+        "completedAt": 1791840875541,
+        "identity": {
+          "x-opencode-agent-mode": "primary",
+          "x-opencode-agent-name": "build"
+        }
+      }
+    ],
+    "resumeEvidence": [
+      {
+        "label": "ordinary continuation",
+        "prior": "000609fa-5c82-4cfe-8afc-f40ac44dde9b",
+        "current": "2e4dad4f-437f-4e00-9c94-432ca0c43524",
+        "cached": 10457,
+        "cacheRead": 10457
+      },
+      {
+        "label": "process restart",
+        "prior": "2e4dad4f-437f-4e00-9c94-432ca0c43524",
+        "current": "349c556d-3ad0-439f-b597-973e95167641",
+        "cached": 10519,
+        "cacheRead": 10519
+      }
+    ],
+    "discoveryRequests": [
+      {
+        "method": "GET",
+        "path": "/v1/models",
+        "startedAt": 1791840828911,
+        "status": 200,
+        "body": "{\"object\":\"list\",\"data\":[{\"id\":\"claude-sonnet-5-5\",\"object\":\"model\",\"created\":1791840829,\"owned_by\":\"anthropic\",\"display_name\":\"Claude Sonnet 5.5\",\"context_window\":200000,\"capabilities\":{\"batch\":{\"supported\":true},\"citations\":{\"supported\":true},\"code_execution\":{\"supported\":true},\"context_management\":{\"clear_thinking_20251015\":{\"supported\":true},\"clear_tool_uses_20250919\":{\"supported\":true},\"compact_20260112\":{\"supported\":true},\"supported\":true},\"effort\":{\"high\":{\"supported\":true},\"low\":{\"supported\":true},\"max\":{\"supported\":true},\"medium\":{\"supported\":true},\"xhigh\":{\"supported\":true},\"supported\":true},\"image_input\":{\"supported\":true},\"pdf_input\":{\"supported\":true},\"structured_outputs\":{\"supported\":true},\"thinking\":{\"supported\":true,\"types\":{\"adaptive\":{\"supported\":true},\"enabled\":{\"supported\":true}}}}},{\"id\":\"claude-sonnet-5\",\"object\":\"model\",\"created\":1791840829,\"owned_by\":\"anthropic\",\"display_name\":\"Claude Sonnet 5\",\"context_window\":200000,\"capabilities\":{\"batch\":{\"supported\":true},\"citations\":{\"supported\":true},\"code_execution\":{\"supported\":true},\"context_management\":{\"clear_thinking_20251015\":{\"supported\":true},\"clear_tool_uses_20250919\":{\"supported\":true},\"compact_20260112\":{\"supported\":true},\"supported\":true},\"effort\":{\"high\":{\"supported\":true},\"low\":{\"supported\":true},\"max\":{\"supported\":true},\"medium\":{\"supported\":true},\"xhigh\":{\"supported\":true},\"supported\":true},\"image_input\":{\"supported\":true},\"pdf_input\":{\"supported\":true},\"structured_outputs\":{\"supported\":true},\"thinking\":{\"supported\":true,\"types\":{\"adaptive\":{\"supported\":true},\"enabled\":{\"supported\":true}}}}},{\"id\":\"claude-sonnet-4-6\",\"object\":\"model\",\"created\":1791840829,\"owned_by\":\"anthropic\",\"display_name\":\"Claude Sonnet 4.6\",\"context_window\":200000,\"capabilities\":{\"batch\":{\"supported\":true},\"citations\":{\"supported\":true},\"code_execution\":{\"supported\":true},\"context_management\":{\"clear_thinking_20251015\":{\"supported\":true},\"clear_tool_uses_20250919\":{\"supported\":true},\"compact_20260112\":{\"supported\":true},\"supported\":true},\"effort\":{\"high\":{\"supported\":true},\"low\":{\"supported\":true},\"max\":{\"supported\":true},\"medium\":{\"supported\":true},\"xhigh\":{\"supported\":true},\"supported\":true},\"image_input\":{\"supported\":true},\"pdf_input\":{\"supported\":true},\"structured_outputs\":{\"supported\":true},\"thinking\":{\"supported\":true,\"types\":{\"adaptive\":{\"supported\":true},\"enabled\":{\"supported\":true}}}}},{\"id\":\"claude-opus-5-5\",\"object\":\"model\",\"created\":1791840829,\"owned_by\":\"anthropic\",\"display_name\":\"Claude Opus 5.5\",\"context_window\":200000,\"capabilities\":{\"batch\":{\"supported\":true},\"citations\":{\"supported\":true},\"code_execution\":{\"supported\":true},\"context_management\":{\"clear_thinking_20251015\":{\"supported\":true},\"clear_tool_uses_20250919\":{\"supported\":true},\"compact_20260112\":{\"supported\":true},\"supported\":true},\"effort\":{\"high\":{\"supported\":true},\"low\":{\"supported\":true},\"max\":{\"supported\":true},\"medium\":{\"supported\":true},\"xhigh\":{\"supported\":true},\"supported\":true},\"image_input\":{\"supported\":true},\"pdf_input\":{\"supported\":true},\"structured_outputs\":{\"supported\":true},\"thinking\":{\"supported\":true,\"types\":{\"adaptive\":{\"supported\":true},\"enabled\":{\"supported\":false}}}}},{\"id\":\"claude-opus-5\",\"object\":\"model\",\"created\":1791840829,\"owned_by\":\"anthropic\",\"display_name\":\"Claude Opus 5\",\"context_window\":200000,\"capabilities\":{\"batch\":{\"supported\":true},\"citations\":{\"supported\":true},\"code_execution\":{\"supported\":true},\"context_management\":{\"clear_thinking_20251015\":{\"supported\":true},\"clear_tool_uses_20250919\":{\"supported\":true},\"compact_20260112\":{\"supported\":true},\"supported\":true},\"effort\":{\"high\":{\"supported\":true},\"low\":{\"supported\":true},\"max\":{\"supported\":true},\"medium\":{\"supported\":true},\"xhigh\":{\"supported\":true},\"supported\":true},\"image_input\":{\"supported\":true},\"pdf_input\":{\"supported\":true},\"structured_outputs\":{\"supported\":true},\"thinking\":{\"supported\":true,\"types\":{\"adaptive\":{\"supported\":true},\"enabled\":{\"supported\":true}}}}},{\"id\":\"claude-opus-4-6\",\"object\":\"model\",\"created\":1791840829,\"owned_by\":\"anthropic\",\"display_name\":\"Claude Opus 4.6\",\"context_window\":200000,\"capabilities\":{\"batch\":{\"supported\":true},\"citations\":{\"supported\":true},\"code_execution\":{\"supported\":true},\"context_management\":{\"clear_thinking_20251015\":{\"supported\":true},\"clear_tool_uses_20250919\":{\"supported\":true},\"compact_20260112\":{\"supported\":true},\"supported\":true},\"effort\":{\"high\":{\"supported\":true},\"low\":{\"supported\":true},\"max\":{\"supported\":true},\"medium\":{\"supported\":true},\"xhigh\":{\"supported\":true},\"supported\":true},\"image_input\":{\"supported\":true},\"pdf_input\":{\"supported\":true},\"structured_outputs\":{\"supported\":true},\"thinking\":{\"supported\":true,\"types\":{\"adaptive\":{\"supported\":true},\"enabled\":{\"supported\":true}}}}},{\"id\":\"claude-opus-4-7\",\"object\":\"model\",\"created\":1791840829,\"owned_by\":\"anthropic\",\"display_name\":\"Claude Opus 4.7\",\"context_window\":200000,\"capabilities\":{\"batch\":{\"supported\":true},\"citations\":{\"supported\":true},\"code_execution\":{\"supported\":true},\"context_management\":{\"clear_thinking_20251015\":{\"supported\":true},\"clear_tool_uses_20250919\":{\"supported\":true},\"compact_20260112\":{\"supported\":true},\"supported\":true},\"effort\":{\"high\":{\"supported\":true},\"low\":{\"supported\":true},\"max\":{\"supported\":true},\"medium\":{\"supported\":true},\"xhigh\":{\"supported\":true},\"supported\":true},\"image_input\":{\"supported\":true},\"pdf_input\":{\"supported\":true},\"structured_outputs\":{\"supported\":true},\"thinking\":{\"supported\":true,\"types\":{\"adaptive\":{\"supported\":true},\"enabled\":{\"supported\":true}}}}},{\"id\":\"claude-opus-4-8\",\"object\":\"model\",\"created\":1791840829,\"owned_by\":\"anthropic\",\"display_name\":\"Claude Opus 4.8\",\"context_window\":200000,\"capabilities\":{\"batch\":{\"supported\":true},\"citations\":{\"supported\":true},\"code_execution\":{\"supported\":true},\"context_management\":{\"clear_thinking_20251015\":{\"supported\":true},\"clear_tool_uses_20250919\":{\"supported\":true},\"compact_20260112\":{\"supported\":true},\"supported\":true},\"effort\":{\"high\":{\"supported\":true},\"low\":{\"supported\":true},\"max\":{\"supported\":true},\"medium\":{\"supported\":true},\"xhigh\":{\"supported\":true},\"supported\":true},\"image_input\":{\"supported\":true},\"pdf_input\":{\"supported\":true},\"structured_outputs\":{\"supported\":true},\"thinking\":{\"supported\":true,\"types\":{\"adaptive\":{\"supported\":true},\"enabled\":{\"supported\":true}}}}},{\"id\":\"claude-fable-5-1\",\"object\":\"model\",\"created\":1791840829,\"owned_by\":\"anthropic\",\"display_name\":\"Claude Fable 5.1\",\"context_window\":200000,\"capabilities\":{\"batch\":{\"supported\":true},\"citations\":{\"supported\":true},\"code_execution\":{\"supported\":true},\"context_management\":{\"clear_thinking_20251015\":{\"supported\":true},\"clear_tool_uses_20250919\":{\"supported\":true},\"compact_20260112\":{\"supported\":true},\"supported\":true},\"effort\":{\"high\":{\"supported\":true},\"low\":{\"supported\":true},\"max\":{\"supported\":true},\"medium\":{\"supported\":true},\"xhigh\":{\"supported\":true},\"supported\":true},\"image_input\":{\"supported\":true},\"pdf_input\":{\"supported\":true},\"structured_outputs\":{\"supported\":true},\"thinking\":{\"supported\":true,\"types\":{\"adaptive\":{\"supported\":true},\"enabled\":{\"supported\":true}}}}},{\"id\":\"claude-fable-5\",\"object\":\"model\",\"created\":1791840829,\"owned_by\":\"anthropic\",\"display_name\":\"Claude Fable 5\",\"context_window\":200000,\"capabilities\":{\"batch\":{\"supported\":true},\"citations\":{\"supported\":true},\"code_execution\":{\"supported\":true},\"context_management\":{\"clear_thinking_20251015\":{\"supported\":true},\"clear_tool_uses_20250919\":{\"supported\":true},\"compact_20260112\":{\"supported\":true},\"supported\":true},\"effort\":{\"high\":{\"supported\":true},\"low\":{\"supported\":true},\"max\":{\"supported\":true},\"medium\":{\"supported\":true},\"xhigh\":{\"supported\":true},\"supported\":true},\"image_input\":{\"supported\":true},\"pdf_input\":{\"supported\":true},\"structured_outputs\":{\"supported\":true},\"thinking\":{\"supported\":true,\"types\":{\"adaptive\":{\"supported\":true},\"enabled\":{\"supported\":true}}}}},{\"id\":\"claude-haiku-5-5\",\"object\":\"model\",\"created\":1791840829,\"owned_by\":\"anthropic\",\"display_name\":\"Claude Haiku 5.5\",\"context_window\":1000000,\"capabilities\":{\"batch\":{\"supported\":true},\"citations\":{\"supported\":true},\"code_execution\":{\"supported\":true},\"context_management\":{\"clear_thinking_20251015\":{\"supported\":true},\"clear_tool_uses_20250919\":{\"supported\":true},\"compact_20260112\":{\"supported\":true},\"supported\":true},\"effort\":{\"high\":{\"supported\":true},\"low\":{\"supported\":true},\"max\":{\"supported\":true},\"medium\":{\"supported\":true},\"xhigh\":{\"supported\":true},\"supported\":true},\"image_input\":{\"supported\":true},\"pdf_input\":{\"supported\":true},\"structured_outputs\":{\"supported\":true},\"thinking\":{\"supported\":true,\"types\":{\"adaptive\":{\"supported\":true},\"enabled\":{\"supported\":false}}}}},{\"id\":\"claude-haiku-4-5\",\"object\":\"model\",\"created\":1791840829,\"owned_by\":\"anthropic\",\"display_name\":\"Claude Haiku 4.5\",\"context_window\":200000,\"capabilities\":{\"batch\":{\"supported\":true},\"citations\":{\"supported\":true},\"code_execution\":{\"supported\":true},\"context_management\":{\"clear_thinking_20251015\":{\"supported\":true},\"clear_tool_uses_20250919\":{\"supported\":true},\"compact_20260112\":{\"supported\":true},\"supported\":true},\"effort\":{\"high\":{\"supported\":true},\"low\":{\"supported\":true},\"max\":{\"supported\":true},\"medium\":{\"supported\":true},\"xhigh\":{\"supported\":true},\"supported\":true},\"image_input\":{\"supported\":true},\"pdf_input\":{\"supported\":true},\"structured_outputs\":{\"supported\":true},\"thinking\":{\"supported\":true,\"types\":{\"adaptive\":{\"supported\":true},\"enabled\":{\"supported\":true}}}}}]}"
+      },
+      {
+        "method": "GET",
+        "path": "/v1/models",
+        "startedAt": 1791840841929,
+        "status": 200,
+        "body": "{\"object\":\"list\",\"data\":[{\"id\":\"claude-sonnet-5-5\",\"object\":\"model\",\"created\":1791840841,\"owned_by\":\"anthropic\",\"display_name\":\"Claude Sonnet 5.5\",\"context_window\":200000,\"capabilities\":{\"batch\":{\"supported\":true},\"citations\":{\"supported\":true},\"code_execution\":{\"supported\":true},\"context_management\":{\"clear_thinking_20251015\":{\"supported\":true},\"clear_tool_uses_20250919\":{\"supported\":true},\"compact_20260112\":{\"supported\":true},\"supported\":true},\"effort\":{\"high\":{\"supported\":true},\"low\":{\"supported\":true},\"max\":{\"supported\":true},\"medium\":{\"supported\":true},\"xhigh\":{\"supported\":true},\"supported\":true},\"image_input\":{\"supported\":true},\"pdf_input\":{\"supported\":true},\"structured_outputs\":{\"supported\":true},\"thinking\":{\"supported\":true,\"types\":{\"adaptive\":{\"supported\":true},\"enabled\":{\"supported\":true}}}}},{\"id\":\"claude-sonnet-5\",\"object\":\"model\",\"created\":1791840841,\"owned_by\":\"anthropic\",\"display_name\":\"Claude Sonnet 5\",\"context_window\":200000,\"capabilities\":{\"batch\":{\"supported\":true},\"citations\":{\"supported\":true},\"code_execution\":{\"supported\":true},\"context_management\":{\"clear_thinking_20251015\":{\"supported\":true},\"clear_tool_uses_20250919\":{\"supported\":true},\"compact_20260112\":{\"supported\":true},\"supported\":true},\"effort\":{\"high\":{\"supported\":true},\"low\":{\"supported\":true},\"max\":{\"supported\":true},\"medium\":{\"supported\":true},\"xhigh\":{\"supported\":true},\"supported\":true},\"image_input\":{\"supported\":true},\"pdf_input\":{\"supported\":true},\"structured_outputs\":{\"supported\":true},\"thinking\":{\"supported\":true,\"types\":{\"adaptive\":{\"supported\":true},\"enabled\":{\"supported\":true}}}}},{\"id\":\"claude-sonnet-4-6\",\"object\":\"model\",\"created\":1791840841,\"owned_by\":\"anthropic\",\"display_name\":\"Claude Sonnet 4.6\",\"context_window\":200000,\"capabilities\":{\"batch\":{\"supported\":true},\"citations\":{\"supported\":true},\"code_execution\":{\"supported\":true},\"context_management\":{\"clear_thinking_20251015\":{\"supported\":true},\"clear_tool_uses_20250919\":{\"supported\":true},\"compact_20260112\":{\"supported\":true},\"supported\":true},\"effort\":{\"high\":{\"supported\":true},\"low\":{\"supported\":true},\"max\":{\"supported\":true},\"medium\":{\"supported\":true},\"xhigh\":{\"supported\":true},\"supported\":true},\"image_input\":{\"supported\":true},\"pdf_input\":{\"supported\":true},\"structured_outputs\":{\"supported\":true},\"thinking\":{\"supported\":true,\"types\":{\"adaptive\":{\"supported\":true},\"enabled\":{\"supported\":true}}}}},{\"id\":\"claude-opus-5-5\",\"object\":\"model\",\"created\":1791840841,\"owned_by\":\"anthropic\",\"display_name\":\"Claude Opus 5.5\",\"context_window\":200000,\"capabilities\":{\"batch\":{\"supported\":true},\"citations\":{\"supported\":true},\"code_execution\":{\"supported\":true},\"context_management\":{\"clear_thinking_20251015\":{\"supported\":true},\"clear_tool_uses_20250919\":{\"supported\":true},\"compact_20260112\":{\"supported\":true},\"supported\":true},\"effort\":{\"high\":{\"supported\":true},\"low\":{\"supported\":true},\"max\":{\"supported\":true},\"medium\":{\"supported\":true},\"xhigh\":{\"supported\":true},\"supported\":true},\"image_input\":{\"supported\":true},\"pdf_input\":{\"supported\":true},\"structured_outputs\":{\"supported\":true},\"thinking\":{\"supported\":true,\"types\":{\"adaptive\":{\"supported\":true},\"enabled\":{\"supported\":false}}}}},{\"id\":\"claude-opus-5\",\"object\":\"model\",\"created\":1791840841,\"owned_by\":\"anthropic\",\"display_name\":\"Claude Opus 5\",\"context_window\":200000,\"capabilities\":{\"batch\":{\"supported\":true},\"citations\":{\"supported\":true},\"code_execution\":{\"supported\":true},\"context_management\":{\"clear_thinking_20251015\":{\"supported\":true},\"clear_tool_uses_20250919\":{\"supported\":true},\"compact_20260112\":{\"supported\":true},\"supported\":true},\"effort\":{\"high\":{\"supported\":true},\"low\":{\"supported\":true},\"max\":{\"supported\":true},\"medium\":{\"supported\":true},\"xhigh\":{\"supported\":true},\"supported\":true},\"image_input\":{\"supported\":true},\"pdf_input\":{\"supported\":true},\"structured_outputs\":{\"supported\":true},\"thinking\":{\"supported\":true,\"types\":{\"adaptive\":{\"supported\":true},\"enabled\":{\"supported\":true}}}}},{\"id\":\"claude-opus-4-6\",\"object\":\"model\",\"created\":1791840841,\"owned_by\":\"anthropic\",\"display_name\":\"Claude Opus 4.6\",\"context_window\":200000,\"capabilities\":{\"batch\":{\"supported\":true},\"citations\":{\"supported\":true},\"code_execution\":{\"supported\":true},\"context_management\":{\"clear_thinking_20251015\":{\"supported\":true},\"clear_tool_uses_20250919\":{\"supported\":true},\"compact_20260112\":{\"supported\":true},\"supported\":true},\"effort\":{\"high\":{\"supported\":true},\"low\":{\"supported\":true},\"max\":{\"supported\":true},\"medium\":{\"supported\":true},\"xhigh\":{\"supported\":true},\"supported\":true},\"image_input\":{\"supported\":true},\"pdf_input\":{\"supported\":true},\"structured_outputs\":{\"supported\":true},\"thinking\":{\"supported\":true,\"types\":{\"adaptive\":{\"supported\":true},\"enabled\":{\"supported\":true}}}}},{\"id\":\"claude-opus-4-7\",\"object\":\"model\",\"created\":1791840841,\"owned_by\":\"anthropic\",\"display_name\":\"Claude Opus 4.7\",\"context_window\":200000,\"capabilities\":{\"batch\":{\"supported\":true},\"citations\":{\"supported\":true},\"code_execution\":{\"supported\":true},\"context_management\":{\"clear_thinking_20251015\":{\"supported\":true},\"clear_tool_uses_20250919\":{\"supported\":true},\"compact_20260112\":{\"supported\":true},\"supported\":true},\"effort\":{\"high\":{\"supported\":true},\"low\":{\"supported\":true},\"max\":{\"supported\":true},\"medium\":{\"supported\":true},\"xhigh\":{\"supported\":true},\"supported\":true},\"image_input\":{\"supported\":true},\"pdf_input\":{\"supported\":true},\"structured_outputs\":{\"supported\":true},\"thinking\":{\"supported\":true,\"types\":{\"adaptive\":{\"supported\":true},\"enabled\":{\"supported\":true}}}}},{\"id\":\"claude-opus-4-8\",\"object\":\"model\",\"created\":1791840841,\"owned_by\":\"anthropic\",\"display_name\":\"Claude Opus 4.8\",\"context_window\":200000,\"capabilities\":{\"batch\":{\"supported\":true},\"citations\":{\"supported\":true},\"code_execution\":{\"supported\":true},\"context_management\":{\"clear_thinking_20251015\":{\"supported\":true},\"clear_tool_uses_20250919\":{\"supported\":true},\"compact_20260112\":{\"supported\":true},\"supported\":true},\"effort\":{\"high\":{\"supported\":true},\"low\":{\"supported\":true},\"max\":{\"supported\":true},\"medium\":{\"supported\":true},\"xhigh\":{\"supported\":true},\"supported\":true},\"image_input\":{\"supported\":true},\"pdf_input\":{\"supported\":true},\"structured_outputs\":{\"supported\":true},\"thinking\":{\"supported\":true,\"types\":{\"adaptive\":{\"supported\":true},\"enabled\":{\"supported\":true}}}}},{\"id\":\"claude-fable-5-1\",\"object\":\"model\",\"created\":1791840841,\"owned_by\":\"anthropic\",\"display_name\":\"Claude Fable 5.1\",\"context_window\":200000,\"capabilities\":{\"batch\":{\"supported\":true},\"citations\":{\"supported\":true},\"code_execution\":{\"supported\":true},\"context_management\":{\"clear_thinking_20251015\":{\"supported\":true},\"clear_tool_uses_20250919\":{\"supported\":true},\"compact_20260112\":{\"supported\":true},\"supported\":true},\"effort\":{\"high\":{\"supported\":true},\"low\":{\"supported\":true},\"max\":{\"supported\":true},\"medium\":{\"supported\":true},\"xhigh\":{\"supported\":true},\"supported\":true},\"image_input\":{\"supported\":true},\"pdf_input\":{\"supported\":true},\"structured_outputs\":{\"supported\":true},\"thinking\":{\"supported\":true,\"types\":{\"adaptive\":{\"supported\":true},\"enabled\":{\"supported\":true}}}}},{\"id\":\"claude-fable-5\",\"object\":\"model\",\"created\":1791840841,\"owned_by\":\"anthropic\",\"display_name\":\"Claude Fable 5\",\"context_window\":200000,\"capabilities\":{\"batch\":{\"supported\":true},\"citations\":{\"supported\":true},\"code_execution\":{\"supported\":true},\"context_management\":{\"clear_thinking_20251015\":{\"supported\":true},\"clear_tool_uses_20250919\":{\"supported\":true},\"compact_20260112\":{\"supported\":true},\"supported\":true},\"effort\":{\"high\":{\"supported\":true},\"low\":{\"supported\":true},\"max\":{\"supported\":true},\"medium\":{\"supported\":true},\"xhigh\":{\"supported\":true},\"supported\":true},\"image_input\":{\"supported\":true},\"pdf_input\":{\"supported\":true},\"structured_outputs\":{\"supported\":true},\"thinking\":{\"supported\":true,\"types\":{\"adaptive\":{\"supported\":true},\"enabled\":{\"supported\":true}}}}},{\"id\":\"claude-haiku-5-5\",\"object\":\"model\",\"created\":1791840841,\"owned_by\":\"anthropic\",\"display_name\":\"Claude Haiku 5.5\",\"context_window\":1000000,\"capabilities\":{\"batch\":{\"supported\":true},\"citations\":{\"supported\":true},\"code_execution\":{\"supported\":true},\"context_management\":{\"clear_thinking_20251015\":{\"supported\":true},\"clear_tool_uses_20250919\":{\"supported\":true},\"compact_20260112\":{\"supported\":true},\"supported\":true},\"effort\":{\"high\":{\"supported\":true},\"low\":{\"supported\":true},\"max\":{\"supported\":true},\"medium\":{\"supported\":true},\"xhigh\":{\"supported\":true},\"supported\":true},\"image_input\":{\"supported\":true},\"pdf_input\":{\"supported\":true},\"structured_outputs\":{\"supported\":true},\"thinking\":{\"supported\":true,\"types\":{\"adaptive\":{\"supported\":true},\"enabled\":{\"supported\":false}}}}},{\"id\":\"claude-haiku-4-5\",\"object\":\"model\",\"created\":1791840841,\"owned_by\":\"anthropic\",\"display_name\":\"Claude Haiku 4.5\",\"context_window\":200000,\"capabilities\":{\"batch\":{\"supported\":true},\"citations\":{\"supported\":true},\"code_execution\":{\"supported\":true},\"context_management\":{\"clear_thinking_20251015\":{\"supported\":true},\"clear_tool_uses_20250919\":{\"supported\":true},\"compact_20260112\":{\"supported\":true},\"supported\":true},\"effort\":{\"high\":{\"supported\":true},\"low\":{\"supported\":true},\"max\":{\"supported\":true},\"medium\":{\"supported\":true},\"xhigh\":{\"supported\":true},\"supported\":true},\"image_input\":{\"supported\":true},\"pdf_input\":{\"supported\":true},\"structured_outputs\":{\"supported\":true},\"thinking\":{\"supported\":true,\"types\":{\"adaptive\":{\"supported\":true},\"enabled\":{\"supported\":true}}}}}]}"
+      }
+    ],
+    "variantProbe": {
+      "model": "anthropic/claude-haiku-5-5#xhigh",
+      "selected": true,
+      "errors": [],
+      "efforts": [
+        "xhigh"
+      ],
+      "completed": true,
+      "answered": true
+    },
+    "coldStartProbe": {
+      "errors": [],
+      "efforts": [
+        "low",
+        "xhigh"
+      ]
+    }
+  }
+}

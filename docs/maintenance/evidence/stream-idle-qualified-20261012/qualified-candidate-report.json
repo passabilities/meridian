@@ -1,0 +1,155 @@
+{
+  "result": "PASS",
+  "root": "/tmp/meridian-long-input-opencode-ms42T2",
+  "expected": "candidate",
+  "model": "claude-opus-5-5",
+  "idleMs": 15000,
+  "platform": "linux/x64",
+  "node": "v22.23.3",
+  "environment": "linux-amd64-docker-emulated-on-darwin-arm64",
+  "actors": [
+    {
+      "command": "/opt/client/node_modules/.bin/opencode",
+      "pid": 12,
+      "close": true,
+      "stdoutClose": true,
+      "stderrClose": true,
+      "code": 0,
+      "signal": null
+    },
+    {
+      "command": "/usr/local/bin/node",
+      "pid": 37,
+      "close": true,
+      "stdoutClose": true,
+      "stderrClose": true,
+      "code": 0,
+      "signal": null
+    },
+    {
+      "command": "/opt/client/node_modules/.bin/opencode",
+      "pid": 45,
+      "close": true,
+      "stdoutClose": true,
+      "stderrClose": true,
+      "code": 0,
+      "signal": null
+    },
+    {
+      "command": "/bin/sh",
+      "pid": 101,
+      "close": true,
+      "stdoutClose": true,
+      "stderrClose": true,
+      "code": 0,
+      "signal": null
+    },
+    {
+      "command": "/bin/sh",
+      "pid": 102,
+      "close": true,
+      "stdoutClose": true,
+      "stderrClose": true,
+      "code": 1,
+      "signal": null
+    },
+    {
+      "command": "/bin/sh",
+      "pid": 206,
+      "close": true,
+      "stdoutClose": true,
+      "stderrClose": true,
+      "code": 0,
+      "signal": null
+    },
+    {
+      "command": "/opt/client/node_modules/.bin/opencode",
+      "pid": 255,
+      "close": true,
+      "stdoutClose": true,
+      "stderrClose": true,
+      "code": 0,
+      "signal": null
+    },
+    {
+      "command": "/bin/sh",
+      "pid": 294,
+      "close": true,
+      "stdoutClose": true,
+      "stderrClose": true,
+      "code": 0,
+      "signal": null
+    }
+  ],
+  "requests": [
+    {
+      "session": "ses_ecec05725ffeXat4cij4IzkRl0",
+      "agent": "title",
+      "toolChars": 0,
+      "toolDeltas": 0,
+      "maxGapMs": 0,
+      "toolDurationMs": 0,
+      "model": "claude-opus-5-5",
+      "hasToolResult": false,
+      "status": 200
+    },
+    {
+      "session": "ses_ecec05725ffeXat4cij4IzkRl0",
+      "agent": "build",
+      "toolChars": 43040,
+      "toolDeltas": 2167,
+      "maxGapMs": 205.93722200000775,
+      "toolDurationMs": 108680.138213,
+      "model": "claude-opus-5-5",
+      "hasToolResult": false,
+      "tool": "write",
+      "status": 200
+    },
+    {
+      "session": "ses_ecec05725ffeXat4cij4IzkRl0",
+      "agent": "build",
+      "toolChars": 0,
+      "toolDeltas": 0,
+      "maxGapMs": 0,
+      "toolDurationMs": 0,
+      "model": "claude-opus-5-5",
+      "hasToolResult": true,
+      "status": 200
+    },
+    {
+      "session": "ses_ecec05725ffeXat4cij4IzkRl0",
+      "agent": "build",
+      "toolChars": 0,
+      "toolDeltas": 0,
+      "maxGapMs": 0,
+      "toolDurationMs": 0,
+      "model": "claude-opus-5-5",
+      "hasToolResult": true,
+      "status": 200
+    }
+  ],
+  "harnessSha256": "972c09e69c50e0d2f0d127534023d598af05220c4f40dcbf0445a364223b8552",
+  "client": "1.18.34",
+  "scrubPreflight": {
+    "path": "/scrub/dist/index.js",
+    "packageName": "@rynfar/meridian-plugin-opencode-scrub",
+    "packageVersion": "0.2.3",
+    "sha256": "4ab89412e6a59fad812a3f6e5500c84f3bdfc41863320bc794f5274a251da656",
+    "runtimeVersion": "0.2.3",
+    "invocations": 0,
+    "errors": 0
+  },
+  "plugin": "/opt/candidate/node_modules/@rynfar/meridian/dist/meridian",
+  "clientExit": 0,
+  "scrubRequest": {
+    "path": "/scrub/dist/index.js",
+    "packageName": "@rynfar/meridian-plugin-opencode-scrub",
+    "packageVersion": "0.2.3",
+    "sha256": "4ab89412e6a59fad812a3f6e5500c84f3bdfc41863320bc794f5274a251da656",
+    "runtimeVersion": "0.2.3",
+    "invocations": 3,
+    "errors": 0
+  },
+  "continued": true,
+  "joined": true
+}

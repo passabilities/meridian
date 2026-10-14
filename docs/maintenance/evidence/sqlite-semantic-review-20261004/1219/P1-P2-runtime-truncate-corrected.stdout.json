@@ -1,0 +1,15 @@
+{
+  "mode": "runtime-truncate",
+  "source": "0bf16b0d83f2fcc8c9b55df06bf20f97d763a23f",
+  "node": "v22.22.3",
+  "platform": "darwin",
+  "arch": "arm64",
+  "guardMode": "shared",
+  "exclusiveBlocked": true,
+  "truncate": {
+    "busy": 0,
+    "log": 0,
+    "checkpointed": 0
+  },
+  "assertions": "PASS (defect reproduced; not product acceptance)"
+}

@@ -1,0 +1,111 @@
+{
+  "sourceHead": "0bf16b0d83f2fcc8c9b55df06bf20f97d763a23f",
+  "bun": "1.3.14",
+  "node": "24.3.0",
+  "platform": "darwin",
+  "arch": "arm64",
+  "libsql": "0.5.29",
+  "hashes": {
+    "lifecycleDeletionSql.ts": "d47588bd90808c60868901b4031e1a2ed0fb72c7b61d8d1239ad5054d0e9f80d",
+    "resources.ts": "b505dbd3dbfd68ef0b0d77f5be68162a2c40f3b850108822a9c37b3ceb9b0e43",
+    "resourceImport.ts": "2a27b81775ee564ba5dcb94a605fe8bd39c3e3d484f92c90c4e85a1b404edb5d",
+    "transaction.ts": "f0bd87d91d308c83626ba222b29da1bec1dca0cb9dfa86253fa1aa9f7120b24f",
+    "connection.ts": "48bf6243a159ce517a951198a5fe395484fbd19b20c982c06624b3f3021275be"
+  },
+  "results": [
+    {
+      "count": 1,
+      "kind": "future-retired imported rows",
+      "maxDeletesPerRun": 1,
+      "runTimeoutMs": 5,
+      "timerBudgetMs": 1,
+      "writerBudgetMs": 25,
+      "elapsedMs": 2.4176250000000152,
+      "claimTransactionMs": 0.6586250000000007,
+      "timerFiredAfterMs": 2.4812920000000247,
+      "writer": {
+        "kind": "writer",
+        "elapsedMs": 1.0230410000000063,
+        "status": "committed"
+      },
+      "deletes": 0,
+      "outcome": {
+        "deleted": 0,
+        "notFound": 0,
+        "failed": 0,
+        "deferred": 1
+      },
+      "states": [
+        {
+          "state": "retired",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "count": 4096,
+      "kind": "future-retired imported rows",
+      "maxDeletesPerRun": 1,
+      "runTimeoutMs": 5,
+      "timerBudgetMs": 1,
+      "writerBudgetMs": 25,
+      "elapsedMs": 178.02774999999997,
+      "claimTransactionMs": 77.52650000000006,
+      "timerFiredAfterMs": 178.07766700000002,
+      "writer": {
+        "kind": "writer",
+        "elapsedMs": 26.396375000000006,
+        "status": "rejected",
+        "name": "Error",
+        "message": "bookkeeping admission expired"
+      },
+      "deletes": 0,
+      "outcome": {
+        "deleted": 0,
+        "notFound": 0,
+        "failed": 0,
+        "deferred": 4096
+      },
+      "states": [
+        {
+          "state": "retired",
+          "count": 4096
+        }
+      ]
+    },
+    {
+      "count": 16384,
+      "kind": "future-retired imported rows",
+      "maxDeletesPerRun": 1,
+      "runTimeoutMs": 5,
+      "timerBudgetMs": 1,
+      "writerBudgetMs": 25,
+      "elapsedMs": 625.8876249999998,
+      "claimTransactionMs": 270.327542,
+      "timerFiredAfterMs": 625.9463339999998,
+      "writer": {
+        "kind": "writer",
+        "elapsedMs": 26.484041000000047,
+        "status": "rejected",
+        "name": "Error",
+        "message": "bookkeeping admission expired"
+      },
+      "deletes": 0,
+      "outcome": {
+        "deleted": 0,
+        "notFound": 0,
+        "failed": 0,
+        "deferred": 16384
+      },
+      "states": [
+        {
+          "state": "retired",
+          "count": 16384
+        }
+      ]
+    }
+  ],
+  "runtime_note": "node field is Bun Node compatibility version, not standalone Node",
+  "standalone_node": "v22.22.3",
+  "exit_code": 0
+}

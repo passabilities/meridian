@@ -139,9 +139,11 @@ describe("/v1/models profile auth context", () => {
     expect(models.get("claude-opus-4-6")?.context_window).toBe(1_000_000)
     expect(models.get("claude-fable-5-1")?.context_window).toBe(1_000_000)
     expect(models.get("claude-fable-5")?.context_window).toBe(1_000_000)
+    expect(models.get("claude-sonnet-5-5")?.context_window).toBe(1_000_000)
+    expect(models.get("claude-sonnet-4-6")?.context_window).toBe(200_000)
   })
 
-  it("keeps the 200k catalog for a non-Max profile", async () => {
+  it("keeps non-Max tiers at 200k, except native-1M Sonnet 5+ and Haiku 5.5", async () => {
     const { app } = createProxyServer({
       port: 0,
       host: "127.0.0.1",
@@ -157,7 +159,11 @@ describe("/v1/models profile auth context", () => {
       profileId: "pro",
       envOverrides: { CLAUDE_CONFIG_DIR: "/profiles/pro" },
     }])
-    expect(body.data.every((model) => model.context_window === 200_000)).toBe(true)
+    // Sonnet 5+ (#1212) and Haiku 5.5 have a native 1M window on every plan; the rest stay 200k.
+    const native1m = new Set(["claude-sonnet-5-5", "claude-sonnet-5", "claude-haiku-5-5"])
+    for (const model of body.data) {
+      expect(model.context_window).toBe(native1m.has(model.id) ? 1_000_000 : 200_000)
+    }
   })
 })
 

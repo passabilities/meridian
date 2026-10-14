@@ -1,0 +1,789 @@
+{
+  "task": "#1219 full semantic packet review P3 + P5, round 1",
+  "source_head": "0bf16b0d83f2fcc8c9b55df06bf20f97d763a23f",
+  "github_base": "f443faee0b135c5d4bfe1e6fe771c6a262ae5f33",
+  "comparison_main": "8e1c8bf738d7372ded01f28e99d6ec167acaf76f",
+  "source_authorship": {
+    "author": "Aleksey Proshutinskiy <alexey.prosh@fluence.one>",
+    "author_date": "2026-10-02T11:50:53+04:00",
+    "committer": "Aleksey Proshutinskiy <alexey.prosh@fluence.one>",
+    "commit_date": "2026-10-02T11:50:53+04:00",
+    "subject": "test(session): give the GC sweep harness the profile-copy pruning dependencies"
+  },
+  "disposition": "defer the SQL incorporation; 27-file bounded review complete, material corrections and owner-approved SQL contract still required; no PR acceptance/merge authorization supplied by this child",
+  "scope": {
+    "files": 27,
+    "hunks": 60,
+    "source_lines": 4030,
+    "source_unchanged": true,
+    "source_tests_run": false,
+    "full_npm_run": false,
+    "install_by_reviewer": false,
+    "models_auth_clients_called": false,
+    "github_mutated": false,
+    "subagents_spawned": false
+  },
+  "findings": [
+    {
+      "id": "F1",
+      "severity": "P2",
+      "status": "reproduced",
+      "title": "GC claim holds one synchronous writer transaction across every deferred/pinned page",
+      "locations": [
+        "src/proxy/session/bookkeeping/lifecycleDeletionSql.ts:45-67",
+        "src/proxy/session/bookkeeping/resources.ts:144-154",
+        "src/proxy/session/bookkeeping/resourceImport.ts:17-25",
+        "src/proxy/session/bookkeeping/migrationImport.ts:51-56,74-80",
+        "src/proxy/session/bookkeeping/transaction.ts:298"
+      ],
+      "cause": "LIMIT 128 bounds each retired SELECT, but while(true) stays inside one BEGIN IMMEDIATE callback until an eligible row or complete exhaustion. Every skipped row is hydrated. run deadline checked only before claim; admission cancellation does not interrupt started transaction. Offline import preserves arbitrary resource counts independently of runtime caps.",
+      "impact": "A valid deferred/imported or durable-pinned ledger blocks the event loop and all competing SQL writers despite maxDeletesPerRun=1/runTimeoutMs=5. Actual 25ms writer rejected on 4096/16384-row arms; one-row negative controls committed. No default-budget failure or Linux/Windows timing was measured.",
+      "correction": "Bound rows/work per claim transaction and yield/release between batches. Preserve exact pin/lease/claim predicates, re-read authority at destructive claim, and use explicit progress state so repeated sweeps do not permanently rescan only oldest blocked entries. Preserve intended candidate ordering or document/approve any changed ordering. Add future-backoff, NULL/exact durable pin, all-leased, late eligible and concurrent-writer controls."
+    },
+    {
+      "id": "F2",
+      "severity": "P2",
+      "status": "causal source path plus isolated phase measurement",
+      "title": "GC deferred accounting hydrates the whole backlog in one synchronous read snapshot after the claim budget",
+      "locations": [
+        "src/proxy/session/bookkeeping/lifecycleDeletionSql.ts:153-157"
+      ],
+      "cause": "SELECT all retired/deleting keys followed by readResource and pin lookup for each row; no paging/yield/deadline applies. Even zero-deferred all-pinned rows take this path.",
+      "impact": "Measured phase/timer delay 263.2ms for 4096 all-pinned rows with deferred=0; 625.9ms for 16384 future rows. Claim-only lock timing is separately recorded; total minus claim is not claimed as an exact isolated count-only duration.",
+      "correction": "Avoid full JS resource hydration for count/accounting and establish a bounded responsiveness strategy while preserving deferred/pin semantics. An aggregate/filter SQL projection may reduce hydration, but do not claim a wall-time bound merely from a single SQL statement. Add an explicit large zero-deferred pinned control and event-loop responsiveness control."
+    },
+    {
+      "id": "F3",
+      "severity": "P2",
+      "status": "confirmed static regression; cross-packet P4 caller, previously recorded bounded review finding",
+      "title": "SQL cache clear retains memory caches on durable clear failure and conflicts with approved #1244 reset policy",
+      "locations": [
+        "src/proxy/session/cache.ts:134-152",
+        "src/proxy/session/bookkeeping/storeMaintenanceWriteSql.ts:44-55",
+        "src/__tests__/bookkeeping-cache-publication.test.ts:178-195"
+      ],
+      "cause": "SQL branch invokes synchronous clearSharedSessions before clearing memory; catch returns silently. Memory clearing is deferred to a successful COMMIT. The current main JSON behavior clears memory before best-effort durable work; approved #1244 requires immediate memory reset and awaited best-effort cleanup.",
+      "impact": "The clear call can complete while the old degraded-store fallback cache survives. Added tests explicitly preserve old cached ID on failed/uncertain COMMIT, so green tests do not establish the authorized reset behavior.",
+      "correction": "Coordinate with P4/#1244: preserve immediate reset at the public clear entry point and approved Promise completion/best-effort policy; retain COMMIT hooks for ordinary publication/eviction effects. Do not apply ordinary publication rollback semantics to the independent reset command. Add failed durable cleanup with immediate empty fallback-cache negative control."
+    }
+  ],
+  "scope_gates": [
+    {
+      "id": "S1",
+      "title": "SQL public contract remains unapproved; JSON GC timeout behavior is also changed",
+      "locations": [
+        "src/proxy/sessionLifecycle.ts:121-129,832-849",
+        "src/proxy/session/bookkeeping/lifecycleGcSql.ts:7-10"
+      ],
+      "detail": "runTimeoutMs now gates new claims rather than shortening already-admitted deletion execution. Shared JSON backend also gets that semantic change and new deletionHandshakeTimeoutMs. This may be a sound independent fix, but must be described explicitly; the prior complete-sweep wording cannot be reused as proof. No owner decision requested by this child. #1244 async clear scope already has approval and is a separate integration gate."
+    }
+  ],
+  "coverage": [
+    {
+      "path": "src/proxy/session/bookkeeping/lifecycleLeasesSql.ts",
+      "packet": "P3 SQL rows and publication",
+      "source_lines": 157,
+      "source_sha256": "0cbb0ef79ef6ed77d8f8e6ffa55eadc6a158a3eb8afa1f635167c5d723cf0d8d",
+      "source_blob": "4e440f085deaa6bd45d7e21924f6a0a3f3783d1b",
+      "patch": "diffs-github-base/121-src__proxy__session__bookkeeping__lifecycleLeasesSql.ts.patch",
+      "patch_sha256": "1144dd64cf468da163069f2cdcc7cbcad653479f91cb894e6ba1258d4b488747",
+      "hunks": [
+        "@@ -0,0 +1,157 @@"
+      ],
+      "status": "Every added/changed/removed hunk inspected; complete source read for new files; mixed lifecycle diff and relevant runtime callers read.",
+      "semantic_review": "Exact resource generation/version plus full lease-field predicates protect observations captured outside SQL; publication/writer purposes stay separate; joined release queues only retryable lock failures. Nonrecoverable executors require boot change.",
+      "tests_and_callers": "bookkeeping-lifecycle-transitions.test.ts:80,108,132,155,174,187,202,233; bookkeeping-lifecycle-injection.test.ts:46",
+      "reviewed": true,
+      "finding_ids": []
+    },
+    {
+      "path": "src/proxy/session/bookkeeping/lifecyclePrepareSql.ts",
+      "packet": "P3 SQL rows and publication",
+      "source_lines": 56,
+      "source_sha256": "1330eb086438639b447562427e768de5b80eb7883e56c83d809be8389623aae3",
+      "source_blob": "33e06dcf05502120678093503f7fe78d308caffd",
+      "patch": "diffs-github-base/122-src__proxy__session__bookkeeping__lifecyclePrepareSql.ts.patch",
+      "patch_sha256": "ad7645142ecb4b63be0557817dba6b59f7eb02de5041208273e1b382e660b7d3",
+      "hunks": [
+        "@@ -0,0 +1,56 @@"
+      ],
+      "status": "Every added/changed/removed hunk inspected; complete source read for new files; mixed lifecycle diff and relevant runtime callers read.",
+      "semantic_review": "Allocation, fence and publication owner lease share one transaction. Admission deferral promotes only unleased retired rows; capacity refusal rolls the promotions back. Existing exact prepare may return a deleting row as JSON does; acquisition/publication still refuse it.",
+      "tests_and_callers": "bookkeeping-lifecycle-prepare.test.ts:49,70,150,167,182,224",
+      "reviewed": true,
+      "finding_ids": []
+    },
+    {
+      "path": "src/proxy/session/bookkeeping/lifecyclePublicationSql.ts",
+      "packet": "P3 SQL rows and publication",
+      "source_lines": 78,
+      "source_sha256": "7edb120d655316d25f16ab7f8fabb77d4c987ed63e959f8f2e27a310254bca69",
+      "source_blob": "19cedfd6e4706afa7fb56ecc0b6d40c512ac5265",
+      "patch": "diffs-github-base/123-src__proxy__session__bookkeeping__lifecyclePublicationSql.ts.patch",
+      "patch_sha256": "df1097304b13f9d58d8aa448137ea00b632f5940564e9bde965a5f6898d5d8c4",
+      "hunks": [
+        "@@ -0,0 +1,78 @@"
+      ],
+      "status": "Every added/changed/removed hunk inspected; complete source read for new files; mixed lifecycle diff and relevant runtime callers read.",
+      "semantic_review": "Resource promotion, publication-lease release and nested store callback share one explicit publication transaction. false/throw/thenable discard rows/hooks and restore caller generation. Unknown COMMIT retains durable authority and does not replay callback; server no-replay/turn-fence barrier was inspected.",
+      "tests_and_callers": "bookkeeping-lifecycle-publication.test.ts:119,158,185,224,250,277,306,321",
+      "reviewed": true,
+      "finding_ids": []
+    },
+    {
+      "path": "src/proxy/session/bookkeeping/lifecycleRegisterSql.ts",
+      "packet": "P3 SQL rows and publication",
+      "source_lines": 56,
+      "source_sha256": "509b39b8ff50554d77bb1dc6731cb807a3f68a75221525ffb3f208412bf3b2c5",
+      "source_blob": "0287bdc4daae06dade87a3595e0445189451033d",
+      "patch": "diffs-github-base/125-src__proxy__session__bookkeeping__lifecycleRegisterSql.ts.patch",
+      "patch_sha256": "ebb697f88a76e5c4a81bc9e235b4fbb64468bf14255d5b83101c4bea2446b57f",
+      "hunks": [
+        "@@ -0,0 +1,56 @@"
+      ],
+      "status": "Every added/changed/removed hunk inspected; complete source read for new files; mixed lifecycle diff and relevant runtime callers read.",
+      "semantic_review": "Missing supplied ownership fence is refused; exact existing locator inspected before/under write; matching ensure/register fast path returns copied exact identity. No inferred ownership for unknown sessions.",
+      "tests_and_callers": "bookkeeping-lifecycle-prepare.test.ts:70,103,117; bookkeeping-lifecycle-injection.test.ts:46",
+      "reviewed": true,
+      "finding_ids": []
+    },
+    {
+      "path": "src/proxy/session/bookkeeping/lifecycleRowsSql.ts",
+      "packet": "P3 SQL rows and publication",
+      "source_lines": 74,
+      "source_sha256": "ea1602319fb53c3fafac8fc4d0e3703450d60198ba3b457ccdad429928be344f",
+      "source_blob": "4a3898a178d7176eb9e21df547a88f9acfba57a5",
+      "patch": "diffs-github-base/126-src__proxy__session__bookkeeping__lifecycleRowsSql.ts.patch",
+      "patch_sha256": "b2b50d1ae148e6724893a57591f3d0ba94289020370d507342e88462e9653747",
+      "hunks": [
+        "@@ -0,0 +1,74 @@"
+      ],
+      "status": "Every added/changed/removed hunk inspected; complete source read for new files; mixed lifecycle diff and relevant runtime callers read.",
+      "semantic_review": "Clock/options validation, generation/physical equality and pending/owned counters checked. Promotions fenced by generation/version/state; tombstones retain fence slots. Runtime admission caps do not cap preserved imported rows.",
+      "tests_and_callers": "bookkeeping-lifecycle-prepare.test.ts:150,182,213,239",
+      "reviewed": true,
+      "finding_ids": []
+    },
+    {
+      "path": "src/proxy/session/bookkeeping/lifecycleSql.ts",
+      "packet": "P3 SQL rows and publication",
+      "source_lines": 13,
+      "source_sha256": "9cb0c96bd2bcfc3a794381d842518a71d0337534df4e00cb1832cfcabf430913",
+      "source_blob": "ff3da584065556bf9a048a83639178dff202b6bf",
+      "patch": "diffs-github-base/127-src__proxy__session__bookkeeping__lifecycleSql.ts.patch",
+      "patch_sha256": "7d5a3a8994bc437ecc480edad426be00f4a9f6a2a917af4f817a356fc5728a50",
+      "hunks": [
+        "@@ -0,0 +1,13 @@"
+      ],
+      "status": "Every added/changed/removed hunk inspected; complete source read for new files; mixed lifecycle diff and relevant runtime callers read.",
+      "semantic_review": "Adapter composes the complete lifecycle backend; no accidental fall-through to legacy JSON.",
+      "tests_and_callers": "bookkeeping-lifecycle-transitions.test.ts:58; bookkeeping-lifecycle-deletion.test.ts:65",
+      "reviewed": true,
+      "finding_ids": []
+    },
+    {
+      "path": "src/proxy/session/bookkeeping/lifecycleTransitionsSql.ts",
+      "packet": "P3 SQL rows and publication",
+      "source_lines": 53,
+      "source_sha256": "2df9a74fe5181b46fbc2814830773867ca7ee624e7b8a65eaaa8a57f22546810",
+      "source_blob": "0091d21dd3e542220fe40574ad1f64a238eaaf02",
+      "patch": "diffs-github-base/128-src__proxy__session__bookkeeping__lifecycleTransitionsSql.ts.patch",
+      "patch_sha256": "adfbc7303a6f49c6b0ebe25ff32dda7ebaaf80816560a17ed6a70971fb16308f",
+      "hunks": [
+        "@@ -0,0 +1,53 @@"
+      ],
+      "status": "Every added/changed/removed hunk inspected; complete source read for new files; mixed lifecycle diff and relevant runtime callers read.",
+      "semantic_review": "Commit/abandon require exact prepared identity; abandon separates publication tokens from physical writer/deletion fences and rolls back on full pending backlog.",
+      "tests_and_callers": "bookkeeping-lifecycle-prepare.test.ts:70,194,224",
+      "reviewed": true,
+      "finding_ids": []
+    },
+    {
+      "path": "src/proxy/session/bookkeeping/mappings.ts",
+      "packet": "P3 SQL rows and publication",
+      "source_lines": 335,
+      "source_sha256": "99a2360f76337e136b0b39d0fb4b9505f16427903ae855ccebf9beaf1efaec84",
+      "source_blob": "5006148214b153a3151b33965f7a80b25a40293f",
+      "patch": "diffs-github-base/134-src__proxy__session__bookkeeping__mappings.ts.patch",
+      "patch_sha256": "959064b8160b7ccfe4afa9bfc58befb745deb8dbda08ae0a0f195d6be1c72026",
+      "hunks": [
+        "@@ -0,0 +1,335 @@"
+      ],
+      "status": "Every added/changed/removed hunk inspected; complete source read for new files; mixed lifecycle diff and relevant runtime callers read.",
+      "semantic_review": "Identity/history validation; exact occupied/absent CAS; canonical metadata pins with NULL wildcard or exact generation; pins/history/mapping change atomically; legacy raw history and CAS bytes preserved until mutation. Startup audits capture filesystem work for after COMMIT. Bulk audits are intentionally not request lookup claims.",
+      "tests_and_callers": "bookkeeping-store-reads.test.ts:57,87,131,168,182; bookkeeping-store-contract.test.ts:64,80,110; bookkeeping-lifecycle-publication.test.ts:185,209",
+      "reviewed": true,
+      "finding_ids": []
+    },
+    {
+      "path": "src/proxy/session/bookkeeping/publicationLocators.ts",
+      "packet": "P3 SQL rows and publication",
+      "source_lines": 22,
+      "source_sha256": "9d1d1cb5a15cf33c237fca1df932acac0be7d4b7572803888459394a35cab889",
+      "source_blob": "f1251f128ac32c62fc78c951e5eca899f828c4e1",
+      "patch": "diffs-github-base/140-src__proxy__session__bookkeeping__publicationLocators.ts.patch",
+      "patch_sha256": "3e10684bcd79f45f2ebf37052f6a261273b7f8b1abc986d6609ac6d9218f6285",
+      "hunks": [
+        "@@ -0,0 +1,22 @@"
+      ],
+      "status": "Every added/changed/removed hunk inspected; complete source read for new files; mixed lifecycle diff and relevant runtime callers read.",
+      "semantic_review": "Synchronous, directory-scoped observation maps a prepared raw locator to its canonical projection; prior scope restored in finally. Only target locator is substituted; remaining joined locators must already be canonical.",
+      "tests_and_callers": "bookkeeping-lifecycle-publication.test.ts:277,306",
+      "reviewed": true,
+      "finding_ids": []
+    },
+    {
+      "path": "src/proxy/session/bookkeeping/resourceImport.ts",
+      "packet": "P3 SQL rows and publication",
+      "source_lines": 26,
+      "source_sha256": "2a27b81775ee564ba5dcb94a605fe8bd39c3e3d484f92c90c4e85a1b404edb5d",
+      "source_blob": "af7a8bc08b2def6e78acfda147421842c1ef51d8",
+      "patch": "diffs-github-base/146-src__proxy__session__bookkeeping__resourceImport.ts.patch",
+      "patch_sha256": "3f2838f2811ad48bbd3e4b514cc67d716dfb301a9ca673e06711df314da84548",
+      "hunks": [
+        "@@ -0,0 +1,26 @@"
+      ],
+      "status": "Every added/changed/removed hunk inspected; complete source read for new files; mixed lifecycle diff and relevant runtime callers read.",
+      "semantic_review": "Offline/fixture helper only, not runtime facade. Resource import validates generation/key and takes maximum fence; deliberately does not apply current runtime capacity limits, making the backlog probe relevant to preserved migration state.",
+      "tests_and_callers": "bookkeeping-lifecycle-fixture.test.ts; migrationImport.ts:51,74-80; isolated GC backlog probes",
+      "reviewed": true,
+      "finding_ids": [
+        "F1"
+      ]
+    },
+    {
+      "path": "src/proxy/session/bookkeeping/resourceRow.ts",
+      "packet": "P3 SQL rows and publication",
+      "source_lines": 30,
+      "source_sha256": "4202b3d49b955d8ff314ada00a59dc15381f27ce2bedf03d5d2e241edfe60e0e",
+      "source_blob": "c4bf6ad1b907e077019e0ff6e47813861bc5b8e4",
+      "patch": "diffs-github-base/147-src__proxy__session__bookkeeping__resourceRow.ts.patch",
+      "patch_sha256": "289e860a50f61b81d34ea10d551b76e7d4209c0575f42bff8000bbd5f309b88f",
+      "hunks": [
+        "@@ -0,0 +1,30 @@"
+      ],
+      "status": "Every added/changed/removed hunk inspected; complete source read for new files; mixed lifecycle diff and relevant runtime callers read.",
+      "semantic_review": "Writes complete physical/resource authority columns; process incarnation JSON is validated; row and lease-trigger semantics checked with schema/consumer references.",
+      "tests_and_callers": "bookkeeping-lifecycle-injection.test.ts:46; bookkeeping-lifecycle-observer.test.ts:4",
+      "reviewed": true,
+      "finding_ids": []
+    },
+    {
+      "path": "src/proxy/session/bookkeeping/resources.ts",
+      "packet": "P3 SQL rows and publication",
+      "source_lines": 184,
+      "source_sha256": "b505dbd3dbfd68ef0b0d77f5be68162a2c40f3b850108822a9c37b3ceb9b0e43",
+      "source_blob": "ce2507ec1c2d2a7fcf79aab090ba4964e26a842a",
+      "patch": "diffs-github-base/148-src__proxy__session__bookkeeping__resources.ts.patch",
+      "patch_sha256": "230b360e344f9a9c39a87685bceb568af8862fc4c467e66b46040ce17b4a06e6",
+      "hunks": [
+        "@@ -0,0 +1,184 @@"
+      ],
+      "status": "Every added/changed/removed hunk inspected; complete source read for new files; mixed lifecycle diff and relevant runtime callers read.",
+      "semantic_review": "Allocation refuses caller-supplied generations/version, advances durable lifecycle slot; state CAS generation/version refuses deleting. Leases projected with purpose and executor authority. Retired-page LIMIT 128 bounds a query, not claim transaction (F1); semantic audits occur at startup/offline.",
+      "tests_and_callers": "bookkeeping-lifecycle-prepare.test.ts:49,182; bookkeeping-lifecycle-transitions.test.ts; bookkeeping-lifecycle-deletion.test.ts:95; isolated backlog probes",
+      "reviewed": true,
+      "finding_ids": [
+        "F1"
+      ]
+    },
+    {
+      "path": "src/proxy/session/bookkeeping/sqliteStoreBackend.ts",
+      "packet": "P3 SQL rows and publication",
+      "source_lines": 20,
+      "source_sha256": "32dbf480ae19ccf07217cfcea6877e00d7637d428dc5bdefe1a6b80744332ed4",
+      "source_blob": "eb6965b9ce1de5109542b321fbb925a1440aab22",
+      "patch": "diffs-github-base/152-src__proxy__session__bookkeeping__sqliteStoreBackend.ts.patch",
+      "patch_sha256": "10f2af5d311b3661e8682d55e7a06f03b4a36b51875c554a66414aff00877e03",
+      "hunks": [
+        "@@ -0,0 +1,20 @@"
+      ],
+      "status": "Every added/changed/removed hunk inspected; complete source read for new files; mixed lifecycle diff and relevant runtime callers read.",
+      "semantic_review": "Complete explicit store adapter; initialization remains separate, no native-open fallback or automatic migration in these operations.",
+      "tests_and_callers": "bookkeeping-store-mutations.test.ts:546; bookkeeping-store-seam.test.ts:105",
+      "reviewed": true,
+      "finding_ids": []
+    },
+    {
+      "path": "src/proxy/session/bookkeeping/storeAttemptsSql.ts",
+      "packet": "P3 SQL rows and publication",
+      "source_lines": 97,
+      "source_sha256": "25db651cb8c973de42dd7ebeb79b80075a7eeb8a4c73b51caa78a5ff15e5d530",
+      "source_blob": "425ab274fb2ff1e04aca58732412b0d934c7fc9f",
+      "patch": "diffs-github-base/155-src__proxy__session__bookkeeping__storeAttemptsSql.ts.patch",
+      "patch_sha256": "6b955d08e0815e9f1acb4312ecb54d5bdb327caee92278ba4481c5df9eef900a",
+      "hunks": [
+        "@@ -0,0 +1,97 @@"
+      ],
+      "status": "Every added/changed/removed hunk inspected; complete source read for new files; mixed lifecycle diff and relevant runtime callers read.",
+      "semantic_review": "Exact route generation and attempt owner token; trusted new-turn floor blocks older/same pending turn; bounded admission refuses instead of evicting unresolved claim; settle preserves blockers and advances absence authority.",
+      "tests_and_callers": "bookkeeping-store-mutations.test.ts:179,203,223,401",
+      "reviewed": true,
+      "finding_ids": []
+    },
+    {
+      "path": "src/proxy/session/bookkeeping/storeMaintenanceSql.ts",
+      "packet": "P3 SQL rows and publication",
+      "source_lines": 62,
+      "source_sha256": "036facc7eedb90487d6a376a79b1296df758e45bc1e11c1488c494a494b42ca9",
+      "source_blob": "6c038c11018de276311f3fd1f7160caf7cfab868",
+      "patch": "diffs-github-base/158-src__proxy__session__bookkeeping__storeMaintenanceSql.ts.patch",
+      "patch_sha256": "7f807c264b352c428598b54963b8ee6576865f0ae9f8b1e5ec59665dd7c697d9",
+      "hunks": [
+        "@@ -0,0 +1,62 @@"
+      ],
+      "status": "Every added/changed/removed hunk inspected; complete source read for new files; mixed lifecycle diff and relevant runtime callers read.",
+      "semantic_review": "Pin read avoids histories; suffix generation snapshot scans keys intentionally to match JavaScript non-BMP/wildcard semantics; tolerant diagnostics do not turn core lookup errors into found authority. Maintenance snapshot remains bulk.",
+      "tests_and_callers": "bookkeeping-store-reads.test.ts:87,195; bookkeeping-store-mutations.test.ts:546",
+      "reviewed": true,
+      "finding_ids": []
+    },
+    {
+      "path": "src/proxy/session/bookkeeping/storeMaintenanceWriteSql.ts",
+      "packet": "P3 SQL rows and publication",
+      "source_lines": 56,
+      "source_sha256": "44bddb69356ee9d69fe93436df3c08bb3b943c218c5cbfba7a78896e241dd5d3",
+      "source_blob": "729cdb939387ae2e9b4d3b94152b747d8a3af065",
+      "patch": "diffs-github-base/159-src__proxy__session__bookkeeping__storeMaintenanceWriteSql.ts.patch",
+      "patch_sha256": "3138b7ea1f2113e0ecbeb15fd20aeca35cf0e67a9ce85748da1cb08ca3db8205",
+      "hunks": [
+        "@@ -0,0 +1,56 @@"
+      ],
+      "status": "Every added/changed/removed hunk inspected; complete source read for new files; mixed lifecycle diff and relevant runtime callers read.",
+      "semantic_review": "Attach requires exact ID/optional generation and refuses rollback-protected mapping; changed attachment refreshes mapping/route tokens and pins. Evict removes mapping dependants but retains route/attempt authority as JSON. Clear advances all affected absence slots. Cache reset behavior must be corrected at caller (F3).",
+      "tests_and_callers": "bookkeeping-store-mutations.test.ts:463,488,520; bookkeeping-cache-publication.test.ts:162,178",
+      "reviewed": true,
+      "finding_ids": [
+        "F3"
+      ]
+    },
+    {
+      "path": "src/proxy/session/bookkeeping/storeMappingsSql.ts",
+      "packet": "P3 SQL rows and publication",
+      "source_lines": 37,
+      "source_sha256": "6f5498e95e3a1deb40d2bb9e5ccc4904a21cd38a6b2b295ba73a35e2198cc84e",
+      "source_blob": "e059714554dec49ca8d0797b7b2396b758da03d4",
+      "patch": "diffs-github-base/160-src__proxy__session__bookkeeping__storeMappingsSql.ts.patch",
+      "patch_sha256": "4e9bda542e3848b9924fa95b981028c43cbac861c65680982fd17e8790dffc0c",
+      "hunks": [
+        "@@ -0,0 +1,37 @@"
+      ],
+      "status": "Every added/changed/removed hunk inspected; complete source read for new files; mixed lifecycle diff and relevant runtime callers read.",
+      "semantic_review": "Addressed lookup hydrates only winner; Claude ID winner uses indexed metadata ordering. Found/missing/error states and durable generation are explicit.",
+      "tests_and_callers": "bookkeeping-store-reads.test.ts:57,87,131,147",
+      "reviewed": true,
+      "finding_ids": []
+    },
+    {
+      "path": "src/proxy/session/bookkeeping/storeMutationSupport.ts",
+      "packet": "P3 SQL rows and publication",
+      "source_lines": 73,
+      "source_sha256": "7249a000326dd19d27c6e0e5e6faaa8a57b1a22ebca76ff5a60760d1fb1785a0",
+      "source_blob": "a1d9152c7ed482320a6fc9ad57c8738acd9a05b3",
+      "patch": "diffs-github-base/161-src__proxy__session__bookkeeping__storeMutationSupport.ts.patch",
+      "patch_sha256": "458902550407321c30c3f39829ffe121a17cffe0cc0d8bc40e6a5638d215392f",
+      "hunks": [
+        "@@ -0,0 +1,73 @@"
+      ],
+      "status": "Every added/changed/removed hunk inspected; complete source read for new files; mixed lifecycle diff and relevant runtime callers read.",
+      "semantic_review": "Locators canonicalized outside own transaction; joined publication uses canonical projection; route refresh advances authorities. Rollback and active-route mappings protected from count pruning. Pruning reads all mapping keys; it does not prove a transaction row/time budget for arbitrary imported ledgers.",
+      "tests_and_callers": "bookkeeping-store-mutations.test.ts:111,137,334,353; bookkeeping-lifecycle-publication.test.ts:306",
+      "reviewed": true,
+      "finding_ids": []
+    },
+    {
+      "path": "src/proxy/session/bookkeeping/storePrioritySql.ts",
+      "packet": "P3 SQL rows and publication",
+      "source_lines": 40,
+      "source_sha256": "2ede74cd533b23e96beb35911d5163801ee179d1385e3298c51bc1f4468a0eed",
+      "source_blob": "644179631771dd16fcb230ccee7e833eca1a1b60",
+      "patch": "diffs-github-base/162-src__proxy__session__bookkeeping__storePrioritySql.ts.patch",
+      "patch_sha256": "f13decf6867d5dc6664448be0b1dd3e7d929edfd5d08a2835a2c735a13a10752",
+      "hunks": [
+        "@@ -0,0 +1,40 @@"
+      ],
+      "status": "Every added/changed/removed hunk inspected; complete source read for new files; mixed lifecycle diff and relevant runtime callers read.",
+      "semantic_review": "Priority/attempt lookup observes one snapshot and includes exact occupied/absent fence slot generation, without hydrating mappings.",
+      "tests_and_callers": "bookkeeping-store-reads.test.ts:195; bookkeeping-store-mutations.test.ts:179,241",
+      "reviewed": true,
+      "finding_ids": []
+    },
+    {
+      "path": "src/proxy/session/bookkeeping/storePublicationSql.ts",
+      "packet": "P3 SQL rows and publication",
+      "source_lines": 123,
+      "source_sha256": "bfd82c24782ffaf6f6deeb6cfc2527780bdacd1a9b709478d06fa3165bc12bc1",
+      "source_blob": "2b37492561b34bf4fad034c363f53e57a5e4be96",
+      "patch": "diffs-github-base/163-src__proxy__session__bookkeeping__storePublicationSql.ts.patch",
+      "patch_sha256": "36d9c6cb92ca9541c3437e32f14325491fb7a073da2c9c4db8a96c8353ae259c",
+      "hunks": [
+        "@@ -0,0 +1,123 @@"
+      ],
+      "status": "Every added/changed/removed hunk inspected; complete source read for new files; mixed lifecycle diff and relevant runtime callers read.",
+      "semantic_review": "Mapping/route/attempt CAS plus rollback marker checks precede atomic publication. Prior canonical locators preserved for rollback. Protected capacity false rolls entire transaction back; rollback backlog retention is intentional. Full candidate pruning is not an imported-ledger latency bound.",
+      "tests_and_callers": "bookkeeping-store-mutations.test.ts:241,334,353; bookkeeping-lifecycle-publication.test.ts:224; bookkeeping-store-multiprocess.test.ts:13",
+      "reviewed": true,
+      "finding_ids": []
+    },
+    {
+      "path": "src/proxy/session/bookkeeping/storeScope.ts",
+      "packet": "P3 SQL rows and publication",
+      "source_lines": 12,
+      "source_sha256": "3156370ca4c7677f12ba11d28beeceb69f2ebb230961e6a62c6c93cd6dda3b89",
+      "source_blob": "aa383cf8342917208648a6fc94210df939dc9b63",
+      "patch": "diffs-github-base/164-src__proxy__session__bookkeeping__storeScope.ts.patch",
+      "patch_sha256": "0b3235d1ee6c5cf987de1d7513257c2cfa20b9ea7451e3651f94fdd776f9b32e",
+      "hunks": [
+        "@@ -0,0 +1,12 @@"
+      ],
+      "status": "Every added/changed/removed hunk inspected; complete source read for new files; mixed lifecycle diff and relevant runtime callers read.",
+      "semantic_review": "Only explicit store/publication scopes join. Cross-database admission rejected before callbacks; swallowed nested false makes outer rollback-only.",
+      "tests_and_callers": "bookkeeping-store-seam.test.ts:45,64,78,95; bookkeeping-lifecycle-publication.test.ts:250",
+      "reviewed": true,
+      "finding_ids": []
+    },
+    {
+      "path": "src/proxy/session/bookkeeping/storeSettlementSql.ts",
+      "packet": "P3 SQL rows and publication",
+      "source_lines": 81,
+      "source_sha256": "07a6e610a8a9a8190434d60935f4bf91c46581e77c9f00596a164beaa5e00aa5",
+      "source_blob": "b6bf5952f372d9200b14ea8e8e198b0f4ced4e2a",
+      "patch": "diffs-github-base/165-src__proxy__session__bookkeeping__storeSettlementSql.ts.patch",
+      "patch_sha256": "1e4df47801100068b45360362735a9a7ca4189fd5c199c0bae3f48901474557f",
+      "hunks": [
+        "@@ -0,0 +1,81 @@"
+      ],
+      "status": "Every added/changed/removed hunk inspected; complete source read for new files; mixed lifecycle diff and relevant runtime callers read.",
+      "semantic_review": "Finalize/rollback compare exact mapping, route, attempt and rollback marker authorities; restoration issues fresh tokens and canonical locators; rollback leaves owner claim for caller settlement, finalize releases exact owned attempt. No cache authority update before COMMIT.",
+      "tests_and_callers": "bookkeeping-store-mutations.test.ts:278,303,367; bookkeeping-cache-publication.test.ts:220,238",
+      "reviewed": true,
+      "finding_ids": []
+    },
+    {
+      "path": "src/proxy/session/bookkeeping/storeWriteSql.ts",
+      "packet": "P3 SQL rows and publication",
+      "source_lines": 57,
+      "source_sha256": "73f402329ac31b8e4c4868389bddff9321f11951fd262171d4c68c1a0a6ceebf",
+      "source_blob": "82c25c809df8c5f3d6757b44609d5dadb95fd606",
+      "patch": "diffs-github-base/167-src__proxy__session__bookkeeping__storeWriteSql.ts.patch",
+      "patch_sha256": "a6d91f37910478647b36887b839185f0b62203e30afc972942625324d55d911f",
+      "hunks": [
+        "@@ -0,0 +1,57 @@"
+      ],
+      "status": "Every added/changed/removed hunk inspected; complete source read for new files; mixed lifecycle diff and relevant runtime callers read.",
+      "semantic_review": "Fenced mapping CAS, rollback protection, immediate predecessor/source consistency, same-ID preservation and cap false rollback. Mapping routes refreshed after successful mutation. No older non-immediate locator invented.",
+      "tests_and_callers": "bookkeeping-store-mutations.test.ts:67,111,137,152; bookkeeping-store-differential.test.ts:12",
+      "reviewed": true,
+      "finding_ids": []
+    },
+    {
+      "path": "src/proxy/session/bookkeeping/lifecycleDeletionSql.ts",
+      "packet": "P5 GC and deletion",
+      "source_lines": 159,
+      "source_sha256": "d47588bd90808c60868901b4031e1a2ed0fb72c7b61d8d1239ad5054d0e9f80d",
+      "source_blob": "6881e22fbb641b90ebfc2011a64739f0173ae7bd",
+      "patch": "diffs-github-base/119-src__proxy__session__bookkeeping__lifecycleDeletionSql.ts.patch",
+      "patch_sha256": "7402c96bc04242f8c881eabbcd92a10a69cab0f1679db4b2b7e8cf7221c3f716",
+      "hunks": [
+        "@@ -0,0 +1,159 @@"
+      ],
+      "status": "Every added/changed/removed hunk inspected; complete source read for new files; mixed lifecycle diff and relevant runtime callers read.",
+      "semantic_review": "Physical deletion outside transaction; claim checks exact row generation/version, durable/ephemeral pins and leases. Attach/finish use exact claim token/owner. SDK-specific absence only; unknown/unjoined custom/child work stays deleting. F1 claim loops every page in one transaction; F2 final count hydrates the complete backlog.",
+      "tests_and_callers": "bookkeeping-lifecycle-deletion.test.ts:74,88,95,150,174,245,257,265,283,290,355,410,442,458; isolated backlog probes",
+      "reviewed": true,
+      "finding_ids": [
+        "F1",
+        "F2"
+      ]
+    },
+    {
+      "path": "src/proxy/session/bookkeeping/lifecycleGcSql.ts",
+      "packet": "P5 GC and deletion",
+      "source_lines": 13,
+      "source_sha256": "c3d25e7ef9e4ebec45d3ff94b57ec4ad2a714823695d3b790d50d0c7b8d07d5d",
+      "source_blob": "87092d19c1b65f041d829a4ce96da68eda50f560",
+      "patch": "diffs-github-base/120-src__proxy__session__bookkeeping__lifecycleGcSql.ts.patch",
+      "patch_sha256": "527fe34e0076b8e443b3dc4c3ad5920b30e5c89e8a4288075f6ccbf2708d272a",
+      "hunks": [
+        "@@ -0,0 +1,13 @@"
+      ],
+      "status": "Every added/changed/removed hunk inspected; complete source read for new files; mixed lifecycle diff and relevant runtime callers read.",
+      "semantic_review": "Joined lease retries, then complete two-pass reconcile, then deletion. Deletion deadline is initialized only after reconcile; no complete-sweep deadline claim is established.",
+      "tests_and_callers": "bookkeeping-lifecycle-differential.test.ts:12; bookkeeping-reconcile.test.ts:234; bookkeeping-lifecycle-injection.test.ts:38",
+      "reviewed": true,
+      "finding_ids": [
+        "F1",
+        "F2"
+      ]
+    },
+    {
+      "path": "src/proxy/session/bookkeeping/lifecycleReconcileSql.ts",
+      "packet": "P5 GC and deletion",
+      "source_lines": 142,
+      "source_sha256": "e2bdbc2b6bc5869a32f899d513a3864770cd4fcf3fe23cb19bc0ccfd91f6346d",
+      "source_blob": "191f3b3887c92e5c1433df5238d25478226143e7",
+      "patch": "diffs-github-base/124-src__proxy__session__bookkeeping__lifecycleReconcileSql.ts.patch",
+      "patch_sha256": "46f691138c31d0c4c8e7fd83625e8552092a602dd00862869e542e06e430a0cc",
+      "hunks": [
+        "@@ -0,0 +1,142 @@"
+      ],
+      "status": "Every added/changed/removed hunk inspected; complete source read for new files; mixed lifecycle diff and relevant runtime callers read.",
+      "semantic_review": "Two 128-row passes yield between pages, rescue before retirement, preserve headroom. Death observations outside SQL are applied only after exact generation/version reread and full lease/claim identity CAS. Durable pins reread under write lock. Win32 deletion recovery skips POSIX groups under existing SDK-no-descendants assumption; unrecoverable writers still require boot change.",
+      "tests_and_callers": "bookkeeping-reconcile.test.ts:61,71,88,106,134,157,169,181,192,206,270; bookkeeping-lifecycle-injection.test.ts:36",
+      "reviewed": true,
+      "finding_ids": []
+    },
+    {
+      "path": "src/proxy/sessionLifecycle.ts",
+      "packet": "P5 GC and deletion",
+      "source_lines": 1974,
+      "source_sha256": "e111cc7a78f945ad475bd0c4f594d6d78de1e59c3746de7af3399ca598c99b7e",
+      "source_blob": "49a15ed4ad3f19967d396c01167abbebc900fab3",
+      "patch": "diffs-github-base/173-src__proxy__sessionLifecycle.ts.patch",
+      "patch_sha256": "59faed44d6cbfd230c00243b5133687f3fdaf5e474793c2fbcd009d5db9fc6c9",
+      "hunks": [
+        "@@ -1,4 +1,4 @@",
+        "@@ -17,7 +17,17 @@ import {",
+        "@@ -61,8 +71,6 @@ import {",
+        "@@ -84,53 +92,6 @@ const DEFAULT_DELETE_TIMEOUT_MS = 30_000",
+        "@@ -158,9 +119,13 @@ export interface SessionLifecycleOptions {",
+        "@@ -188,12 +153,7 @@ export interface GcResult {",
+        "@@ -216,6 +176,8 @@ export async function acquireActiveTranscriptLease(",
+        "@@ -253,6 +215,8 @@ export async function attachActiveTranscriptExecutor(",
+        "@@ -273,6 +237,8 @@ export async function releaseActiveTranscriptLease(",
+        "@@ -303,6 +269,8 @@ export async function releaseJoinedTranscriptLease(",
+        "@@ -328,6 +296,8 @@ export async function prepareFork(",
+        "@@ -340,6 +310,8 @@ export async function prepareForkForPublication(",
+        "@@ -396,6 +368,8 @@ export async function ensureTranscriptJournaled(",
+        "@@ -437,6 +411,8 @@ export async function registerLiveTranscript(",
+        "@@ -487,6 +463,8 @@ export async function commitFork(",
+        "@@ -521,6 +499,8 @@ export async function publishPinnedTranscript<T extends boolean | string>(",
+        "@@ -534,6 +514,8 @@ export async function attachPinnedTranscript<T extends boolean | string>(",
+        "@@ -614,6 +596,8 @@ export async function abandonFork(",
+        "@@ -645,6 +629,8 @@ export async function reconcile(",
+        "@@ -820,6 +806,8 @@ export async function runGc(",
+        "@@ -841,11 +829,8 @@ export async function runGc(",
+        "@@ -853,11 +838,12 @@ export async function runGc(",
+        "@@ -929,10 +915,15 @@ async function attachDeletionExecutor(",
+        "@@ -997,6 +988,15 @@ class DeletionStillRunningError extends Error {}",
+        "@@ -1090,9 +1090,18 @@ async function deleteWithSdkChild(",
+        "@@ -1146,12 +1155,16 @@ try {",
+        "@@ -1188,7 +1201,42 @@ try {",
+        "@@ -1328,6 +1376,11 @@ export async function createInitializedSidecarLockCandidate(",
+        "@@ -1655,17 +1708,7 @@ async function readSidecar(path: string): Promise<SessionGcSidecar> {",
+        "@@ -1675,7 +1718,7 @@ async function writeSidecar(path: string, sidecar: SessionGcSidecar): Promise<vo",
+        "@@ -1691,115 +1734,6 @@ async function writeSidecar(path: string, sidecar: SessionGcSidecar): Promise<vo",
+        "@@ -1956,68 +1890,8 @@ function pruneTombstones(sidecar: SessionGcSidecar, options: SessionLifecycleOpt",
+        "@@ -2028,11 +1902,6 @@ function assertSameLocator(left: TranscriptLocator, right: TranscriptLocator): v",
+        "@@ -2078,14 +1947,6 @@ function hasCode(error: unknown, code: string): boolean {"
+      ],
+      "status": "Every added/changed/removed hunk inspected; complete source read for new files; mixed lifecycle diff and relevant runtime callers read.",
+      "semantic_review": "All mixed hunks reviewed: backend dispatch, extracted codec/locators/types, common supported SDK deletion runtime, admission cancellation/handshake deadline, owned child gate/kill/join and cleanup, Node executable resolution, sidecar/maintenance lock and removed legacy validators. JSON stays default. runTimeout semantics also change on JSON (scope gate S1); no private transcript deletion/rewrites.",
+      "tests_and_callers": "bookkeeping-handshake-cancellation.test.ts:15; bookkeeping-lifecycle-differential.test.ts:102; session-lifecycle.test.ts; source sessionLifecycle.ts:805-982,992-1300,1379-1382,1808-1832",
+      "reviewed": true,
+      "finding_ids": [
+        "S1"
+      ]
+    }
+  ],
+  "probes": {
+    "future_retired": {
+      "sourceHead": "0bf16b0d83f2fcc8c9b55df06bf20f97d763a23f",
+      "bun": "1.3.14",
+      "node": "24.3.0",
+      "platform": "darwin",
+      "arch": "arm64",
+      "libsql": "0.5.29",
+      "hashes": {
+        "lifecycleDeletionSql.ts": "d47588bd90808c60868901b4031e1a2ed0fb72c7b61d8d1239ad5054d0e9f80d",
+        "resources.ts": "b505dbd3dbfd68ef0b0d77f5be68162a2c40f3b850108822a9c37b3ceb9b0e43",
+        "resourceImport.ts": "2a27b81775ee564ba5dcb94a605fe8bd39c3e3d484f92c90c4e85a1b404edb5d",
+        "transaction.ts": "f0bd87d91d308c83626ba222b29da1bec1dca0cb9dfa86253fa1aa9f7120b24f",
+        "connection.ts": "48bf6243a159ce517a951198a5fe395484fbd19b20c982c06624b3f3021275be"
+      },
+      "results": [
+        {
+          "count": 1,
+          "kind": "future-retired imported rows",
+          "maxDeletesPerRun": 1,
+          "runTimeoutMs": 5,
+          "timerBudgetMs": 1,
+          "writerBudgetMs": 25,
+          "elapsedMs": 2.4176250000000152,
+          "claimTransactionMs": 0.6586250000000007,
+          "timerFiredAfterMs": 2.4812920000000247,
+          "writer": {
+            "kind": "writer",
+            "elapsedMs": 1.0230410000000063,
+            "status": "committed"
+          },
+          "deletes": 0,
+          "outcome": {
+            "deleted": 0,
+            "notFound": 0,
+            "failed": 0,
+            "deferred": 1
+          },
+          "states": [
+            {
+              "state": "retired",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "count": 4096,
+          "kind": "future-retired imported rows",
+          "maxDeletesPerRun": 1,
+          "runTimeoutMs": 5,
+          "timerBudgetMs": 1,
+          "writerBudgetMs": 25,
+          "elapsedMs": 178.02774999999997,
+          "claimTransactionMs": 77.52650000000006,
+          "timerFiredAfterMs": 178.07766700000002,
+          "writer": {
+            "kind": "writer",
+            "elapsedMs": 26.396375000000006,
+            "status": "rejected",
+            "name": "Error",
+            "message": "bookkeeping admission expired"
+          },
+          "deletes": 0,
+          "outcome": {
+            "deleted": 0,
+            "notFound": 0,
+            "failed": 0,
+            "deferred": 4096
+          },
+          "states": [
+            {
+              "state": "retired",
+              "count": 4096
+            }
+          ]
+        },
+        {
+          "count": 16384,
+          "kind": "future-retired imported rows",
+          "maxDeletesPerRun": 1,
+          "runTimeoutMs": 5,
+          "timerBudgetMs": 1,
+          "writerBudgetMs": 25,
+          "elapsedMs": 625.8876249999998,
+          "claimTransactionMs": 270.327542,
+          "timerFiredAfterMs": 625.9463339999998,
+          "writer": {
+            "kind": "writer",
+            "elapsedMs": 26.484041000000047,
+            "status": "rejected",
+            "name": "Error",
+            "message": "bookkeeping admission expired"
+          },
+          "deletes": 0,
+          "outcome": {
+            "deleted": 0,
+            "notFound": 0,
+            "failed": 0,
+            "deferred": 16384
+          },
+          "states": [
+            {
+              "state": "retired",
+              "count": 16384
+            }
+          ]
+        }
+      ],
+      "runtime_note": "node field is Bun Node compatibility version, not standalone Node",
+      "standalone_node": "v22.22.3",
+      "exit_code": 0
+    },
+    "durable_null_pinned": {
+      "sourceHead": "0bf16b0d83f2fcc8c9b55df06bf20f97d763a23f",
+      "bun": "1.3.14",
+      "node": "24.3.0",
+      "platform": "darwin",
+      "arch": "arm64",
+      "libsql": "0.5.29",
+      "hashes": {
+        "lifecycleDeletionSql.ts": "d47588bd90808c60868901b4031e1a2ed0fb72c7b61d8d1239ad5054d0e9f80d",
+        "resources.ts": "b505dbd3dbfd68ef0b0d77f5be68162a2c40f3b850108822a9c37b3ceb9b0e43",
+        "resourceImport.ts": "2a27b81775ee564ba5dcb94a605fe8bd39c3e3d484f92c90c4e85a1b404edb5d",
+        "transaction.ts": "f0bd87d91d308c83626ba222b29da1bec1dca0cb9dfa86253fa1aa9f7120b24f",
+        "connection.ts": "48bf6243a159ce517a951198a5fe395484fbd19b20c982c06624b3f3021275be"
+      },
+      "results": [
+        {
+          "count": 1,
+          "kind": "retired imported rows with durable NULL-generation pins",
+          "maxDeletesPerRun": 1,
+          "runTimeoutMs": 5,
+          "timerBudgetMs": 1,
+          "writerBudgetMs": 25,
+          "elapsedMs": 2.7685419999999965,
+          "claimTransactionMs": 0.9186669999999992,
+          "timerFiredAfterMs": 2.8779169999999965,
+          "writer": {
+            "kind": "writer",
+            "elapsedMs": 0.9880830000000032,
+            "status": "committed"
+          },
+          "deletes": 0,
+          "outcome": {
+            "deleted": 0,
+            "notFound": 0,
+            "failed": 0,
+            "deferred": 0
+          },
+          "states": [
+            {
+              "state": "retired",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "count": 4096,
+          "kind": "retired imported rows with durable NULL-generation pins",
+          "maxDeletesPerRun": 1,
+          "runTimeoutMs": 5,
+          "timerBudgetMs": 1,
+          "writerBudgetMs": 25,
+          "elapsedMs": 263.2381660000001,
+          "claimTransactionMs": 137.50695799999994,
+          "timerFiredAfterMs": 263.27879099999996,
+          "writer": {
+            "kind": "writer",
+            "elapsedMs": 26.951458000000002,
+            "status": "rejected",
+            "name": "Error",
+            "message": "bookkeeping admission expired"
+          },
+          "deletes": 0,
+          "outcome": {
+            "deleted": 0,
+            "notFound": 0,
+            "failed": 0,
+            "deferred": 0
+          },
+          "states": [
+            {
+              "state": "retired",
+              "count": 4096
+            }
+          ]
+        }
+      ],
+      "runtime_note": "node field is Bun Node compatibility version, not standalone Node",
+      "standalone_node": "v22.22.3",
+      "exit_code": 0
+    }
+  },
+  "validation_limits": [
+    "Only two standalone synthetic metadata probes run; no source test suite/typecheck/build/model/auth/client was run by this reviewer. Root npm ci --ignore-scripts preceded probes; source copies verified against Git for all27 assigned files.",
+    "macOS arm64/Bun1.3.14/libsql0.5.29 only. Bun Node compatibility field24.3.0 is not standalone Node22.22.3 execution proof. No Linux/Windows/platform-native bundled Node/installed package test was run.",
+    "SDK marker/handshake/orphan tests were inspected as source and demonstrate test intent, not live installed SDK/client proof. No actual SDK deleteSession called by the probes.",
+    "Packet review depends on P1 codec, P2 engine/guard/schema, P4 server/cache/public contract and P6 migration/operator review. Cross-packet concerns are identified without claiming full176-file acceptance.",
+    "No main edits, worktree mutations, installs, GitHub comments or owner scope approvals from this review. Reports/probes are temporary escrow for root to persist in the eventual review record."
+  ]
+}

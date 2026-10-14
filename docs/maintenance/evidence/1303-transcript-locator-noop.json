@@ -1,0 +1,80 @@
+{
+  "before": {
+    "runtime": "Bun 1.4.2",
+    "platform": "linux",
+    "architecture": "arm64",
+    "filesystem": "Linux tmpfs /dev/shm; synthetic metadata only",
+    "metric": "Replacement-file payload sizes, NOT physical SSD/NAND writes; lock-file work is excluded",
+    "mutationsPerFixture": 20,
+    "identicalLocatorCallsPerFixture": 5,
+    "results": [
+      {
+        "sessions": 100,
+        "seedBytes": 947871,
+        "completeStoreReplacements": 20,
+        "completeStorePayloadBytes": 18959243,
+        "identicalLocatorReplacements": 5,
+        "identicalLocatorPayloadBytes": 4740775,
+        "identicalLocatorFileContentsUnchanged": true,
+        "identicalLocatorGenerationUnchanged": true,
+        "identicalLocatorFileIdentityUnchanged": false,
+        "seededSessionHash": "349c3cfc52c6a0401ff617003baaa0a331461083cc5d2f92d78d05fd42c7c9fd"
+      },
+      {
+        "sessions": 900,
+        "seedBytes": 8533471,
+        "completeStoreReplacements": 20,
+        "completeStorePayloadBytes": 170671243,
+        "identicalLocatorReplacements": 5,
+        "identicalLocatorPayloadBytes": 42668775,
+        "identicalLocatorFileContentsUnchanged": true,
+        "identicalLocatorGenerationUnchanged": true,
+        "identicalLocatorFileIdentityUnchanged": false,
+        "seededSessionHash": "0fdc7f7729001961af386402a86a0f99d3ff50ad9d38061404d1bca989c39a1a"
+      }
+    ],
+    "exitCode": 1
+  },
+  "after": {
+    "runtime": "Bun 1.4.2",
+    "platform": "linux",
+    "architecture": "arm64",
+    "filesystem": "Linux tmpfs /dev/shm; synthetic metadata only",
+    "metric": "Replacement-file payload sizes, NOT physical SSD/NAND writes; lock-file work is excluded",
+    "mutationsPerFixture": 20,
+    "identicalLocatorCallsPerFixture": 5,
+    "results": [
+      {
+        "sessions": 100,
+        "seedBytes": 947871,
+        "completeStoreReplacements": 20,
+        "completeStorePayloadBytes": 18959243,
+        "identicalLocatorReplacements": 0,
+        "identicalLocatorPayloadBytes": 0,
+        "identicalLocatorFileContentsUnchanged": true,
+        "identicalLocatorGenerationUnchanged": true,
+        "identicalLocatorFileIdentityUnchanged": true,
+        "seededSessionHash": "9fc1d3f1225eff6b0a85d595a0959b2bcdbb6f6428a278953f16ee9fbd3aa6c9"
+      },
+      {
+        "sessions": 900,
+        "seedBytes": 8533471,
+        "completeStoreReplacements": 20,
+        "completeStorePayloadBytes": 170671243,
+        "identicalLocatorReplacements": 0,
+        "identicalLocatorPayloadBytes": 0,
+        "identicalLocatorFileContentsUnchanged": true,
+        "identicalLocatorGenerationUnchanged": true,
+        "identicalLocatorFileIdentityUnchanged": true,
+        "seededSessionHash": "8d32469cdbadf676dce23bc4b4b8afebe489cfddde5f862742edc8ad936e819a"
+      }
+    ],
+    "exitCode": 0
+  },
+  "baselineCommit": "7e89f843e0477cf61bcedb6ffc2dbe5dbcad651f",
+  "testedCodeCommit": "130d8fac681aa970678b0fd39515ef464567d851",
+  "harnessSha256": "b446867976f706af9a05bca004579e61b1f1043225ac7a9e13792fd652c4f557",
+  "baselineSourceSha256": "659b281902f8db8e113587a984efa43548489acf17a616f7884b104a88fecdcd",
+  "candidateSourceSha256": "41a0e61a957c5dc7cc73fa16aa71a04ad732e32a37dad2bea046125ae6b72837",
+  "dockerImage": "oven/bun@sha256:9114c058aeae42162ee16dd5084b95fe9473970bb6bcb5b232ab1630f0546895"
+}

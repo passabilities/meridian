@@ -1,0 +1,21 @@
+286 |     expect(received).toHaveLength(1)
+287 |     const event = eventOf(received[0]!.body)
+288 |     expect(event.level).toBe("fatal")
+289 |     expect(event.exception.values[0]!.mechanism).toEqual({ type: "onuncaughtexception", handled: false })
+290 |     for (const secret of LEAK_MARKERS) expect(received[0]!.body).not.toContain(secret)
+291 |     expect(existsSync(spool) ? readdirSync(spool) : []).toEqual([])
+                                                              ^
+error: expect(received).toEqual(expected)
+
+- []
++ [
++   "0mv5loj6c-62cf58f6efd0421fa658254b1ef65375.json.sending-71409",
++ ]
+
+- Expected  - 1
++ Received  + 3
+
+      at <anonymous> (/Users/rynfar/repos/meridian-mcp-tools-1283-20261012/src/__tests__/error-reporting.test.ts:291:57)
+(fail) in a real process > a crash still crashes, exactly as without the reporter, and the fatal event is delivered after the process is gone [1219.03ms]
+
+Primary suite: 5229 pass, 35 skip, 1 fail; exit 1.

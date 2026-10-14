@@ -1,0 +1,146 @@
+{
+  "result": "FAIL",
+  "root": "/private/var/folders/ks/xnz659y11jl44j80b_lfws6r0000gn/T/meridian-opencode-instruction-update-HUxvfr",
+  "expected": "baseline",
+  "model": "claude-haiku-5-5",
+  "idleMs": 15000,
+  "platform": "darwin/arm64",
+  "node": "v22.22.3",
+  "environment": "unspecified",
+  "actors": [
+    {
+      "command": "/tmp/meridian-1301-opencode-20261012/node_modules/.bin/opencode",
+      "pid": 55976,
+      "close": true,
+      "stdoutClose": true,
+      "stderrClose": true,
+      "code": 0,
+      "signal": null
+    },
+    {
+      "command": "/tmp/meridian-1301-opencode-20261012/node_modules/.bin/opencode",
+      "pid": 55980,
+      "close": true,
+      "stdoutClose": true,
+      "stderrClose": true,
+      "code": 130,
+      "signal": null
+    },
+    {
+      "command": "/bin/sh",
+      "pid": 55997,
+      "close": true,
+      "stdoutClose": true,
+      "stderrClose": true,
+      "code": 143,
+      "signal": null
+    },
+    {
+      "command": "/bin/sh",
+      "pid": 56000,
+      "close": true,
+      "stdoutClose": true,
+      "stderrClose": true,
+      "code": 1,
+      "signal": null
+    },
+    {
+      "command": "/bin/sh",
+      "pid": 56685,
+      "close": true,
+      "stdoutClose": true,
+      "stderrClose": true,
+      "code": 0,
+      "signal": null
+    }
+  ],
+  "requests": [
+    {
+      "requestId": "instruction-d7d26fea-bf50-42b4-86c0-654349500e86",
+      "attested": false,
+      "agent": "title",
+      "source": "subagent-title",
+      "toolChars": 0,
+      "toolDeltas": 0,
+      "maxGapMs": 0,
+      "toolDurationMs": 0,
+      "clientProjectPresent": false,
+      "model": "claude-haiku-4-5",
+      "hasToolResult": false,
+      "roles": [
+        {
+          "role": "user",
+          "types": [
+            "text"
+          ]
+        }
+      ],
+      "trailingSystem": false,
+      "hasInstructionMarker": true,
+      "status": 200
+    },
+    {
+      "requestId": "instruction-7b80aa19-5a12-4798-a77e-8f61f6afb773",
+      "attested": true,
+      "session": "ses_ece10484cffe0SM6QD55QfJlG1",
+      "agent": "build",
+      "toolChars": 244,
+      "toolDeltas": 19,
+      "maxGapMs": 308.0495000000001,
+      "toolDurationMs": 496.19854099999975,
+      "clientProjectPresent": true,
+      "model": "claude-haiku-5-5",
+      "hasToolResult": false,
+      "roles": [
+        {
+          "role": "user",
+          "types": [
+            "text"
+          ]
+        }
+      ],
+      "trailingSystem": false,
+      "hasInstructionMarker": true,
+      "tool": "write",
+      "status": 200
+    },
+    {
+      "requestId": "instruction-460fcce5-6c37-4a54-8cfe-5eec1f70e148",
+      "attested": false,
+      "session": "ses_ece10484cffe0SM6QD55QfJlG1",
+      "agent": "build",
+      "toolChars": 0,
+      "toolDeltas": 0,
+      "maxGapMs": 0,
+      "toolDurationMs": 0,
+      "clientProjectPresent": true,
+      "status": 400
+    }
+  ],
+  "harnessSha256": "ca8c1a3525cf82da65f8e429732fb3ea6c2f2d54b0eb8264ea3fc52935d3a0e1",
+  "client": "opencode v2.0.21",
+  "scrubPreflight": {
+    "path": "/private/tmp/meridian-scrub-preflight-package-20261012/node_modules/@rynfar/meridian-plugin-opencode-scrub/dist/index.js",
+    "packageName": "@rynfar/meridian-plugin-opencode-scrub",
+    "packageVersion": "0.2.3",
+    "sha256": "4ab89412e6a59fad812a3f6e5500c84f3bdfc41863320bc794f5274a251da656",
+    "runtimeVersion": "0.2.3",
+    "invocations": 0,
+    "errors": 0
+  },
+  "setupQualification": "manual-owned-fixture; setup does not qualify 2.0.21",
+  "plugin": "/private/tmp/meridian-1301-baseline-installed-20261012/node_modules/@rynfar/meridian/dist/meridian-v2",
+  "clientPreflightMismatch": true,
+  "clientExit": 130,
+  "scrubRequest": {
+    "path": "/private/tmp/meridian-scrub-preflight-package-20261012/node_modules/@rynfar/meridian-plugin-opencode-scrub/dist/index.js",
+    "packageName": "@rynfar/meridian-plugin-opencode-scrub",
+    "packageVersion": "0.2.3",
+    "sha256": "4ab89412e6a59fad812a3f6e5500c84f3bdfc41863320bc794f5274a251da656",
+    "runtimeVersion": "0.2.3",
+    "invocations": 3,
+    "errors": 0
+  },
+  "failure": "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n\n130 !== 0\n",
+  "joined": true
+}

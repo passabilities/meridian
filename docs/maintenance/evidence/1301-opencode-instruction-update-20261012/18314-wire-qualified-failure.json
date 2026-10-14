@@ -1,0 +1,372 @@
+{
+  "exit": 1,
+  "joined": true,
+  "workers": [
+    {
+      "pid": 70523,
+      "result": "PASS",
+      "children": [
+        {
+          "exitSeen": true,
+          "closeSeen": true,
+          "stdoutClosed": true,
+          "stderrClosed": true,
+          "spawnFailed": false,
+          "exitCode": 0,
+          "exitSignal": null,
+          "joined": true,
+          "termSent": false,
+          "killSent": false,
+          "signalFailure": null
+        },
+        {
+          "exitSeen": true,
+          "closeSeen": true,
+          "stdoutClosed": true,
+          "stderrClosed": true,
+          "spawnFailed": false,
+          "exitCode": 0,
+          "exitSignal": null,
+          "joined": true,
+          "termSent": false,
+          "killSent": false,
+          "signalFailure": null
+        },
+        {
+          "exitSeen": true,
+          "closeSeen": true,
+          "stdoutClosed": true,
+          "stderrClosed": true,
+          "spawnFailed": false,
+          "exitCode": 0,
+          "exitSignal": null,
+          "joined": true,
+          "termSent": false,
+          "killSent": false,
+          "signalFailure": null
+        },
+        {
+          "exitSeen": true,
+          "closeSeen": true,
+          "stdoutClosed": true,
+          "stderrClosed": true,
+          "spawnFailed": false,
+          "exitCode": 0,
+          "exitSignal": null,
+          "joined": true,
+          "termSent": false,
+          "killSent": false,
+          "signalFailure": null
+        }
+      ],
+      "scrubPreflight": {
+        "path": "/private/tmp/meridian-scrub-preflight-package-20261012/node_modules/@rynfar/meridian-plugin-opencode-scrub/dist/index.js",
+        "packageName": "@rynfar/meridian-plugin-opencode-scrub",
+        "packageVersion": "0.2.3",
+        "sha256": "4ab89412e6a59fad812a3f6e5500c84f3bdfc41863320bc794f5274a251da656",
+        "runtimeVersion": "0.2.3",
+        "invocations": 0,
+        "errors": 0
+      },
+      "observedModels": [
+        "claude-haiku-5-5"
+      ],
+      "scrubFinal": {
+        "path": "/private/tmp/meridian-scrub-preflight-package-20261012/node_modules/@rynfar/meridian-plugin-opencode-scrub/dist/index.js",
+        "packageName": "@rynfar/meridian-plugin-opencode-scrub",
+        "packageVersion": "0.2.3",
+        "sha256": "4ab89412e6a59fad812a3f6e5500c84f3bdfc41863320bc794f5274a251da656",
+        "runtimeVersion": "0.2.3",
+        "invocations": 4,
+        "errors": 0
+      },
+      "joined": true
+    },
+    {
+      "pid": 70057,
+      "result": "PASS",
+      "children": [
+        {
+          "exitSeen": true,
+          "closeSeen": true,
+          "stdoutClosed": true,
+          "stderrClosed": true,
+          "spawnFailed": false,
+          "exitCode": 0,
+          "exitSignal": null,
+          "joined": true,
+          "termSent": false,
+          "killSent": false,
+          "signalFailure": null
+        },
+        {
+          "exitSeen": true,
+          "closeSeen": true,
+          "stdoutClosed": true,
+          "stderrClosed": true,
+          "spawnFailed": false,
+          "exitCode": 1,
+          "exitSignal": null,
+          "joined": true,
+          "termSent": false,
+          "killSent": false,
+          "signalFailure": null
+        },
+        {
+          "exitSeen": true,
+          "closeSeen": true,
+          "stdoutClosed": true,
+          "stderrClosed": true,
+          "spawnFailed": false,
+          "exitCode": 0,
+          "exitSignal": null,
+          "joined": true,
+          "termSent": false,
+          "killSent": false,
+          "signalFailure": null
+        },
+        {
+          "exitSeen": true,
+          "closeSeen": true,
+          "stdoutClosed": true,
+          "stderrClosed": true,
+          "spawnFailed": false,
+          "exitCode": 0,
+          "exitSignal": null,
+          "joined": true,
+          "termSent": false,
+          "killSent": false,
+          "signalFailure": null
+        },
+        {
+          "exitSeen": true,
+          "closeSeen": true,
+          "stdoutClosed": true,
+          "stderrClosed": true,
+          "spawnFailed": false,
+          "exitCode": 0,
+          "exitSignal": null,
+          "joined": true,
+          "termSent": false,
+          "killSent": false,
+          "signalFailure": null
+        }
+      ],
+      "scrubPreflight": {
+        "path": "/private/tmp/meridian-scrub-preflight-package-20261012/node_modules/@rynfar/meridian-plugin-opencode-scrub/dist/index.js",
+        "packageName": "@rynfar/meridian-plugin-opencode-scrub",
+        "packageVersion": "0.2.3",
+        "sha256": "4ab89412e6a59fad812a3f6e5500c84f3bdfc41863320bc794f5274a251da656",
+        "runtimeVersion": "0.2.3",
+        "invocations": 0,
+        "errors": 0
+      },
+      "observedModels": [
+        "claude-haiku-5-5"
+      ],
+      "scrubFinal": {
+        "path": "/private/tmp/meridian-scrub-preflight-package-20261012/node_modules/@rynfar/meridian-plugin-opencode-scrub/dist/index.js",
+        "packageName": "@rynfar/meridian-plugin-opencode-scrub",
+        "packageVersion": "0.2.3",
+        "sha256": "4ab89412e6a59fad812a3f6e5500c84f3bdfc41863320bc794f5274a251da656",
+        "runtimeVersion": "0.2.3",
+        "invocations": 5,
+        "errors": 0
+      },
+      "joined": true
+    }
+  ],
+  "result": null,
+  "variantProbe": {
+    "model": "anthropic/claude-haiku-5-5#xhigh",
+    "selected": true,
+    "errors": [],
+    "efforts": [
+      null,
+      "xhigh",
+      "xhigh"
+    ],
+    "completed": false,
+    "answered": true
+  },
+  "requests": [
+    {
+      "clientSystemHash": "dd9d0034ce3c78cfe8a4f4c9925d2f7b19829c6dbdc6a9edb05a223f1c0c628a",
+      "requestId": "ab7a525a-8826-4b81-9b83-e7badfa4e2b3",
+      "path": "/v1/messages",
+      "model": "claude-haiku-5-5",
+      "effortFields": {
+        "thinking": {
+          "type": "disabled"
+        }
+      },
+      "hasForkMarker": false,
+      "hasUndoMarker": false,
+      "hasSummaryMarker": false,
+      "startedAt": 1791840699847,
+      "completedAt": 1791840699953,
+      "identity": {
+        "x-meridian-source": "subagent-title",
+        "x-opencode-agent-mode": "subagent",
+        "x-opencode-agent-name": "title"
+      }
+    },
+    {
+      "clientSystemHash": "b3f819b6b51a094b3b649018e9ca31c63885d1b0dd08cf1b0f46501cc06fbd54",
+      "clientCwd": "/private/var/folders/ks/xnz659y11jl44j80b_lfws6r0000gn/T/meridian-v2-package-XiLeyA",
+      "requestId": "5f004918-c51b-4bcf-8bce-17d31cda2e69",
+      "path": "/v1/messages",
+      "model": "claude-haiku-5-5",
+      "effortFields": {},
+      "hasForkMarker": false,
+      "hasUndoMarker": false,
+      "hasSummaryMarker": false,
+      "startedAt": 1791840699848,
+      "completedAt": 1791840703353,
+      "identity": {
+        "x-opencode-agent-mode": "primary",
+        "x-opencode-agent-name": "build"
+      }
+    },
+    {
+      "clientSystemHash": "dd9d0034ce3c78cfe8a4f4c9925d2f7b19829c6dbdc6a9edb05a223f1c0c628a",
+      "requestId": "687ebe85-0542-407f-a4a0-f0abc3a14a34",
+      "path": "/v1/messages",
+      "model": "claude-haiku-5-5",
+      "effortFields": {},
+      "hasForkMarker": false,
+      "hasUndoMarker": false,
+      "hasSummaryMarker": false,
+      "startedAt": 1791840699958,
+      "completedAt": 1791840705145,
+      "identity": {
+        "x-meridian-source": "subagent-title",
+        "x-opencode-agent-mode": "subagent",
+        "x-opencode-agent-name": "title"
+      }
+    },
+    {
+      "clientSystemHash": "b3f819b6b51a094b3b649018e9ca31c63885d1b0dd08cf1b0f46501cc06fbd54",
+      "clientCwd": "/private/var/folders/ks/xnz659y11jl44j80b_lfws6r0000gn/T/meridian-v2-package-XiLeyA",
+      "requestId": "d502fccf-161d-44b7-9555-1cc753e08cd9",
+      "path": "/v1/messages",
+      "model": "claude-haiku-5-5",
+      "effortFields": {},
+      "hasForkMarker": false,
+      "hasUndoMarker": false,
+      "hasSummaryMarker": false,
+      "startedAt": 1791840703379,
+      "completedAt": 1791840705317,
+      "identity": {
+        "x-opencode-agent-mode": "primary",
+        "x-opencode-agent-name": "build"
+      }
+    },
+    {
+      "clientSystemHash": "b3f819b6b51a094b3b649018e9ca31c63885d1b0dd08cf1b0f46501cc06fbd54",
+      "clientCwd": "/private/var/folders/ks/xnz659y11jl44j80b_lfws6r0000gn/T/meridian-v2-package-XiLeyA",
+      "requestId": "e426e30c-3e60-40d2-96b6-8689f2355861",
+      "path": "/v1/messages",
+      "model": "claude-haiku-5-5",
+      "effortFields": {},
+      "hasForkMarker": false,
+      "hasUndoMarker": false,
+      "hasSummaryMarker": false,
+      "startedAt": 1791840705549,
+      "completedAt": 1791840707487,
+      "identity": {
+        "x-opencode-agent-mode": "primary",
+        "x-opencode-agent-name": "build"
+      }
+    },
+    {
+      "clientSystemHash": "b3f819b6b51a094b3b649018e9ca31c63885d1b0dd08cf1b0f46501cc06fbd54",
+      "clientCwd": "/private/var/folders/ks/xnz659y11jl44j80b_lfws6r0000gn/T/meridian-v2-package-XiLeyA",
+      "requestId": "a4f69d9c-e3fe-44cd-a8cb-08ad478dbeb5",
+      "path": "/v1/messages",
+      "model": "claude-haiku-5-5",
+      "effortFields": {},
+      "hasForkMarker": false,
+      "hasUndoMarker": false,
+      "hasSummaryMarker": false,
+      "startedAt": 1791840708020,
+      "completedAt": 1791840710130,
+      "identity": {
+        "x-opencode-agent-mode": "primary",
+        "x-opencode-agent-name": "build"
+      }
+    },
+    {
+      "clientSystemHash": "dd9d0034ce3c78cfe8a4f4c9925d2f7b19829c6dbdc6a9edb05a223f1c0c628a",
+      "requestId": "5f6d6aca-878c-4f33-9032-db25fbe409e7",
+      "path": "/v1/messages",
+      "model": "claude-haiku-5-5",
+      "effortFields": {
+        "thinking": {
+          "type": "disabled"
+        }
+      },
+      "hasForkMarker": false,
+      "hasUndoMarker": false,
+      "hasSummaryMarker": false,
+      "startedAt": 1791840710357,
+      "completedAt": 1791840710360,
+      "identity": {
+        "x-meridian-source": "subagent-title",
+        "x-opencode-agent-mode": "subagent",
+        "x-opencode-agent-name": "title"
+      }
+    },
+    {
+      "clientSystemHash": "783a4f909a49b728204b2ca46985e9bd18f9a97827269a2e3b3c8c8feb48da18",
+      "clientCwd": "/private/var/folders/ks/xnz659y11jl44j80b_lfws6r0000gn/T/meridian-v2-package-XiLeyA",
+      "requestId": "6b0c6343-f09a-4f19-9fa9-6f94eba50f67",
+      "path": "/v1/messages",
+      "model": "claude-haiku-5-5",
+      "effort": "xhigh",
+      "effortFields": {
+        "output": {
+          "effort": "xhigh"
+        },
+        "thinking": {
+          "type": "adaptive",
+          "display": "summarized"
+        }
+      },
+      "hasForkMarker": false,
+      "hasUndoMarker": false,
+      "hasSummaryMarker": false,
+      "startedAt": 1791840710357,
+      "completedAt": 1791840711671,
+      "identity": {
+        "x-opencode-agent-mode": "primary",
+        "x-opencode-agent-name": "build"
+      }
+    },
+    {
+      "clientSystemHash": "dd9d0034ce3c78cfe8a4f4c9925d2f7b19829c6dbdc6a9edb05a223f1c0c628a",
+      "requestId": "4dbe203c-5f92-4ea5-a318-c6d0d3988f15",
+      "path": "/v1/messages",
+      "model": "claude-haiku-5-5",
+      "effort": "xhigh",
+      "effortFields": {
+        "output": {
+          "effort": "xhigh"
+        },
+        "thinking": {
+          "type": "adaptive",
+          "display": "summarized"
+        }
+      },
+      "hasForkMarker": false,
+      "hasUndoMarker": false,
+      "hasSummaryMarker": false,
+      "startedAt": 1791840710362,
+      "identity": {
+        "x-meridian-source": "subagent-title",
+        "x-opencode-agent-mode": "subagent",
+        "x-opencode-agent-name": "title"
+      }
+    }
+  ]
+}

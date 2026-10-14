@@ -226,7 +226,7 @@ describe("SDK model pin injection (fixes #419)", () => {
     expect(capturedQueryOptions.env.ANTHROPIC_DEFAULT_FABLE_MODEL).toBe("claude-fable-5-1")
     expect(capturedQueryOptions.env.ANTHROPIC_DEFAULT_OPUS_MODEL).toBe("claude-opus-5-5")
     expect(capturedQueryOptions.env.ANTHROPIC_DEFAULT_SONNET_MODEL).toBe("claude-sonnet-5-5")
-    expect(capturedQueryOptions.env.ANTHROPIC_DEFAULT_HAIKU_MODEL).toBe("claude-haiku-4-5")
+    expect(capturedQueryOptions.env.ANTHROPIC_DEFAULT_HAIKU_MODEL).toBe("claude-haiku-5-5")
   })
 
   it("explicit claude-opus-4-6 requests pin the SDK env to 4.6", async () => {
@@ -270,6 +270,15 @@ describe("SDK model pin injection (fixes #419)", () => {
     const app = createTestApp()
     await post(app, { ...BASIC_REQUEST, model: "claude-sonnet-5" })
     expect(capturedQueryOptions.env.ANTHROPIC_DEFAULT_SONNET_MODEL).toBe("claude-sonnet-5")
+  })
+
+  it("bare Haiku uses the new canonical pin and explicit 5.5 beats a legacy shell pin", async () => {
+    const app = createTestApp()
+    await post(app, { ...BASIC_REQUEST, model: "haiku" })
+    expect(capturedQueryOptions.env.ANTHROPIC_DEFAULT_HAIKU_MODEL).toBe("claude-haiku-5-5")
+    process.env.ANTHROPIC_DEFAULT_HAIKU_MODEL = "claude-haiku-4-5"
+    await post(app, { ...BASIC_REQUEST, model: "claude-haiku-5-5" })
+    expect(capturedQueryOptions.env.ANTHROPIC_DEFAULT_HAIKU_MODEL).toBe("claude-haiku-5-5")
   })
 
   it("explicit claude-haiku-4-5 requests pin the SDK env to haiku-4-5", async () => {

@@ -1,0 +1,70 @@
+{
+  "result": "PASS",
+  "scope": "E41 plugin-bearing protocol host; actual OpenCode executable separately qualified",
+  "image": "sha256:b84819d1bd9adbaa6a40889a312dbe5c75f0ee9f9016d1dd369f51dff148293a",
+  "serverSource": "e5cce1f71",
+  "harnessSource": "451c43c7",
+  "harnessSha256": "9306af7e3e47c5ed55cb693d12a51a692d0350ae4614f162e8881861fd9fe3bf",
+  "sdk": "0.2.141",
+  "native": "2.1.296",
+  "platform": "Linux amd64 Docker emulation on Darwin arm64",
+  "grantAbsent": true,
+  "arms": [
+    {
+      "arm": "qualified-chain-json",
+      "result": "PASS",
+      "models": [
+        "claude-opus-5-5"
+      ],
+      "batches": [
+        1,
+        1,
+        1
+      ],
+      "clientHooks": 5,
+      "scrubHooks": 5,
+      "joined": true
+    },
+    {
+      "arm": "qualified-chain-sse",
+      "result": "PASS",
+      "models": [
+        "claude-opus-5-5"
+      ],
+      "batches": [
+        1,
+        1,
+        1
+      ],
+      "clientHooks": 5,
+      "scrubHooks": 5,
+      "joined": true
+    },
+    {
+      "arm": "qualified-parallel-json",
+      "result": "PASS",
+      "models": [
+        "claude-opus-5-5"
+      ],
+      "batches": [
+        3
+      ],
+      "clientHooks": 3,
+      "scrubHooks": 3,
+      "joined": true
+    },
+    {
+      "arm": "qualified-parallel-sse",
+      "result": "PASS",
+      "models": [
+        "claude-opus-5-5"
+      ],
+      "batches": [
+        3
+      ],
+      "clientHooks": 3,
+      "scrubHooks": 3,
+      "joined": true
+    }
+  ]
+}

@@ -1,0 +1,40 @@
+[PROXY] CREDENTIALS READ-ONLY MODE (MERIDIAN_CREDENTIALS_READONLY): this instance will not refresh or write OAuth credentials. Token rotation is another instance's job; credentials are re-read from disk.
+  explicit isolated profile: default
+
+=== turn 1 (stream=true) http 200 ===
+  calls: read(a.txt)#HWzkzKHR
+  text: "I'll start with the first file."
+  lineage: lineage=new session=new
+  usage: cache_read=763 cache_create=2040 input=2 (27% of 2805 input read from cache)
+
+=== turn 2 (stream=true) http 200 ===
+  calls: read(b.txt)#kzP1VpjP
+  lineage: lineage=continuation session=df71e6c4
+  usage: cache_read=763 cache_create=2280 input=2 (25% of 3045 input read from cache)
+
+=== turn 3 (stream=true) http 200 ===
+  calls: read(c.txt)#1foB2LHc
+  lineage: lineage=continuation session=7f21cdc8
+  usage: cache_read=3043 cache_create=99 input=2 (97% of 3144 input read from cache)
+
+=== turn 4 (stream=true) http 200 ===
+  calls: none
+  text: "REALOUTPUT[alpha] REALOUTPUT[bravo] REALOUTPUT[charlie]"
+  lineage: lineage=continuation session=2f77377e
+  usage: cache_read=3142 cache_create=99 input=2 (97% of 3243 input read from cache)
+
+=== follow-up turn (stream=true) http 200 ===
+  lineage: lineage=continuation session=cb59482d
+  usage: cache_read=3241 cache_create=53 input=4 (98% of 3298 input read from cache)
+
+=== verdict (stream=true, parallel=false) ===
+  tool-call batches: 1 + 1 + 1
+  continuation session prefixes: df71e6c4 -> 7f21cdc8 -> 2f77377e -> cb59482d
+  final reply quotes 3/3 contents: alpha,bravo,charlie
+  active fork face6192-b5ac-4616-a71c-69fd4e6b3f75: exactly one real answer per delivered call
+  source history: 4 unchanged parents
+  saved-session follow-up: OK
+  actual assistant models: claude-opus-4-8,claude-opus-5-5
+  prompt cache: turn 2: cache_read=763 < 0.95 x prior cached 2803   <-- PREFIX LOST
+  FAIL: tool batching, active history, and prompt-cache continuity
+

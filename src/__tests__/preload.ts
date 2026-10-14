@@ -3,9 +3,10 @@
  * Clears environment variables that would interfere with test isolation.
  */
 
+import { afterAll } from "bun:test"
 import { mkdirSync } from "node:fs"
 import { tmpdir } from "node:os"
-import { join } from "node:path"
+import { removeTestDir, sweepStaleTestDirs, testDirsFor } from "./test-tmp-dirs"
 
 // Take the operator's whole configuration namespace away from the suite.
 //
@@ -40,15 +41,31 @@ delete process.env.CLAUDE_PROXY_FOLLOW_ACTIVE
 // to getSetting("routing") when MERIDIAN_ROUTING is unset — so those tests
 // were asserting against whatever the developer happened to have configured.
 // Keyed by pid so concurrent runs don't share state.
-process.env.MERIDIAN_CONFIG_DIR = join(tmpdir(), `meridian-test-settings-${process.pid}`)
-mkdirSync(process.env.MERIDIAN_CONFIG_DIR, { recursive: true })
-
+//
 // Isolate durable session mappings and transcript lifecycle metadata too.
 // Fresh SDK sessions are pre-journaled before spawn, so allowing tests to use
 // the developer's real session root would both pollute it and exhaust the
 // bounded ownership budget during the suite.
-process.env.MERIDIAN_SESSION_DIR = join(tmpdir(), `meridian-test-sessions-${process.pid}`)
-mkdirSync(process.env.MERIDIAN_SESSION_DIR, { recursive: true })
+//
+// Both directories are removed when this process exits; leftovers of runs that
+// were killed before they could exit are swept here (see test-tmp-dirs.ts). A
+// pair already carrying this pid can only be a dead process's, so it is
+// cleared rather than inherited.
+sweepStaleTestDirs(tmpdir())
+const { configDir, sessionDir } = testDirsFor(tmpdir(), process.pid)
+for (const dir of [configDir, sessionDir]) {
+  if (!removeTestDir(dir)) throw new Error(`Could not reset test scratch directory: ${dir}`)
+  mkdirSync(dir, { recursive: true })
+}
+// `bun test` emits neither "exit" nor "beforeExit"; an afterAll registered in a
+// preload is its once-per-run teardown, and it also runs after failures and
+// timeouts.
+afterAll(() => {
+  removeTestDir(configDir)
+  removeTestDir(sessionDir)
+})
+process.env.MERIDIAN_CONFIG_DIR = configDir
+process.env.MERIDIAN_SESSION_DIR = sessionDir
 
 // Raise the pending-transcript ceiling for the suite (#917).
 //

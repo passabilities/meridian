@@ -1,0 +1,18 @@
+{
+  "head": "dd4bf666ec5fb06985329d3541b454e5cf0fbfcc",
+  "originalHandle": 99164,
+  "exitCode": 0,
+  "commands": [
+    "npm ci --ignore-scripts --no-audit --no-fund",
+    "npm test",
+    "npm run typecheck",
+    "npm run build"
+  ],
+  "counts": {
+    "pass": 5752,
+    "fail": 0,
+    "skip": 35
+  },
+  "isolatedGroups": 23,
+  "fullLogSha256": "adee688b56779d218314aacdb6e43e7f0be26ba2eb50c18ba3750e5ac0e876a3"
+}

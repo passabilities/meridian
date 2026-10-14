@@ -1,0 +1,62 @@
+{
+  "exit": 0,
+  "reports": [
+    {
+      "result": "PASS",
+      "version": "opencode2 v0.0.0-beta-19271",
+      "source": true,
+      "live": false,
+      "extended": false,
+      "discovery": true,
+      "coldStartProbe": {
+        "errors": [],
+        "efforts": [
+          null,
+          "xhigh"
+        ]
+      },
+      "invalidationProbe": {
+        "cacheDropped": true,
+        "first": [
+          "provider.no-route"
+        ],
+        "second": [
+          "provider.no-route"
+        ]
+      },
+      "requestCount": 9,
+      "discoveryRequests": [
+        {
+          "method": "GET",
+          "path": "/v1/models",
+          "status": 200
+        },
+        {
+          "method": "GET",
+          "path": "/v1/models",
+          "status": 200
+        },
+        {
+          "method": "GET",
+          "path": "/v1/models",
+          "status": 200
+        },
+        {
+          "method": "GET",
+          "path": "/v1/models",
+          "status": 200
+        },
+        {
+          "method": "GET",
+          "path": "/v1/models",
+          "status": 200
+        },
+        {
+          "method": "GET",
+          "path": "/v1/models",
+          "status": 200
+        }
+      ]
+    }
+  ]
+}

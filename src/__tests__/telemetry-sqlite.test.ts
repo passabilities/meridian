@@ -149,6 +149,7 @@ describe("SqliteTelemetryStore", () => {
       adapter: "opencode",
       model: "sonnet",
       requestModel: "claude-sonnet-4-6-20250312",
+      resolvedModel: "claude-sonnet-4-6-20250312",
       mode: "stream",
       isResume: true,
       isPassthrough: true,
@@ -184,6 +185,7 @@ describe("SqliteTelemetryStore", () => {
     expect(retrieved!.requestId).toBe("rt-1")
     expect(retrieved!.adapter).toBe("opencode")
     expect(retrieved!.requestModel).toBe("claude-sonnet-4-6-20250312")
+    expect(retrieved!.resolvedModel).toBe("claude-sonnet-4-6-20250312")
     expect(retrieved!.isResume).toBe(true)
     expect(retrieved!.isPassthrough).toBe(true)
     expect(retrieved!.lineageType).toBe("continuation")
@@ -223,6 +225,21 @@ describe("SqliteTelemetryStore", () => {
     expect(recent[0]!.requestId).toBe("r1")
     expect(recent[1]!.requestId).toBe("r3")
     expect(recent[2]!.requestId).toBe("r2")
+  })
+
+  it("preserves legacy Haiku pin pricing after restart without relabeling original aliases", () => {
+    const dbPath = join(tmpDir, "haiku-pin.db")
+    const first = createSqliteStores(dbPath, 7)
+    first.telemetry.record(makeMetric({ model: "haiku", requestModel: "haiku", resolvedModel: "claude-haiku-4-5", inputTokens: 10_000, outputTokens: 1_000 }))
+    first.close()
+    const reopened = createSqliteStores(dbPath, 7)
+    try {
+      const row = reopened.telemetry.getRecent()[0]!
+      expect(row.model).toBe("haiku")
+      expect(row.requestModel).toBe("haiku")
+      expect(row.resolvedModel).toBe("claude-haiku-4-5")
+      expect(reopened.telemetry.summarize().costEstimate.totalUsd).toBeCloseTo(0.015, 6)
+    } finally { reopened.close() }
   })
 
   it("persists data across close/reopen", () => {
@@ -316,6 +333,73 @@ describe("SqliteTelemetryStore error handling", () => {
     }).not.toThrow()
 
     rmSync(tmpDir, { recursive: true, force: true })
+  })
+})
+
+describe("SqliteTelemetryStore beside another writer", () => {
+  it("gives up on a held lock and records normally after its release", () => {
+    const tmpDir = mkdtempSync(join(tmpdir(), "meridian-test-"))
+    const dbPath = join(tmpDir, "held.db")
+    const stores = createSqliteStores(dbPath, 7)
+    const writer = new Database(dbPath)
+    try {
+      writer.exec("BEGIN IMMEDIATE")
+      const start = performance.now()
+      stores.telemetry.record(makeMetric({ requestId: "held" }))
+      const elapsed = performance.now() - start
+      expect(elapsed).toBeGreaterThanOrEqual(750)
+      expect(elapsed).toBeLessThan(3000)
+      expect(stores.telemetry.size).toBe(0)
+
+      writer.exec("ROLLBACK")
+      stores.telemetry.record(makeMetric({ requestId: "released" }))
+      expect(stores.telemetry.getRecent().map(m => m.requestId)).toEqual(["released"])
+    } finally {
+      writer.close()
+      stores.close()
+      rmSync(tmpDir, { recursive: true, force: true })
+    }
+  })
+
+  it("records a request while another process briefly holds the write lock", async () => {
+    const tmpDir = mkdtempSync(join(tmpdir(), "meridian-test-"))
+    const dbPath = join(tmpDir, "shared.db")
+    const stores = createSqliteStores(dbPath, 7)
+    // A second process takes the database's write lock, says so, holds it
+    // for 150ms and commits - what an import or an operator's sqlite3 does.
+    const holder = Bun.spawn([process.execPath, "-e", `
+      const Database = require(${JSON.stringify(Bun.resolveSync("libsql", import.meta.dir))})
+      const db = new Database(process.env.HOLD_DB)
+      db.exec("BEGIN IMMEDIATE")
+      db.prepare("INSERT INTO diagnostic_logs (timestamp, level, category, message) VALUES (1, 'info', 'test', 'held')").run()
+      console.log("locked")
+      Bun.sleepSync(150)
+      db.exec("COMMIT")
+    `], { env: { ...process.env, HOLD_DB: dbPath }, stdout: "pipe", stderr: "pipe" })
+    // Drain both pipes and join the holder before releasing its database.
+    const stderr = new Response(holder.stderr).text()
+    const reader = holder.stdout.getReader()
+    try {
+      const { value } = await reader.read()
+      expect(new TextDecoder().decode(value)).toContain("locked")
+      stores.telemetry.record(makeMetric({ requestId: "while-locked" }))
+
+      expect(await holder.exited).toBe(0)
+      expect(stores.telemetry.getRecent().map(m => m.requestId)).toEqual(["while-locked"])
+    } finally {
+      holder.kill()
+      await holder.exited
+      try {
+        await Promise.all([
+          (async () => { while (!(await reader.read()).done) { /* drain to EOF */ } })(),
+          stderr,
+        ])
+      } finally {
+        reader.releaseLock()
+        stores.close()
+        rmSync(tmpDir, { recursive: true, force: true })
+      }
+    }
   })
 })
 
@@ -437,6 +521,7 @@ describe("SqliteTelemetryStore — memory-store parity for newer fields", () => 
     expect(legacyColumns).not.toContain("profile_id")
     expect(legacyColumns).not.toContain("route_kind")
     expect(legacyColumns).not.toContain("route_refused_bucket")
+    expect(legacyColumns).not.toContain("resolved_model")
 
     legacy.exec(`
       INSERT INTO metrics (
@@ -452,6 +537,7 @@ describe("SqliteTelemetryStore — memory-store parity for newer fields", () => 
     migrated.telemetry.record(makeMetric({
       requestId: "req-new",
       profileId: "work",
+      resolvedModel: "claude-haiku-4-5",
       sessionQueueWaitMs: 42,
       sdkQueueWaitMs: 7,
       routeKind: "active+priority-hop",
@@ -463,6 +549,7 @@ describe("SqliteTelemetryStore — memory-store parity for newer fields", () => 
     const rows = migrated.telemetry.getRecent({ limit: 10 })
     const fresh = rows.find(r => r.requestId === "req-new")!
     expect(fresh.profileId).toBe("work")
+    expect(fresh.resolvedModel).toBe("claude-haiku-4-5")
     expect(fresh.sessionQueueWaitMs).toBe(42)
     expect(fresh.sdkQueueWaitMs).toBe(7)
     expect(fresh.routeKind).toBe("active+priority-hop")
@@ -475,6 +562,7 @@ describe("SqliteTelemetryStore — memory-store parity for newer fields", () => 
     const old = rows.find(r => r.requestId === "req-old")!
     expect(old).toBeDefined()
     expect(old.profileId).toBeUndefined()
+    expect(old.resolvedModel).toBeUndefined()
     expect(old.sessionQueueWaitMs ?? 0).toBe(0)
     expect(old.sdkQueueWaitMs ?? 0).toBe(0)
 

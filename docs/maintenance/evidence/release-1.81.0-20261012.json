@@ -1,0 +1,141 @@
+{
+  "status": "PUBLISHED_AND_REGISTRY_INSTALLED_LIVE_VERIFIED",
+  "version": "1.81.0",
+  "candidate": "f907402b247b54f2773f979fad13ed71aa509b82",
+  "merge": "d4d60c406362750b8e96e3d1507f83b96a839125",
+  "release": "https://github.com/rynfar/meridian/releases/tag/meridian-v1.81.0",
+  "workflow": "https://github.com/rynfar/meridian/actions/runs/38277901722",
+  "localGates": {
+    "pass": 5615,
+    "fail": 0,
+    "skip": 35,
+    "typecheck": "PASS",
+    "build": "PASS"
+  },
+  "registry": {
+    "version": "1.81.0",
+    "dist": {
+      "shasum": "0e7e73707655763d76ee17e661357e1beac0b2be",
+      "tarball": "https://registry.npmjs.org/@rynfar/meridian/-/meridian-1.81.0.tgz",
+      "fileCount": 455,
+      "integrity": "sha512-JTP2zjuDUr4jraPbPC4t/42AXEajgneKjshj8myvVXF/KHVLGy/GVxaSm+JWf+c1J3LzGsYlgOWDjbvIER+sUA==",
+      "signatures": [
+        {
+          "sig": "MEUCIBluv4VfnqF5x/pgSqv+mwq7aVqlJZy2IEt3y9FIIUPwAiEA05VKEsvJV8h9pAM2HlQno23XwEsgIFXQ4ESgdQkKEVo=",
+          "keyid": "SHA256:DhQ8wR5APBvFHLF/+Tc+AYvPOdTpcIDqOhxsBHRwC7U"
+        },
+        {
+          "keyid": "SHA256:DhQ8wR5APBvFHLF/+Tc+AYvPOdTpcIDqOhxsBHRwC7U",
+          "sig": "MEQCIHtf4UFCsk9sv7+ZkDKemW/2tUoHCpxheP7i1vC22VpCAiBhoLLHyfIrIFUd8ad9F/NphcPD787Pf2M9iPeggA6D1Q=="
+        }
+      ],
+      "attestations": {
+        "url": "https://registry.npmjs.org/-/npm/v1/attestations/@rynfar%2fmeridian@1.81.0",
+        "provenance": {
+          "predicateType": "https://slsa.dev/provenance/v1"
+        }
+      },
+      "unpackedSize": 6050556
+    },
+    "gitHead": "d4d60c406362750b8e96e3d1507f83b96a839125"
+  },
+  "signatureVerification": {
+    "command": "npm audit signatures --prefix <fresh-install>",
+    "registrySignatures": 109,
+    "attestations": 15
+  },
+  "provenance": {
+    "transparencyLogIndex": 3231380943,
+    "workflow": ".github/workflows/release-please.yml",
+    "gitCommit": "d4d60c406362750b8e96e3d1507f83b96a839125"
+  },
+  "docker": {
+    "image": "ghcr.io/rynfar/meridian:1.81.0",
+    "platforms": [
+      "linux/amd64",
+      "linux/arm64"
+    ]
+  },
+  "registryInstalledLive": {
+    "result": "PASS",
+    "acceptance": true,
+    "model": "claude-haiku-5-5",
+    "clientModel": "haiku",
+    "platform": "darwin/arm64",
+    "node": "v22.22.3",
+    "source": "1.81.0",
+    "harnessSha256": "38b43a6b17b35442dff065b18239a24390c1fb1d7dcaa490856a75d8f11c476d",
+    "actors": [
+      {
+        "pid": 6316,
+        "command": "claude.exe",
+        "sdkGate": false,
+        "close": true,
+        "stdoutClose": true,
+        "stderrClose": true,
+        "code": 0,
+        "signal": null
+      },
+      {
+        "pid": 6569,
+        "command": "sh",
+        "sdkGate": true,
+        "close": true,
+        "stdoutClose": true,
+        "stderrClose": true,
+        "code": 1,
+        "signal": null
+      },
+      {
+        "pid": 6588,
+        "command": "sh",
+        "sdkGate": true,
+        "close": true,
+        "stdoutClose": true,
+        "stderrClose": true,
+        "code": 0,
+        "signal": null
+      }
+    ],
+    "credentials": {
+      "accessOnly": true,
+      "refreshAuthorized": false,
+      "extraUsageAuthorized": false,
+      "accountSwitchAuthorized": false
+    },
+    "nativeVersion": "2.1.296 (Claude Code)",
+    "pi": "1.1.0",
+    "clientTerminal": {
+      "stopReason": "stop"
+    },
+    "actualReadBack": true,
+    "ownedReadCount": 1,
+    "requests": [
+      {
+        "adapter": "pi",
+        "model": "haiku",
+        "requestModel": "haiku",
+        "resolvedModel": "claude-haiku-5-5",
+        "sdkSessionId": "8fdc55b9-db5b-4c42-8f82-1b20ca367304",
+        "status": 200,
+        "error": null
+      },
+      {
+        "adapter": "pi",
+        "model": "haiku",
+        "requestModel": "haiku",
+        "resolvedModel": "claude-haiku-5-5",
+        "sdkSessionId": "19396a9c-91af-4b15-bfbf-d9612327b1f5",
+        "status": 200,
+        "error": null
+      }
+    ],
+    "sdk": "0.2.141",
+    "observedNativeModels": [
+      "claude-haiku-5-5"
+    ],
+    "cleanupJoined": true,
+    "fixtureRetained": true
+  },
+  "publicationDelay": "npm accepted the upload at 16:38 UTC and reported processing. Metadata and tarball initially returned 404; after both became available, bytes matched SHA512/SHA1 and a fresh registry install and live run passed."
+}

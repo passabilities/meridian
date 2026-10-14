@@ -1,0 +1,85 @@
+{
+  "headAtExecution": "34bcb02820c69fc8c3932c5974dbb457b53eb76d",
+  "packSource": "d3e28b489251908cda3add02c3a1fe251510545d",
+  "source": [
+    {
+      "path": "src/proxy/models.ts",
+      "sha256": "5615e3d25f78b567772d3a639292428b393690c89e48bcbcd37af46cbe446086",
+      "unchangedSincePackSource": true
+    },
+    {
+      "path": "src/proxy/openai.ts",
+      "sha256": "b38de1c76d3cba92c2f9c983bc0a2d7d480daf22f3a84ef530634cf6640bf56f",
+      "unchangedSincePackSource": true
+    },
+    {
+      "path": "src/proxy/replayBudget.ts",
+      "sha256": "17bbe1f58422b0f2f61f8a0e736ac8bcc829ace2291db435f1fbc381b6695459",
+      "unchangedSincePackSource": true
+    },
+    {
+      "path": "src/proxy/server.ts",
+      "sha256": "bcbe13eee1f224fabb72964858b07cf6c7d0ef108177a4ee69272fa2c9d21ca5",
+      "unchangedSincePackSource": true
+    },
+    {
+      "path": "src/proxy/query.ts",
+      "sha256": "65cb4d9be0a278863b5d640a6a8594ab9710fbe95b9bc519302254af62eaf49f",
+      "unchangedSincePackSource": true
+    },
+    {
+      "path": "src/proxy/haikuCompatibility.ts",
+      "sha256": "dcb78dade7eca579d9d0f700ff5aa1303e35383f45330b757e12c3733e5ca3c1",
+      "unchangedSincePackSource": true
+    },
+    {
+      "path": "src/telemetry/pricing.ts",
+      "sha256": "360e46a17dc28d5239a92792c093429e143e1bb158939d06a7a3a21424a0ac95",
+      "unchangedSincePackSource": true
+    },
+    {
+      "path": "src/telemetry/types.ts",
+      "sha256": "db40b4794842ca7813bb80addfde05b03800550f2f60c04f0bef37f6799931ae",
+      "unchangedSincePackSource": true
+    },
+    {
+      "path": "src/telemetry/sqlite.ts",
+      "sha256": "3549e38cf562888e747aa08ce80c449cf860a598e5bc5e13bad81a03b2f27afc",
+      "unchangedSincePackSource": true
+    }
+  ],
+  "artifacts": [
+    {
+      "label": "sourceDist",
+      "sha256": "74fbb3bb17e98ed94ac2a67c578bd81eefe8aa5f3289048ebcf4aa9f5a0b1a6d",
+      "bytes": 947
+    },
+    {
+      "label": "installedDist",
+      "sha256": "a0a4d9d9cd8b2efe1e877e6f1b2980bc517a70b480d0a81c7ab4dceb5a8cfa55",
+      "bytes": 947
+    },
+    {
+      "label": "sourceNative",
+      "sha256": "c9b5341637becbd423ddffc5b254afb645682a3868cb708bbc6cc0e7bb419937",
+      "bytes": 240664432
+    },
+    {
+      "label": "installedNative",
+      "sha256": "c9b5341637becbd423ddffc5b254afb645682a3868cb708bbc6cc0e7bb419937",
+      "bytes": 240664432
+    },
+    {
+      "label": "tarball",
+      "sha256": "d5553b86af17f26efb5d4c28f1416a4a9131e82e1d932d646ad0ecdc64ed638d",
+      "bytes": 1641537
+    },
+    {
+      "label": "harness",
+      "sha256": "38b43a6b17b35442dff065b18239a24390c1fb1d7dcaa490856a75d8f11c476d",
+      "bytes": 13105
+    }
+  ],
+  "registryInstall": false,
+  "sourceNativeBinIndependentOfInstalledNativeBin": true
+}

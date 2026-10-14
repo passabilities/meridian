@@ -1,0 +1,11 @@
+{
+  "source": "9106fa7b0b96b6155e97b0c61b1e2298ed73cf04",
+  "incorporated": "3a03e6d180938ae0bd71c16e8ca941398018d6d6",
+  "rawAuthorAndDatePreserved": true,
+  "fullMessagePreserved": true,
+  "base": "85db81fee02dc00e08f8d3bb9d910aecc8bc1124",
+  "head": "e83ca03e1465d3a092d007f27ec09d5d07323a80",
+  "correctionSeparateCommit": true,
+  "providerLiveProof": "MISSING",
+  "scope": "Recognized primary provider line only, 300-character cap. Not a general redaction parser; original status/type/failover classification remains."
+}

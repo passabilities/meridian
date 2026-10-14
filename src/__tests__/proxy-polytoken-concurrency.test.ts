@@ -280,6 +280,80 @@ describe("Polytoken native session concurrency", () => {
     await continuation("pt-parallel-b", "continue B")
   })
 
+  it("isolates and resumes sibling conversations sharing one Polytoken session", async () => {
+    const app = createProxyServer({ port: 0, host: "127.0.0.1", silent: true }).app
+    const request = (conversation: string, messages?: ReturnType<typeof continuationMessages>) =>
+      nativeRequest("shared-parent", "identical opening", {
+        "x-polytoken-conversation": conversation,
+      }, messages)
+    const first = fetchTracked(app, request("thread.worker:a"))
+    const a = await waitForControl(0)
+    const second = fetchTracked(app, request("thread.worker:b"))
+    const b = await waitForControl(1)
+    expect(maxActiveQueries).toBe(2)
+    expect(capturedInputs[0]!.options?.sessionId).not.toBe(capturedInputs[1]!.options?.sessionId)
+    a.release()
+    b.release()
+    expect((await first).status).toBe(200)
+    expect((await second).status).toBe(200)
+
+    for (const [index, conversation] of ["thread.worker:a", "thread.worker:b"].entries()) {
+      const next = fetchTracked(app, request(conversation,
+        continuationMessages("identical opening", "continue")))
+      const control = await waitForControl(index + 2)
+      expect(capturedInputs[index + 2]!.options?.resume).toBe(capturedInputs[index]!.options?.sessionId)
+      control.release()
+      expect((await next).status).toBe(200)
+    }
+  })
+
+  it("keeps native title inference out of the working conversation and resumes the original checkpoint", async () => {
+    const app = createProxyServer({ port: 0, host: "127.0.0.1", silent: true }).app
+    const headers = { "x-polytoken-conversation": "working-thread" }
+    const main = fetchTracked(app, nativeRequest("parent", "opening", headers))
+    const mainControl = await waitForControl(0)
+    const titleRequest = nativeRequest("parent", "opening", headers)
+    const title = fetchTracked(app, new Request(titleRequest.url, {
+      method: "POST", headers: titleRequest.headers,
+      body: JSON.stringify({ model: "claude-sonnet-4-6", max_tokens: 128, stream: false,
+        messages: [{ role: "user", content: "opening" }],
+        system: "You summarize the conversation so far into a short session title. Respond ONLY by calling the provided tool with a single `title` string.",
+        tools: [{ name: "_infer_title", input_schema: { type: "object", properties: { title: { type: "string" } } } }],
+      }),
+    }))
+    const titleControl = await waitForControl(1)
+    expect(maxActiveQueries).toBe(2)
+    expect(capturedInputs[1]!.options?.sessionId).not.toBe(capturedInputs[0]!.options?.sessionId)
+    titleControl.release()
+    expect((await title).status).toBe(200)
+    mainControl.release()
+    expect((await main).status).toBe(200)
+    const next = fetchTracked(app, nativeRequest("parent", "opening", headers, continuationMessages("opening", "continue")))
+    const continuation = await waitForControl(2)
+    expect(capturedInputs[2]!.options?.resume).toBe(capturedInputs[0]!.options?.sessionId)
+    continuation.release()
+    expect((await next).status).toBe(200)
+  })
+
+  it("still rejects stale requests sharing a conversation even across session headers", async () => {
+    const app = createProxyServer({ port: 0, host: "127.0.0.1", silent: true }).app
+    const headers = { "x-polytoken-conversation": "same-thread" }
+    const first = fetchTracked(app, nativeRequest("parent-a", "same body", headers))
+    const control = await waitForControl(0)
+    const arrival = observeNativeTurnArrival("same-thread")
+    const second = fetchTracked(app, nativeRequest("parent-b", "same body", headers))
+    try {
+      await arrival.arrived
+    } finally {
+      arrival.restore()
+    }
+    expect(queryCalls).toBe(1)
+    control.release()
+    expect((await first).status).toBe(200)
+    expect((await second).status).toBe(400)
+    expect(queryCalls).toBe(1)
+  })
+
   it("polytoken_cross_profile_lineage_isolated", async () => {
     const app = createProxyServer({
       port: 0,

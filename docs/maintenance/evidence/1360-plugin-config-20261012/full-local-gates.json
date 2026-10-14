@@ -1,0 +1,13 @@
+{
+  "head": "584bd172826e192282b20bb1a586a04fc6447da7",
+  "command": "npm test && npm run typecheck && npm run build",
+  "exit": 0,
+  "counts": {
+    "pass": 5754,
+    "skip": 35,
+    "fail": 0
+  },
+  "isolatedGroups": 23,
+  "logSha256": "d90791542c05a15705810d068f98e8bd3a1dba1f8dd3d017c80633220442bbc2",
+  "scope": "Full isolated local suite, standalone typecheck and build. Does not establish actual source/installed CLI or affected-client live acceptance."
+}

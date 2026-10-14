@@ -1,0 +1,13 @@
+# Independent installed-Nix evidence review R5
+
+Pi / GPT-6.1-Sol / high reasoning, task `haiku55-nix-installed-review-r5`, read-only static/evidence review. **No material blocker for the narrowly stated Linux ARM64 installed-Nix credentialless qualification.** Not feature acceptance, actual inference, merge or release approval.
+
+Independently verified archive SHA-256, all 1,089 source-manifest files/executable bits, independently serialized archive NAR equality to actual derivation source, build/closure/wrapper identities, all 60 artifact-manifest entries and historical harness/report bindings, final harness SHA-256 `11defd43ce328ba318cf52a3377b225725b845c7a1e26909607f0c5a87b20276`, final run SHA-256 `3d38fde139c370cfa6625d99d005cb25881cdb046b68f12cfbb4d746aa1db762`, nine original actor process/pipe witnesses, six exact selected native ELF witnesses, Docker loopback isolation, listeners/socket closure, syntax/JSON/local links/whitespace. No actors/build/container/provider/credential operations were performed by the reviewer.
+
+## Nonblocking limitations, retained
+
+- Harness lines 268–299 discriminate installed HTTP receipt materialization, wire facts/history and absence of an error event, **not full JSON/SSE protocol conformance**. It does not require content type or parsed terminal SSE structure; truncated-after-receipt or wrong response format could satisfy these particular assertions. Complete stream qualification requires stronger parsed protocol controls. Do not broaden the receipt claim.
+- Observer lines 61–91,106 captures original spawn/exec/execFile handles and detects sync calls, but is **not universal subprocess/descendant/fault coverage**. Fork/descendant fault qualification is not provided; executable recognition is a package-prefix test. For this exact run, production source captures both pipes, uses POSIX in-place exec and six retained paths match exactly. This is successful-run evidence, not arbitrary missing-pipe/late-actor/alternate-launch qualification.
+- The changed legacy budget assertion is honestly bounded. Base and head both lack snake-case `budget_tokens` → SDK `budgetTokens` translation. Final run exercises the supported camel-case field, while the failed snake-case run remains preserved and unqualified. No contract fix or broader budget guarantee follows.
+
+Actual Haiku/Pi and independent installed-package provider evidence is recorded separately after this review. Nix macOS installed-native execution, registry/publication and exact final landing-head CI remain separate evidence dimensions. New harness/evidence must be committed before relying on repository escrow.

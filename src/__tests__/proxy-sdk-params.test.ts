@@ -120,6 +120,29 @@ describe("Claude Code live prompt with trailing system metadata", () => {
     expect(serialized).toContain("CURRENT_METADATA")
   })
 
+  it.each([false, true])("deduplicates historical image read-back at the SDK boundary (stream=%s)", async (stream) => {
+    const image = {type:"image",source:{type:"base64",media_type:"image/png",data:"aGlzdG9yaWNhbA=="}}
+    const response = await post(createTestApp(), {...BASE_BODY,stream,messages:[
+      {role:"user",content:[{type:"text",text:"original attachment"},image]},
+      {role:"assistant",content:[{type:"tool_use",id:"read-back-id",name:"read",input:{path:"prior.png"}}]},
+      {role:"user",content:[{type:"tool_result",tool_use_id:"read-back-id",content:[{type:"text",text:"read receipt"},image]}]},
+      {role:"assistant",content:"previous answer"},
+      {role:"user",content:"current text request"},
+    ]})
+    expect(response.status).toBe(200)
+    await response.text()
+    if (!capturedPrompt || typeof capturedPrompt === "string") throw new Error("Expected structured SDK input")
+    const inputs: unknown[]=[]
+    for await (const message of capturedPrompt) inputs.push(message)
+    const serialized=JSON.stringify(inputs)
+    expect(inputs).toHaveLength(1)
+    expect(serialized.split(JSON.stringify(image)).length-1).toBe(1)
+    expect(serialized).toContain("read-back-id")
+    expect(serialized).toContain("read receipt")
+    expect(serialized).toContain("original attachment")
+    expect(serialized).toContain("current text request")
+  })
+
   it("retains the reminder on a resumed user turn without replaying earlier input", async () => {
     const app = createTestApp()
     const headers = { "user-agent": "claude-cli/2.1.287", "x-opencode-session": "owned-reminder-resume" }

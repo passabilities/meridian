@@ -1,0 +1,336 @@
+{
+  "scope": "Original production process-gate close/publication; controlled real Node children, no SDK query, native Claude CLI or model requests",
+  "baselineRef": "6e510dbcb7713997e0299a7f954ee73bb45ceae7",
+  "candidateGateSha256": "8d299ee900cfa5b4302a3ac839922e082d2c6594294871004a5f8daa595dde1d",
+  "harnessSha256": "39e2ec01765d931c4adc18a1f17f8cf8516f64fa5a87d5be2ac4fcfb9db093a8",
+  "linuxSetup": {
+    "image": "node:24.20.0-bookworm-slim",
+    "platform": "linux/arm64",
+    "mounts": "Read-only standalone bundle and owned valid machine-id; no owner HOME, source checkout, credentials or registry token"
+  },
+  "controls": {
+    "baselineDirectRegressionTests": "0 pass / 2 fail",
+    "candidateNewAndAdjacentTests": "10 pass / 0 fail",
+    "ordinaryExit": "positive original-close control",
+    "heldPipes": "helper release marker withheld until verdict, then explicit owned release",
+    "resistantChild": "actual SIGTERM handler armed before join; candidate asserts SIGKILL signal and original close"
+  },
+  "limits": [
+    "Not a reproduction or resolution of issue #1326",
+    "No reported Linux x64/OpenCode/SDK/Claude/model tuple",
+    "No Windows native proof; POSIX-only new fixtures skip Windows",
+    "No arbitrary process-tree custody or strict scheduling guarantee",
+    "Unknown close/publication retains fail-closed state and fixture"
+  ],
+  "receipts": {
+    "darwin-before": {
+      "result": "FAIL",
+      "error": "exit without owned pipe-close must not authorize join\n\ntrue !== false\n",
+      "scope": "production SDK process gate with controlled actual Node children; no SDK query/model/Claude CLI",
+      "platform": "darwin",
+      "arch": "arm64",
+      "driver": "v24.20.0",
+      "bun": null,
+      "nodeChild": "v24.20.0",
+      "artifactSha256": "47e9246316cbd1f82bcdc8140b090433fc7f70db0a5e5500adbc8fccf146b6c2",
+      "fixtureRemoved": true,
+      "facts": [
+        {
+          "mode": "ordinary-exit",
+          "budgetMs": 1000,
+          "joined": true,
+          "closeAtVerdict": true,
+          "exitAtVerdict": true,
+          "ignoredTerm": false,
+          "exitCodeAtVerdict": 0,
+          "signalAtVerdict": null,
+          "elapsedMs": 3,
+          "cleanupVerdict": true,
+          "finalJoin": true,
+          "originalCloseJoined": true
+        },
+        {
+          "mode": "delayed-pipes",
+          "budgetMs": 100,
+          "joined": true,
+          "closeAtVerdict": false,
+          "exitAtVerdict": true,
+          "ignoredTerm": false,
+          "exitCodeAtVerdict": 0,
+          "signalAtVerdict": null,
+          "elapsedMs": 0,
+          "cleanupVerdict": true,
+          "finalJoin": true,
+          "originalCloseJoined": true
+        },
+        {
+          "mode": "resists-term",
+          "budgetMs": 1000,
+          "joined": false,
+          "closeAtVerdict": false,
+          "exitAtVerdict": false,
+          "ignoredTerm": true,
+          "exitCodeAtVerdict": null,
+          "signalAtVerdict": null,
+          "elapsedMs": 1001,
+          "cleanupVerdict": true,
+          "finalJoin": true,
+          "originalCloseJoined": true
+        }
+      ]
+    },
+    "darwin-after": {
+      "result": "PASS",
+      "scope": "production SDK process gate with controlled actual Node children; no SDK query/model/Claude CLI",
+      "platform": "darwin",
+      "arch": "arm64",
+      "driver": "v24.20.0",
+      "bun": null,
+      "nodeChild": "v24.20.0",
+      "artifactSha256": "248c1af8123aa94b6255f2a1df73f7fe6721d4149e8d412ef90f680a522f493f",
+      "fixtureRemoved": true,
+      "facts": [
+        {
+          "mode": "ordinary-exit",
+          "budgetMs": 1000,
+          "joined": true,
+          "closeAtVerdict": true,
+          "exitAtVerdict": true,
+          "ignoredTerm": false,
+          "exitCodeAtVerdict": 0,
+          "signalAtVerdict": null,
+          "elapsedMs": 2,
+          "cleanupVerdict": true,
+          "finalJoin": true,
+          "originalCloseJoined": true
+        },
+        {
+          "mode": "delayed-pipes",
+          "budgetMs": 100,
+          "joined": false,
+          "closeAtVerdict": false,
+          "exitAtVerdict": true,
+          "ignoredTerm": false,
+          "exitCodeAtVerdict": 0,
+          "signalAtVerdict": null,
+          "elapsedMs": 99,
+          "cleanupVerdict": true,
+          "finalJoin": true,
+          "originalCloseJoined": true
+        },
+        {
+          "mode": "resists-term",
+          "budgetMs": 1000,
+          "joined": true,
+          "closeAtVerdict": true,
+          "exitAtVerdict": true,
+          "ignoredTerm": true,
+          "exitCodeAtVerdict": null,
+          "signalAtVerdict": "SIGKILL",
+          "elapsedMs": 626,
+          "cleanupVerdict": true,
+          "finalJoin": true,
+          "originalCloseJoined": true
+        }
+      ]
+    },
+    "linux-before": {
+      "result": "FAIL",
+      "error": "exit without owned pipe-close must not authorize join\n\ntrue !== false\n",
+      "scope": "production SDK process gate with controlled actual Node children; no SDK query/model/Claude CLI",
+      "platform": "linux",
+      "arch": "arm64",
+      "driver": "v24.20.0",
+      "bun": null,
+      "nodeChild": "v24.20.0",
+      "artifactSha256": "47e9246316cbd1f82bcdc8140b090433fc7f70db0a5e5500adbc8fccf146b6c2",
+      "fixtureRemoved": true,
+      "facts": [
+        {
+          "mode": "ordinary-exit",
+          "budgetMs": 1000,
+          "joined": true,
+          "closeAtVerdict": true,
+          "exitAtVerdict": true,
+          "ignoredTerm": false,
+          "exitCodeAtVerdict": 0,
+          "signalAtVerdict": null,
+          "elapsedMs": 5,
+          "cleanupVerdict": true,
+          "finalJoin": true,
+          "originalCloseJoined": true
+        },
+        {
+          "mode": "delayed-pipes",
+          "budgetMs": 100,
+          "joined": true,
+          "closeAtVerdict": false,
+          "exitAtVerdict": true,
+          "ignoredTerm": false,
+          "exitCodeAtVerdict": 0,
+          "signalAtVerdict": null,
+          "elapsedMs": 0,
+          "cleanupVerdict": true,
+          "finalJoin": true,
+          "originalCloseJoined": true
+        },
+        {
+          "mode": "resists-term",
+          "budgetMs": 1000,
+          "joined": false,
+          "closeAtVerdict": false,
+          "exitAtVerdict": false,
+          "ignoredTerm": true,
+          "exitCodeAtVerdict": null,
+          "signalAtVerdict": null,
+          "elapsedMs": 1001,
+          "cleanupVerdict": true,
+          "finalJoin": true,
+          "originalCloseJoined": true
+        }
+      ]
+    },
+    "linux-after": {
+      "result": "PASS",
+      "scope": "production SDK process gate with controlled actual Node children; no SDK query/model/Claude CLI",
+      "platform": "linux",
+      "arch": "arm64",
+      "driver": "v24.20.0",
+      "bun": null,
+      "nodeChild": "v24.20.0",
+      "artifactSha256": "248c1af8123aa94b6255f2a1df73f7fe6721d4149e8d412ef90f680a522f493f",
+      "fixtureRemoved": true,
+      "facts": [
+        {
+          "mode": "ordinary-exit",
+          "budgetMs": 1000,
+          "joined": true,
+          "closeAtVerdict": true,
+          "exitAtVerdict": true,
+          "ignoredTerm": false,
+          "exitCodeAtVerdict": 0,
+          "signalAtVerdict": null,
+          "elapsedMs": 2,
+          "cleanupVerdict": true,
+          "finalJoin": true,
+          "originalCloseJoined": true
+        },
+        {
+          "mode": "delayed-pipes",
+          "budgetMs": 100,
+          "joined": false,
+          "closeAtVerdict": false,
+          "exitAtVerdict": true,
+          "ignoredTerm": false,
+          "exitCodeAtVerdict": 0,
+          "signalAtVerdict": null,
+          "elapsedMs": 100,
+          "cleanupVerdict": true,
+          "finalJoin": true,
+          "originalCloseJoined": true
+        },
+        {
+          "mode": "resists-term",
+          "budgetMs": 1000,
+          "joined": true,
+          "closeAtVerdict": true,
+          "exitAtVerdict": true,
+          "ignoredTerm": true,
+          "exitCodeAtVerdict": null,
+          "signalAtVerdict": "SIGKILL",
+          "elapsedMs": 628,
+          "cleanupVerdict": true,
+          "finalJoin": true,
+          "originalCloseJoined": true
+        }
+      ]
+    },
+    "darwin-bun-after": {
+      "result": "PASS",
+      "scope": "production SDK process gate with controlled actual Node children; no SDK query/model/Claude CLI",
+      "platform": "darwin",
+      "arch": "arm64",
+      "driver": "v24.3.0",
+      "bun": "1.3.14",
+      "nodeChild": "v24.20.0",
+      "artifactSha256": "39e2ec01765d931c4adc18a1f17f8cf8516f64fa5a87d5be2ac4fcfb9db093a8",
+      "fixtureRemoved": true,
+      "facts": [
+        {
+          "mode": "ordinary-exit",
+          "budgetMs": 1000,
+          "joined": true,
+          "closeAtVerdict": true,
+          "exitAtVerdict": true,
+          "ignoredTerm": false,
+          "exitCodeAtVerdict": 0,
+          "signalAtVerdict": null,
+          "elapsedMs": 2,
+          "cleanupVerdict": true,
+          "finalJoin": true,
+          "originalCloseJoined": true
+        },
+        {
+          "mode": "delayed-pipes",
+          "budgetMs": 100,
+          "joined": false,
+          "closeAtVerdict": false,
+          "exitAtVerdict": true,
+          "ignoredTerm": false,
+          "exitCodeAtVerdict": 0,
+          "signalAtVerdict": null,
+          "elapsedMs": 100,
+          "cleanupVerdict": true,
+          "finalJoin": true,
+          "originalCloseJoined": true
+        },
+        {
+          "mode": "resists-term",
+          "budgetMs": 1000,
+          "joined": true,
+          "closeAtVerdict": true,
+          "exitAtVerdict": true,
+          "ignoredTerm": true,
+          "exitCodeAtVerdict": null,
+          "signalAtVerdict": "SIGKILL",
+          "elapsedMs": 628,
+          "cleanupVerdict": true,
+          "finalJoin": true,
+          "originalCloseJoined": true
+        }
+      ]
+    }
+  },
+  "baselineArtifact": {
+    "path": "artifacts/sdk-close-join-baseline.mjs",
+    "sha256": "47e9246316cbd1f82bcdc8140b090433fc7f70db0a5e5500adbc8fccf146b6c2",
+    "builder": "Bun 1.3.14",
+    "command": "bun build /tmp/meridian-backlog-202607/sdk-gate-baseline/scripts/e2e-sdk-process-join.mjs --target=node --outfile=/tmp/meridian-backlog-202607/sdk-gate-final-before.mjs",
+    "cwd": "/Users/rynfar/.t3/worktrees/meridian/codex-backlog-oldest-first",
+    "note": "Historical actual tested bundle retained byte-for-byte. Source-path layout affects generated Bun module comments; a generic archive build need not have identical bytes. Gate source and harness hashes, identical assertions and this exact artifact pin causal provenance.",
+    "archiveRebuildSha256": "79974d20308f85b7d634d76a6a86f014f0fb826a4947ac63e8d0416fc2dea26c",
+    "difference": "Only six generated source-path section comments differ; byte equality after normalizing those exact headers independently checked. No runtime code differs.",
+    "normalizedSha256": "380cbefe4053d0ec718ce8cdfde8028329e0ca6d5b24d7628836dd0f8ec820ab"
+  },
+  "independentReview": {
+    "head": "ea868971e1b294d7507729911213f52f6dffa3dc",
+    "provider": "Pi",
+    "model": "GPT-6.1-Sol",
+    "effort": "high",
+    "implementation": "No P1/P2; precise internal contract approved",
+    "finding": "P3 baseline artifact digest not independently reproduced from generic archive recipe; actual bytes now escrowed and replayed",
+    "landing": "HELD: actual SDK/client acceptance or explicit owner scope determination remains a gate; original #1326 not resolved"
+  },
+  "finalLocalGates": {
+    "head": "ea868971e1b294d7507729911213f52f6dffa3dc",
+    "npmTest": {
+      "pass": 5576,
+      "fail": 0,
+      "skip": 35,
+      "isolatedInvocations": 21
+    },
+    "typecheck": "PASS",
+    "build": "PASS",
+    "subsequentDelta": "Evidence/docs and byte-for-byte historical baseline escrow only; no source/test/harness change"
+  }
+}

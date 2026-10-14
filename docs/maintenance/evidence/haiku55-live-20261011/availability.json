@@ -1,0 +1,15 @@
+{
+  "fetchedAt": "2026-10-11T17:17:24.609Z",
+  "status": 200,
+  "defaultStoreReadOnly": true,
+  "refreshAttempted": false,
+  "fiveHour": {
+    "utilization": 3,
+    "resetsAt": "2026-10-11T21:59:59.586046+00:00"
+  },
+  "weekly": {
+    "utilization": 0,
+    "resetsAt": "2026-10-18T16:59:59.586074+00:00"
+  },
+  "extraUsageEnabled": false
+}

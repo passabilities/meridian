@@ -232,8 +232,12 @@ export async function createSdkProcessGate(
   })
   // `error` does not prove process exit. Node emits `close` only after the
   // process has ended (or spawn failed) and all owned stdio handles close.
+  let hasClosed = false
   const exited = new Promise<void>((resolveExit) => {
-    child.once("close", () => resolveExit())
+    child.once("close", () => {
+      hasClosed = true
+      resolveExit()
+    })
   })
   let attached = false
   let spawned = false
@@ -280,17 +284,23 @@ export async function createSdkProcessGate(
       async closeAndJoin(timeoutMs = 7_000): Promise<boolean> {
         const deadline = performance.now() + Math.max(0, timeoutMs)
         const remaining = (): number => Math.max(0, deadline - performance.now())
-        let joined = child.exitCode !== null
-        // Use one budget for termination and publication. An exited child
-        // cannot make an unresponsive disk safe to await indefinitely.
-        if (!joined) joined = await waitForExit(exited, Math.min(250, remaining()))
+        // Exit status alone does not join the captured pipes. Only the exact
+        // child's close witness may authorize release of its writer lease.
+        let joined = hasClosed
+        // Use one budget for termination and publication. Reserve escalation
+        // and close observation inside it, including for short caller budgets.
+        if (!joined) joined = await waitForExit(exited, Math.min(250, remaining() / 4))
         if (!joined) {
           killOwned("SIGTERM")
-          joined = await waitForExit(exited, remaining())
+          // POSIX reserves the rest of the same deadline for KILL + close.
+          // Windows retains its existing wrapper-owned cancellation wait.
+          joined = await waitForExit(exited, process.platform === "win32"
+            ? remaining()
+            : Math.min(2_000, remaining() / 2))
         }
         if (!joined && process.platform !== "win32") {
           killOwned("SIGKILL")
-          joined = await waitForExit(exited, Math.min(2_000, remaining()))
+          joined = await waitForExit(exited, remaining())
         }
         const publicationSettled = joined && await waitForExit(publication, remaining())
         const cleanup = (): void => {

@@ -1,0 +1,67 @@
+{
+  "artifactSourceHead": "d3e28b489251908cda3add02c3a1fe251510545d",
+  "artifactSha256": "d5553b86af17f26efb5d4c28f1416a4a9131e82e1d932d646ad0ecdc64ed638d",
+  "npmIntegrity": "sha512-ZcQHAz1Qw1euF6UZpmWz7OIq6ewsyus6w25nLvDi1rPoIeH+2BvzuCoNs2HbYAQpgJ9EOnS6qbOidduxtMmb6A==",
+  "version": "1.80.0",
+  "freshInstall": "npm install --prefix /tmp/meridian-haiku55-release/pack-installed <owned-tarball> --no-audit --no-fund",
+  "sdkVersion": "0.2.141",
+  "scriptSha256": "bde1472682f1ab29ca2d1493d5c7dfc868bb7fd955c7cc2fec95522086f1774a",
+  "report": {
+    "scope": "independent installed package HTTP discovery/refusal and native version; NO model/client acceptance",
+    "modelAcceptance": false,
+    "package": "1.80.0",
+    "requests": [
+      {
+        "stream": false,
+        "thinking": {
+          "type": "disabled"
+        },
+        "status": 400,
+        "error": {
+          "type": "invalid_request_error",
+          "message": "Claude Haiku 5.5 through the Claude Code SDK cannot reliably honor thinking: disabled. Use adaptive thinking with effort, or explicitly select claude-haiku-4-5."
+        }
+      },
+      {
+        "stream": false,
+        "thinking": {
+          "type": "adaptive",
+          "display": "omitted"
+        },
+        "status": 400,
+        "error": {
+          "type": "invalid_request_error",
+          "message": "Claude Haiku 5.5 through the Claude Code SDK cannot reliably honor thinking.display: omitted. Omit display or use summarized, or explicitly select claude-haiku-4-5."
+        }
+      },
+      {
+        "stream": true,
+        "thinking": {
+          "type": "disabled"
+        },
+        "status": 400,
+        "error": {
+          "type": "invalid_request_error",
+          "message": "Claude Haiku 5.5 through the Claude Code SDK cannot reliably honor thinking: disabled. Use adaptive thinking with effort, or explicitly select claude-haiku-4-5."
+        }
+      },
+      {
+        "stream": true,
+        "thinking": {
+          "type": "adaptive",
+          "display": "omitted"
+        },
+        "status": 400,
+        "error": {
+          "type": "invalid_request_error",
+          "message": "Claude Haiku 5.5 through the Claude Code SDK cannot reliably honor thinking.display: omitted. Omit display or use summarized, or explicitly select claude-haiku-4-5."
+        }
+      }
+    ],
+    "native": "2.1.296 (Claude Code)",
+    "nativeProbeJoined": true,
+    "result": "PASS"
+  },
+  "modelAcceptance": false,
+  "remaining": "Actual Node/Pi/Haiku 5.5 SDK/public model history and physical joins from independently installed artifact; final-head CI/publication gates"
+}

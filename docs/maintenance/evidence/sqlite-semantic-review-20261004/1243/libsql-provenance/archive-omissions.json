@@ -1,0 +1,46 @@
+{
+  "omissions": [
+    {
+      "path": "ffi-bundled-sqlite3.c",
+      "sizeBytes": 9322339,
+      "sha256": "d9791dc493f043172d75c4fe6ef48307db6534c98f2106c843551ca5cbfa2912",
+      "reason": "large public dependency/source blob; retrieve using provenance links"
+    },
+    {
+      "path": "ffi-libsql-ffi-0.9.30--bundled--SQLite3MultipleCiphers--src--sqlite3.h",
+      "sizeBytes": 662578,
+      "sha256": "dce697eff7a5b432dfa6c430134b2d78583c494b1e1f0a507f02100f0c155faf",
+      "reason": "large public dependency/source blob; retrieve using provenance links"
+    },
+    {
+      "path": "ffi-libsql-ffi-0.9.30--bundled--src--sqlite3.h",
+      "sizeBytes": 662578,
+      "sha256": "dce697eff7a5b432dfa6c430134b2d78583c494b1e1f0a507f02100f0c155faf",
+      "reason": "large public dependency/source blob; retrieve using provenance links"
+    },
+    {
+      "path": "github-libsql-issue-2271-comments.json",
+      "sizeBytes": 2,
+      "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "reason": "unverified issue report is not relied on as primary proof"
+    },
+    {
+      "path": "github-libsql-issue-2271.json",
+      "sizeBytes": 4421,
+      "sha256": "5e9787db18e33139fa069087fdf4df9dd1a5828ff5409d80f8321c93b0f07037",
+      "reason": "unverified issue report is not relied on as primary proof"
+    },
+    {
+      "path": "libsql-ffi-0.9.30.crate",
+      "sizeBytes": 8677487,
+      "sha256": "0be1da6f123ceb2cd23f469883415cab9ee963286a85d61e22afb8b12e15e681",
+      "reason": "large public dependency/source blob; retrieve using provenance links"
+    },
+    {
+      "path": "native-darwin-arm64-0.5.29.tgz",
+      "sizeBytes": 3738616,
+      "sha256": "c2f451572527ed9980485a427201a1d2bf95716d7c6d90a18a0dee00c72d925a",
+      "reason": "large public dependency/source blob; retrieve using provenance links"
+    }
+  ]
+}

@@ -1,0 +1,179 @@
+{
+  "baseRefOid": "e68b9bcadd7597d16724a3655b7322cd02a965ad",
+  "headRefOid": "34bcb02820c69fc8c3932c5974dbb457b53eb76d",
+  "isDraft": true,
+  "mergeStateStatus": "UNSTABLE",
+  "number": 1337,
+  "statusCheckRollup": [
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-10-11T15:40:45Z",
+      "conclusion": "CANCELLED",
+      "detailsUrl": "https://github.com/rynfar/meridian/actions/runs/38152277704/job/114508001799",
+      "name": "build (.#checks.x86_64-linux.home-module)",
+      "startedAt": "2026-10-11T15:40:42Z",
+      "status": "COMPLETED",
+      "workflowName": "Nix installable builds"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-10-11T15:48:01Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/rynfar/meridian/actions/runs/38152280736/job/114508010677",
+      "name": "test",
+      "startedAt": "2026-10-11T15:40:47Z",
+      "status": "COMPLETED",
+      "workflowName": "CI"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-10-11T15:41:13Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/rynfar/meridian/actions/runs/38152280774/job/114508010721",
+      "name": "check",
+      "startedAt": "2026-10-11T15:40:47Z",
+      "status": "COMPLETED",
+      "workflowName": "Check claude-code availability"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-10-11T15:41:59Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/rynfar/meridian/actions/runs/38152280737/job/114508010440",
+      "name": "smoke",
+      "startedAt": "2026-10-11T15:40:47Z",
+      "status": "COMPLETED",
+      "workflowName": "Docker"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-10-11T15:41:09Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/rynfar/meridian/actions/runs/38152280742/job/114508013493",
+      "name": "build (.#checks.x86_64-linux.home-module)",
+      "startedAt": "2026-10-11T15:40:48Z",
+      "status": "COMPLETED",
+      "workflowName": "Nix installable builds"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-10-11T15:40:57Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/rynfar/meridian/actions/runs/38152280738/job/114508010879",
+      "name": "verify",
+      "startedAt": "2026-10-11T15:40:47Z",
+      "status": "COMPLETED",
+      "workflowName": "Sync bun.nix"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-10-11T15:41:42Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/rynfar/meridian/actions/runs/38152280758/job/114508011101",
+      "name": "desktop-build (ubuntu-latest)",
+      "startedAt": "2026-10-11T15:40:47Z",
+      "status": "COMPLETED",
+      "workflowName": "desktop"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-10-11T15:42:18Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/rynfar/meridian/actions/runs/38152280758/job/114508010887",
+      "name": "desktop-build (macos-latest)",
+      "startedAt": "2026-10-11T15:40:54Z",
+      "status": "COMPLETED",
+      "workflowName": "desktop"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-10-11T15:40:45Z",
+      "conclusion": "SKIPPED",
+      "detailsUrl": "https://github.com/rynfar/meridian/actions/runs/38152280738/job/114508011854",
+      "name": "sync",
+      "startedAt": "2026-10-11T15:40:45Z",
+      "status": "COMPLETED",
+      "workflowName": "Sync bun.nix"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-10-11T15:42:36Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/rynfar/meridian/actions/runs/38152280736/job/114508010874",
+      "name": "windows-smoke",
+      "startedAt": "2026-10-11T15:40:48Z",
+      "status": "COMPLETED",
+      "workflowName": "CI"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-10-11T15:45:11Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/rynfar/meridian/actions/runs/38152280737/job/114508265551",
+      "name": "build-push",
+      "startedAt": "2026-10-11T15:42:01Z",
+      "status": "COMPLETED",
+      "workflowName": "Docker"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-10-11T15:40:44Z",
+      "conclusion": "SKIPPED",
+      "detailsUrl": "https://github.com/rynfar/meridian/actions/runs/38152280736/job/114508011761",
+      "name": "changelog-duplication",
+      "startedAt": "2026-10-11T15:40:45Z",
+      "status": "COMPLETED",
+      "workflowName": "CI"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-10-11T15:55:29Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/rynfar/meridian/actions/runs/38152280738/job/114508011035",
+      "name": "build (ubuntu-latest)",
+      "startedAt": "2026-10-11T15:40:47Z",
+      "status": "COMPLETED",
+      "workflowName": "Sync bun.nix"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-10-11T16:05:48Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/rynfar/meridian/actions/runs/38152280738/job/114508011034",
+      "name": "build (macos-latest)",
+      "startedAt": "2026-10-11T15:40:54Z",
+      "status": "COMPLETED",
+      "workflowName": "Sync bun.nix"
+    }
+  ],
+  "homeConcurrencyEvidence": [
+    {
+      "conclusion": "cancelled",
+      "created_at": "2026-10-11T15:40:41Z",
+      "event": "push",
+      "head_sha": "34bcb02820c69fc8c3932c5974dbb457b53eb76d",
+      "html_url": "https://github.com/rynfar/meridian/actions/runs/38152277704",
+      "id": 38152277704,
+      "name": "Nix installable builds",
+      "path": ".github/workflows/nix-builds.yaml",
+      "run_attempt": 1,
+      "status": "completed",
+      "updated_at": "2026-10-11T15:40:46Z"
+    },
+    {
+      "conclusion": "success",
+      "created_at": "2026-10-11T15:40:44Z",
+      "event": "pull_request",
+      "head_sha": "34bcb02820c69fc8c3932c5974dbb457b53eb76d",
+      "html_url": "https://github.com/rynfar/meridian/actions/runs/38152280742",
+      "id": 38152280742,
+      "name": "Nix installable builds",
+      "path": ".github/workflows/nix-builds.yaml",
+      "run_attempt": 1,
+      "status": "completed",
+      "updated_at": "2026-10-11T15:41:09Z"
+    }
+  ],
+  "qualification": "Latest same-head PR check contexts successful; cancelled push Home Manager run superseded by PR run under declared concurrency. Draft/UNSTABLE raw GitHub state preserved; recheck required checks/head/base before landing.",
+  "missing": "Actual native-Node Pi Haiku turn/read/history/physical joins, independent installed actual flow, Nix-installed executable/version/SDK qualification, guarded merge/release and registry acceptance."
+}

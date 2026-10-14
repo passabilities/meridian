@@ -1,0 +1,30 @@
+{
+  "build": {
+    "source": "local",
+    "kind": "artifact",
+    "version": "1.81.0",
+    "releaseVersion": "1.81.0",
+    "sha": "6974747fe910658c33056f1b6194292c23247bd2",
+    "branch": "codex/stream-idle-1294-20261012",
+    "dirty": false,
+    "sourceHash": "630ebbd5ca3c2de91d26c744073f2658c9f7ca8b5329e73cc7f0d10095d7446e",
+    "branchUrl": "https://github.com/rynfar/meridian/tree/codex%2Fstream-idle-1294-20261012",
+    "commitUrl": "https://github.com/rynfar/meridian/commit/6974747fe910658c33056f1b6194292c23247bd2",
+    "counter": 3,
+    "counterScope": "7a0ab645-d89d-4498-9b64-f309f3250b7a",
+    "attemptId": "13b176bb-e906-462d-8782-f3e824b8dff2",
+    "builtAt": "2026-10-12T17:58:52.800Z",
+    "displayVersion": "v1.81.0-3-codex/stream-idle-1294-20261012-6974747f",
+    "certification": "verified"
+  },
+  "package": {
+    "filename": "rynfar-meridian-1.81.0.tgz",
+    "shasum": "63729e4b4d5899cfe8e0b8b62afb754e93507682",
+    "integrity": "sha512-3bAhPHBk0HU4xue/TebKNMBm3OEAUOBrwAagx9Sy++q3p/PNLT1LrIo5UaH1Uioj7DZ4cIBzBqSlmbR5H9TGEA=="
+  },
+  "sdk": "0.2.141",
+  "native": "2.1.296",
+  "client": "1.18.34",
+  "diagnostic": "Failed to authenticate: OAuth token revoked. Please log in again or contact your administrator.",
+  "grantRemovedAfterJoin": true
+}

@@ -1,0 +1,84 @@
+{
+  "status": "setup-or-probe-failure",
+  "error": {
+    "name": "Error",
+    "message": "ownership unexpectedly released while finalizer active",
+    "stack": "Error: ownership unexpectedly released while finalizer active\n    at /private/tmp/meridian-backlog-20261004/meridian/1219/semantic-round1/P4-shutdown-probe/probe.mjs:167:92\n    at processTicksAndRejections (native:7:39)"
+  },
+  "counters": {
+    "sdkQueries": 1,
+    "syntheticAuthChecks": 1,
+    "syntheticExecutableResolutions": 1,
+    "syntheticCredentialReads": 0,
+    "outboundFetchRefusals": 0,
+    "realCredentialReads": 0,
+    "spawnedSdkChildren": 0
+  },
+  "events": [
+    {
+      "name": "actualProxyListening",
+      "elapsedMs": 292.636,
+      "port": 53234
+    },
+    {
+      "name": "mockSdkStarted",
+      "elapsedMs": 342.133
+    },
+    {
+      "name": "ownershipSnapshot",
+      "elapsedMs": 345.868,
+      "label": "admitted request, before close",
+      "guardReleased": false,
+      "guardError": {
+        "name": "Error",
+        "message": "maintenance guard is held; stop all proxies before maintenance"
+      },
+      "runtimeIdentityRetained": false,
+      "sqliteBackendInstalled": true,
+      "connection": {
+        "refs": 1,
+        "pending": 0,
+        "phase": "READY",
+        "databaseOpen": true
+      }
+    },
+    {
+      "name": "mockSdkObservedAbort",
+      "elapsedMs": 398.675
+    },
+    {
+      "name": "actualRequestFinalizerPaused",
+      "elapsedMs": 398.987
+    },
+    {
+      "name": "ownershipSnapshot",
+      "elapsedMs": 399.189,
+      "label": "actual finalizer active",
+      "guardReleased": false,
+      "guardError": {
+        "name": "Error",
+        "message": "maintenance guard is held; stop all proxies before maintenance"
+      },
+      "runtimeIdentityRetained": false,
+      "sqliteBackendInstalled": true,
+      "connection": {
+        "refs": 1,
+        "pending": 0,
+        "phase": "READY",
+        "databaseOpen": true
+      }
+    },
+    {
+      "name": "actualRequestFinalizerReleased",
+      "elapsedMs": 399.471
+    },
+    {
+      "name": "actualSqlTranscriptLeaseReleased",
+      "elapsedMs": 400.383
+    },
+    {
+      "name": "actualClosePromiseFulfilled",
+      "elapsedMs": 413.143
+    }
+  ]
+}

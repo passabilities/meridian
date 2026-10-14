@@ -29,19 +29,19 @@ Environment variables, endpoints, authentication, SDK feature toggles, passthrou
 | `MERIDIAN_DIAGNOSTIC_LOG_SIZE` | `CLAUDE_PROXY_DIAGNOSTIC_LOG_SIZE` | `500` | Diagnostic log ring buffer size (the Logs tab and `GET /telemetry/logs`) |
 | `MERIDIAN_NO_FILE_CHANGES` | `CLAUDE_PROXY_NO_FILE_CHANGES` | unset | Disable "Files changed" summary in responses |
 | `MERIDIAN_STRIP_THINKING` | `CLAUDE_PROXY_STRIP_THINKING` | unset | Set to `1` to strip raw `<thinking>` tags from user-authored prompt text. Off by default — `<thinking>` is a common chain-of-thought convention in hand-written prompts (#720); enable only if your harness is observed leaking it verbatim. |
-| `MERIDIAN_SONNET_MODEL` | `CLAUDE_PROXY_SONNET_MODEL` | `sonnet` | Sonnet context tier: `sonnet` (200k, default) or `sonnet[1m]` (1M, requires Extra Usage†). Not to be confused with `MERIDIAN_DEFAULT_SONNET_MODEL` below, which pins a concrete model id, not a context tier. |
+| `MERIDIAN_SONNET_MODEL` | `CLAUDE_PROXY_SONNET_MODEL` | `sonnet` | Sonnet 4.x context tier: `sonnet` (200k, default) or `sonnet[1m]` (1M, requires Extra Usage†). No effect on Sonnet 5 and later (the default pin), which run with a native 1M window on every plan without Extra Usage. Not to be confused with `MERIDIAN_DEFAULT_SONNET_MODEL` below, which pins a concrete model id, not a context tier. |
 | `MERIDIAN_FABLE_MODEL` | `CLAUDE_PROXY_FABLE_MODEL` | `fable[1m]` | Fable context tier opt-out: set to `fable` to disable the 1M extended context window and stay on the 200k base variant (also governs Mythos, which rides the Fable tier). `fable[1m]` is a documented no-op. Not to be confused with `MERIDIAN_DEFAULT_FABLE_MODEL` below, which pins a concrete model id, not a context tier. |
 | `MERIDIAN_OPUS_MODEL` | `CLAUDE_PROXY_OPUS_MODEL` | `opus[1m]` | Opus context tier opt-out: set to `opus` to disable the 1M extended context window and stay on the 200k base variant. `opus[1m]` is a documented no-op. Not to be confused with `MERIDIAN_DEFAULT_OPUS_MODEL` below, which pins a concrete model id, not a context tier. |
-| `MERIDIAN_1M_CONTEXT_SUPPORT` | `CLAUDE_PROXY_1M_CONTEXT_SUPPORT` | unset | Set to `0`/`false`/`no` to disable 1M context entirely — every model resolves to its 200k base variant, so Meridian never requests the extended window (avoids Extra Usage on 1M). To opt out a single tier instead, use `MERIDIAN_FABLE_MODEL` or `MERIDIAN_OPUS_MODEL` above. |
+| `MERIDIAN_1M_CONTEXT_SUPPORT` | `CLAUDE_PROXY_1M_CONTEXT_SUPPORT` | unset | Set to `0`/`false`/`no` to stop Meridian selecting the optional `[1m]` tier — every model resolves to its base variant, so Meridian never requests the extended window (avoids Extra Usage on 1M). Sonnet 5+ and Haiku 5.5 have a native 1M window with no `[1m]` variant, so this switch does not shrink them. To opt out a single tier instead, use `MERIDIAN_FABLE_MODEL` or `MERIDIAN_OPUS_MODEL` above. |
 | `MERIDIAN_DEFAULT_AGENT` | — | `opencode` | Default adapter for unrecognized agents: `opencode`, `forgecode`, `pi`, `prime`, `crush`, `droid`, `cherry`, `claude-code`, `passthrough`, `polytoken`, `openai`, `jcode`, `letta`, `codex`. Aliases: `prime-agent`, `cherrystudio`, `claudecode`. Re-read per request from the process environment — restart the proxy to pick up deployment-level env changes. |
 | `MERIDIAN_ROUTING` | — | `active` | Session-to-profile routing: `active` (all traffic to the active profile), `sticky` ([sticky session routing](profiles.md#sticky-session-routing)), or `priority` ([priority failover](profiles.md#priority-failover-routing)) |
 | `MERIDIAN_PROFILE_ORDER` | — | *(config order)* | Priority-mode pool order, comma-separated, highest priority first (e.g. `work,personal`). Also editable at `/settings`. |
 | `MERIDIAN_PRIORITY_FAILBACK` | — | `new-conversation` | Priority failback policy: `new-conversation` (current behavior) or `next-user-turn`. Environment value overrides `priorityFailback` in the settings JSON. Applies only to priority routing and OpenCode turn metadata; other adapters retain `new-conversation` behavior. |
 | `MERIDIAN_FOLLOW_ACTIVE` | `CLAUDE_PROXY_FOLLOW_ACTIVE` | unset | Base URL of another Meridian instance to take the active profile from, e.g. `http://127.0.0.1:3456`. For a development instance running beside a primary one — see [Following another instance's active profile](#following-another-instances-active-profile). |
 | `MERIDIAN_PASSTHROUGH_EARLY_STOP` | — | `1` | Set to `0` to disable [digest-turn elimination](#how-tool-calling-works-in-passthrough) and restore the old end-of-turn behavior |
-| `MERIDIAN_PASSTHROUGH_MAX_TURNS` | `CLAUDE_PROXY_PASSTHROUGH_MAX_TURNS` | *(unset — capped at 1)* | Pin the passthrough SDK turn budget. **Setting this opts out of [digest-turn elimination](#how-tool-calling-works-in-passthrough)** — an explicit value always wins over the cap, so a turn budget set to work around an older issue keeps paying for the discarded digest turn. Unset it unless you still need it. |
+| `MERIDIAN_PASSTHROUGH_MAX_TURNS` | `CLAUDE_PROXY_PASSTHROUGH_MAX_TURNS` | *(unset — capped at 1)* | Pin the passthrough SDK turn budget. An explicit value always wins over the one-turn cap; a budget above one turn still stops after a batch forwarded to the client (see [digest-turn elimination](#how-tool-calling-works-in-passthrough)), so the pin only adds headroom before the tool boundary. Unset it unless you still need it. |
 | `MERIDIAN_PASSTHROUGH_UNCAPTURED_TOOL_RECOVERY` | — | *(unset — confirmed CLI rejection only)* | In streaming passthrough, a capped turn with complete client-declared tool calls is returned as `tool_use` when every call has an ID-matched CLI `No such tool available` result; the rejected SDK session is evicted so the next client result replays against a fresh one. Set to `1` to **also** allow the experimental uncaptured abort-window recovery without an explicit dispatch rejection (no live positive gate yet). Set to `0` to disable both recoveries. Non-streaming responses are unaffected. The confirmed-rejection recovery applies at any turn budget, including the deferred-tools budget; the abort-window recovery requires `maxTurns=1`. Both require a complete open envelope and no cancellation. |
-| `MERIDIAN_SESSION_GC_LOCK_WAIT_MS` | `CLAUDE_PROXY_SESSION_GC_LOCK_WAIT_MS` | `2000` | External lifecycle-lock acquisition budget, starting only at the head of the local FIFO; minimum 100 ms. Local queue waiting does not consume this budget and is not bounded by two seconds. Each lock allows 256 waiting callers; a holder stalled for 60 seconds rejects queued/new callers without unlocking its transaction. Request cancellation removes queued work or cancels acquisition, never an executing durable transaction; cleanup remains uncanceled. External timeout, queue capacity and stalled-holder failures answer **503 `overloaded_error`** with distinct reasons. |
+| `MERIDIAN_SESSION_GC_LOCK_WAIT_MS` | `CLAUDE_PROXY_SESSION_GC_LOCK_WAIT_MS` | `2000` | External lifecycle-lock acquisition budget, starting only at the head of the local FIFO; minimum 100 ms. Local queue waiting does not consume this budget and is not bounded by two seconds. Each lock allows 256 waiting callers; a holder stalled for 60 seconds rejects queued/new callers without unlocking its transaction, unless the deadline itself ran late because the event loop was blocked. An answered turn whose terminal publication meets any of these errors is still delivered; its next turn replays history. Request cancellation removes queued work or cancels acquisition, never an executing durable transaction; cleanup remains uncanceled. External timeout, queue capacity and stalled-holder failures answer **503 `overloaded_error`** with distinct reasons. |
 | `MERIDIAN_SESSION_PROFILE_COPY_PRUNE` | `CLAUDE_PROXY_SESSION_PROFILE_COPY_PRUNE` | `0` | Opt in to removing stale cross-profile session mappings during GC. Off preserves native resume history. Returning to a pruned profile uses flattened, context-trimmed replay, which cannot restore SDK thinking. |
 | `MERIDIAN_SESSION_PROFILE_COPY_GRACE_MS` | `CLAUDE_PROXY_SESSION_PROFILE_COPY_GRACE_MS` | `86400000` (24 hours) | With several profiles, the same conversation gets its own stored session under each profile it has run on. When profile-copy pruning is enabled, on every session GC sweep a copy is removed once a newer copy of that conversation exists under another profile and the older copy has not been used for this many milliseconds. The newest copy, copies of a conversation with a request in flight, and mappings a priority route depends on are always kept. A conversation that returns to a profile while its copy exists resumes that profile's own session; after removal it is replayed into a fresh session on that account, as flattened history trimmed to the model's context window. The default covers an account's 5-hour usage window resetting and a day of switching back and forth. `0` keeps only the newest copy. Removal is paced to leave at least half of `MERIDIAN_SESSION_GC_MAX_PENDING` free for new requests, so a large store is trimmed over several sweeps. |
 | `MERIDIAN_SILENT_TURN_RECOVERY` | `CLAUDE_PROXY_SILENT_TURN_RECOVERY` | `1` | Set to `0` to stop spending a recovery turn on a [silent turn](#silent-turns). Detection and telemetry stay on either way |
@@ -61,7 +61,7 @@ Environment variables, endpoints, authentication, SDK feature toggles, passthrou
 | `MERIDIAN_DEFAULT_PROFILE` | — | *(first profile)* | Default profile ID when no header is sent |
 | `MERIDIAN_ADAPTER_INSTANCES` | — | unset | JSON [adapter instance](agents.md#adapter-instances) definitions, overriding `~/.config/meridian/adapter-instances.json` |
 | `MERIDIAN_BETA_POLICY` | — | `allow-safe` | Client `anthropic-beta` header handling: `allow-safe`, `strip-all`, or `allow-all` |
-| `MERIDIAN_DEFAULT_{FABLE,OPUS,SONNET,HAIKU}_MODEL` | — | canonical ids | Pin the model id the SDK resolves for each tier alias (e.g. `MERIDIAN_DEFAULT_OPUS_MODEL`) |
+| `MERIDIAN_DEFAULT_{FABLE,OPUS,SONNET,HAIKU}_MODEL` | — | canonical ids | Pin the model id the SDK resolves for each tier alias (e.g. `MERIDIAN_DEFAULT_OPUS_MODEL`); Haiku defaults to `claude-haiku-5-5` |
 | `MERIDIAN_SESSION_DIR` | `CLAUDE_PROXY_SESSION_DIR` | `~/.cache/meridian` | Directory for the persisted session store |
 | `MERIDIAN_NO_UPDATE_CHECK` | — | unset | Set to `1` to force the update check off even when the `checkForUpdates` setting is on. No outbound request is made at all when set. See [Build provenance](#build-provenance-and-staying-current). |
 | `MERIDIAN_UPDATE_CHECK_URL` | — | npm dist-tags | Registry endpoint for the update check. Point it at a mirror on restricted networks; it must return `{"latest":"<version>"}`. |
@@ -75,11 +75,51 @@ Environment variables, endpoints, authentication, SDK feature toggles, passthrou
 | `MERIDIAN_HOST_ID` | — | derived | Stable, unique container identity for session locks; see [deployment](deployment.md#persistence-and-host-identity). |
 | `MERIDIAN_QUIET` | `CLAUDE_PROXY_QUIET` | unset | Suppress informational telemetry startup output; warnings and errors still print. |
 | `MERIDIAN_AUTH_RENEWAL_WARN_DAYS` | — | `3` | Renewal warning horizon reported by health when credential renewal information is available. |
-| `MERIDIAN_PLUGIN_DIR` | — | `~/.config/meridian/plugins` | Plugin auto-discovery directory |
-| `MERIDIAN_PLUGIN_CONFIG` | — | `~/.config/meridian/plugins.json` | Plugin manifest path |
+| `MERIDIAN_PLUGIN_DIR` | — | `<config dir>/plugins` | Plugin auto-discovery directory |
+| `MERIDIAN_PLUGIN_CONFIG` | — | `<config dir>/plugins.json` | Plugin manifest path |
 | `MERIDIAN_CREDENTIALS_READONLY` | `CLAUDE_PROXY_CREDENTIALS_READONLY` | unset | Set to `1` to forbid this instance from refreshing or writing OAuth credentials. For a second instance sharing another's credential files — see [Read-only credentials](#read-only-credentials). |
 
 †These are Meridian context defaults, not a billing guarantee. Availability and extended-context charges depend on the model and account; consult [Anthropic model configuration](https://code.claude.com/docs/en/model-config#extended-context). Historical Max/Team tests do not establish entitlement for another account.
+
+### Haiku 5.5
+
+The bare `haiku` alias defaults to `claude-haiku-5-5`. Use Claude Code **2.1.293
+or newer** (including when selecting a system/custom executable). Haiku 5.5 has
+a native **1M context window**, up to **128K output tokens**, and adaptive
+thinking controlled by effort; it does not need a `haiku[1m]` SDK alias.
+Explicit `claude-haiku-4-5` and dated 4.5 requests retain their requested model
+and 200k context window (default replay allowance 160k, with a 20k reserve).
+Shell/profile pins and `MERIDIAN_DEFAULT_HAIKU_MODEL`
+still work; replay capacity follows the effective Haiku pin.
+
+The tested Claude Code 2.1.296 / Agent SDK 0.2.141 path cannot reliably honor
+explicit `thinking: disabled` or `thinking.display: omitted` on Haiku 5.5.
+Meridian refuses those requests with HTTP 400 **before generation**, including
+an authoritative adapter-off setting or a beta policy that disables thinking.
+Use adaptive thinking with effort, omit display/use `summarized`, or explicitly
+select Haiku 4.5. The native CLI converts legacy enabled/manual-budget inputs
+to adaptive thinking on Haiku 5.5; a numeric thinking budget is not an adaptive
+hard cap. Use effort for depth, or keep an explicit 4.5 pin for manual thinking.
+The tested native SDK path preserves a 4.5 budget supplied as SDK-style
+`budgetTokens`; conventional Anthropic `budget_tokens` is not translated by the
+existing HTTP builder and was not preserved in the retained control. This change
+does not fix that pre-existing limitation or guarantee snake-case manual budgets.
+The disabled/omitted refusal is a native SDK limitation, not a claim that Haiku
+5.5's API lacks those controls.
+
+Built-in cost estimates use Haiku 5.5's short-prompt rates ($0.10 input / $0.50
+output per million tokens). Above **100,000 prompt tokens**, including cache
+reads and writes, the entire request uses $0.50 / $2.50 instead. Five-minute
+cache writes cost 1.25× input and cache reads 0.10× input. Settings list the
+short-prompt rates; custom overrides remain flat. These are API-value estimates,
+not subscription bills; SDK-aggregated subrequests and one-hour cache writes
+cannot be reconstructed exactly from the retained request totals. New Haiku
+records retain the effective SDK pin for pricing, while request-key overrides
+still win. Historical bare aliases without that pin use today's alias valuation,
+not a reconstruction of the model actually served.
+
+See Anthropic's [overview](https://platform.claude.com/docs/en/models/haiku-5-5/overview)
+and [migration guide](https://platform.claude.com/docs/en/models/haiku-5-5/migration-guide).
 
 ### Read-only credentials
 
@@ -166,10 +206,11 @@ second instance pointed at an empty directory starts genuinely empty:
 file when set. `XDG_CONFIG_HOME` is deliberately ignored: honouring it would
 relocate the configuration of everyone who has it set, without them asking.
 
-Two paths do **not** follow it yet — plugins (`plugins/`, `plugins.json`) and
-`design-token.json` still default under `~/.config/meridian` whatever this is set
-to. Point a second instance's plugins elsewhere with `MERIDIAN_PLUGIN_DIR` /
-`MERIDIAN_PLUGIN_CONFIG` / `MERIDIAN_DESIGN_TOKEN_PATH` in the meantime.
+Plugins follow it too: `plugins/` and `plugins.json` default under this
+directory, and `MERIDIAN_PLUGIN_DIR` / `MERIDIAN_PLUGIN_CONFIG` still win when
+set. One path does **not** follow it yet: `design-token.json` still defaults
+under `~/.config/meridian`; point a second instance's elsewhere with
+`MERIDIAN_DESIGN_TOKEN_PATH`.
 
 Running a second instance beside your usual one:
 
@@ -301,8 +342,9 @@ adapter lets the subprocess run the built-in WebFetch at all.
 | `POST /profiles/add/complete` | Finish that creation — writes the profile only once Anthropic returns credentials |
 | `GET /v1/usage/quota` | Usage windows for the active profile (JSON) |
 | `GET /v1/usage/quota/all` | Usage windows for every profile (JSON) |
-| `GET /settings` | Routing, SDK feature toggles, model pricing, telemetry storage, update-check and page layout UI |
+| `GET /settings` | Routing, SDK feature toggles, model pricing, telemetry storage, update-check, site-header and page layout UI |
 | `GET/PUT /settings/api/updates` | Read or set `checkForUpdates` (JSON `{"checkForUpdates": true}`); takes effect on the running proxy |
+| `GET/PUT /settings/api/header` | Read or set `showHostname` (JSON `{"showHostname": true}`): name the machine beside the header's status; takes effect on the running proxy |
 | `GET/PUT /settings/api/layout` | Read or set the web pages' `layout`: `contained` (default, a centered column) or `wide` (spans the window, more cards per row). JSON `{"layout": "wide"}`, `null` to unset; applies on the next page load |
 | `GET /plugins` | Plugin management page (`/plugins/list`, `POST /plugins/reload` for JSON/actions) |
 
@@ -320,6 +362,34 @@ Illustrative health response excerpt (versions and status vary by installation):
 ```
 
 `plugin.opencode` is `"configured"` when `meridian setup` has been run, `"not-configured"` otherwise.
+
+With `"showHostname": true` in `settings.json` (or the switch under **Site
+Header** at `/settings`), `/health` also carries `"hostname"`, the machine's
+name as the OS reports it, and the site header shows it beside the status, e.g.
+`Operational · nwkr-desktop`. It is off by default because `/health` answers
+without the API key.
+
+This applies to Claude and standalone Antigravity health, including unhealthy
+and draining responses; their status codes and other fields stay intact.
+`/livez` and `/readyz` do not disclose the hostname. The header shows the first
+DNS label (or a whole IP address), with the complete name in its tooltip.
+
+`GET /settings/api/header` returns `{ "showHostname": false, "hostname":
+"<OS name>" }` when off. `PUT` accepts a boolean, `null` to remove the saved
+field, or an omitted field to preserve it; invalid values or bodies return
+400. Both routes use the existing `MERIDIAN_API_KEY` gate when configured.
+Health and header settings bypass caches, and disabling takes effect on
+responses assembled after the setting changes, including probes already
+waiting for auth. The UI permits one hostname save at a time and ignores
+older health polls when a newer refresh has started.
+
+Browser writes must originate from this server. HTTPS origins are also
+accepted across an internal HTTP TLS-termination hop with the same preserved
+public Host/port; explicit default 443 is equivalent to omitted HTTPS 443.
+Foreign, opaque, malformed or different-port origins return 403. Forwarding
+headers are not trusted. A reverse proxy that rewrites Host must preserve the
+public Host for this route. CLI writes without an `Origin` header continue to
+work through the API-key gate.
 
 ## Error reporting
 
@@ -633,7 +703,7 @@ when their opening text and working directory match.
 | `letta` | The `conv-<uuid>` id in the agent-info block Letta places in its opening user message (no session header) |
 | `passthrough` (LiteLLM) | `x-litellm-session-id` |
 | `cherry`, `openai` | Inherit OpenCode header handling; a headerless generic OpenAI tool loop additionally gets a derived `tool-loop:<hash>` key, so it resumes instead of packing |
-| `polytoken` | Valid `x-polytoken-session` |
+| `polytoken` | Nonblank `x-polytoken-conversation`, falling back to `x-polytoken-session` |
 | `droid`, `forgecode` | none — fingerprint fallback |
 
 ### Claude Code behind a gateway
@@ -776,8 +846,9 @@ request-scoped context contract or a way to make content disappear from an
 active model session. In particular, do not use it for secrets or instructions
 that must be forgotten. For Pi and generic passthrough, persist advisory
 snapshots in append-only history when client and SDK context must agree. An
-explicit opt-in contract with defined retention semantics remains under
-discussion in [#1068](https://github.com/rynfar/meridian/issues/1068).
+explicit request-scoped context API was declined in
+[#1068](https://github.com/rynfar/meridian/issues/1068); append-only advisory
+snapshots remain the supported approach.
 
 ### Reading the log
 
@@ -1033,14 +1104,17 @@ Measured against the live SDK (sonnet, one tool call), capped vs. uncapped: **66
 
 The cap is lifted for the cases that genuinely need the SDK to keep going — deferred tools (ToolSearch discovery is a real round-trip), a configured advisor, and structured output — and an explicit `MERIDIAN_PASSTHROUGH_MAX_TURNS` always wins. Kill switch: `MERIDIAN_PASSTHROUGH_EARLY_STOP=0` restores the uncapped multi-turn behavior.
 
+A lifted budget still stops at the tool boundary. Deferred tools and an advisor need turns *before* the client tool call, not after it, so whenever the budget is above one turn Meridian adds a `PostToolBatch` hook: once a batch holding a call forwarded to the client has resolved, the hook returns `continue: false` and the CLI ends the turn without another model request. The turn ends on a normal `success` result, so the transcript is committed at the tool boundary exactly as under the cap. The stop counts only calls Meridian captured for the client. A batch made only of other calls continues: SDK-internal ones (ToolSearch), a bare tool name the CLI refused, a repeat the hook dropped — so the CLI-refusal recovery (`MERIDIAN_PASSTHROUGH_UNCAPTURED_TOOL_RECOVERY`) still runs to `error_max_turns`. Not covered: the one-turn cap, where `error_max_turns` is the expected terminal shape; structured output, whose answer is a StructuredOutput call that can only come after the denial; and the kill switch, which removes the stop along with the cap.
+
 > **Upgrade note.** If you previously set `MERIDIAN_PASSTHROUGH_MAX_TURNS` — most
-> likely to give deep orchestration chains more headroom (#494) — you will not
-> get this saving: an explicit budget wins over the cap by design, so every tool
-> call still pays for a digest turn. Try unsetting it. The reason the override
+> likely to give deep orchestration chains more headroom (#494) — an explicit
+> budget still wins over the cap by design. A budget above one turn no longer
+> pays for a digest turn: it gets the `PostToolBatch` stop described above, so
+> the pin only adds headroom before the tool boundary. The reason the override
 > was needed is largely gone: it existed because wide parallel tool calls could
-> exhaust the budget, and under the cap the SDK stops at the tool boundary
-> instead of competing for turns with its own internal loop. If unsetting it
-> causes trouble, that is worth an issue rather than a permanent pin.
+> exhaust the budget, and the SDK now stops at the tool boundary instead of
+> competing for turns with its own internal loop. If unsetting it causes
+> trouble, that is worth an issue rather than a permanent pin.
 >
 > Two other behaviours change with the cap, both deliberate. A passthrough tool
 > turn now ends on the SDK's `max_turns` result rather than a clean `success` —

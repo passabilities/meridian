@@ -1,0 +1,297 @@
+{
+  "label": "candidate-0b080b02",
+  "result": "FAIL",
+  "model": "gemini-3.8-flash-low",
+  "platform": "darwin",
+  "arch": "arm64",
+  "node": "v22.22.3",
+  "nativeHash": "8c01ef82307dc01455418eb2e6e82f2989a3fa8b815c4b192efaaa89a55bef8d",
+  "pluginHash": "0b40c022e3883332b39ad5bc6411033f0d836dc3bd303476d4bfe7226cc77e8e",
+  "toolMs": 1000,
+  "idleMs": 10000,
+  "pauseMs": 1600,
+  "clientPreflight": true,
+  "metrics": [
+    {
+      "model": "gemini-3.8-flash-low",
+      "status": 200,
+      "continuation": "new",
+      "conversationId": "a95546f9-8fc0-46ec-b83a-ad2c1fd38d7b",
+      "inputTokens": 14338,
+      "outputTokens": 10
+    },
+    {
+      "model": "gemini-3.8-flash-low",
+      "status": 200,
+      "continuation": "new",
+      "conversationId": "fee6744b-e13b-4ea4-8fe7-61af42931b4f",
+      "inputTokens": 14390,
+      "outputTokens": 9
+    },
+    {
+      "model": "gemini-3.8-flash-low",
+      "status": 200,
+      "continuation": "new",
+      "conversationId": "e92dd4fb-e17d-4794-81d4-b683f6cd2778",
+      "inputTokens": 14441,
+      "outputTokens": 7
+    }
+  ],
+  "requests": [
+    {
+      "model": "gemini-3.8-flash-low",
+      "id": "814efd96-0422-4943-83cb-a1bd752d2744",
+      "messageCount": 1
+    },
+    {
+      "model": "gemini-3.8-flash-low",
+      "id": "3e7ee104-0cb2-4497-a17d-d28638836b3b",
+      "messageCount": 3
+    },
+    {
+      "model": "gemini-3.8-flash-low",
+      "id": "f6988ebb-f809-41a2-81bb-8c9a52e6601d",
+      "messageCount": 5
+    }
+  ],
+  "health": [
+    {
+      "processes": 1,
+      "active": 0,
+      "pending": 0,
+      "reused": 0,
+      "completed": 1,
+      "failed": 0
+    },
+    {
+      "processes": 0,
+      "active": 0,
+      "pending": 0,
+      "reused": 0,
+      "completed": 1,
+      "failed": 0
+    },
+    {
+      "processes": 1,
+      "active": 0,
+      "pending": 0,
+      "reused": 0,
+      "completed": 2,
+      "failed": 0
+    },
+    {
+      "processes": 0,
+      "active": 0,
+      "pending": 0,
+      "reused": 0,
+      "completed": 2,
+      "failed": 0
+    },
+    {
+      "processes": 1,
+      "active": 0,
+      "pending": 0,
+      "reused": 0,
+      "completed": 3,
+      "failed": 0
+    }
+  ],
+  "children": [
+    {
+      "pid": 4874,
+      "close": true,
+      "stdoutEof": true,
+      "stderrEof": true,
+      "code": 143,
+      "signal": null
+    },
+    {
+      "pid": 4882,
+      "close": true,
+      "stdoutEof": true,
+      "stderrEof": true,
+      "code": 0,
+      "signal": null
+    },
+    {
+      "pid": 4883,
+      "close": true,
+      "stdoutEof": true,
+      "stderrEof": true,
+      "code": 0,
+      "signal": null
+    },
+    {
+      "pid": 5457,
+      "close": true,
+      "stdoutEof": true,
+      "stderrEof": true,
+      "code": 0,
+      "signal": null
+    },
+    {
+      "pid": 5503,
+      "close": true,
+      "stdoutEof": true,
+      "stderrEof": true,
+      "code": 143,
+      "signal": null
+    },
+    {
+      "pid": 5506,
+      "close": true,
+      "stdoutEof": true,
+      "stderrEof": true,
+      "code": 0,
+      "signal": null
+    },
+    {
+      "pid": 5507,
+      "close": true,
+      "stdoutEof": true,
+      "stderrEof": true,
+      "code": 0,
+      "signal": null
+    },
+    {
+      "pid": 5681,
+      "close": true,
+      "stdoutEof": true,
+      "stderrEof": true,
+      "code": 1,
+      "signal": null
+    },
+    {
+      "pid": 5926,
+      "close": true,
+      "stdoutEof": true,
+      "stderrEof": true,
+      "code": 0,
+      "signal": null
+    },
+    {
+      "pid": 5928,
+      "close": true,
+      "stdoutEof": true,
+      "stderrEof": true,
+      "code": 0,
+      "signal": null
+    },
+    {
+      "pid": 6011,
+      "close": true,
+      "stdoutEof": true,
+      "stderrEof": true,
+      "code": 0,
+      "signal": null
+    },
+    {
+      "pid": 6012,
+      "close": true,
+      "stdoutEof": true,
+      "stderrEof": true,
+      "code": 0,
+      "signal": null
+    },
+    {
+      "pid": 6316,
+      "close": true,
+      "stdoutEof": true,
+      "stderrEof": true,
+      "code": 0,
+      "signal": null
+    },
+    {
+      "pid": 6317,
+      "close": true,
+      "stdoutEof": true,
+      "stderrEof": true,
+      "code": 0,
+      "signal": null
+    },
+    {
+      "pid": 6373,
+      "close": true,
+      "stdoutEof": true,
+      "stderrEof": true,
+      "code": 1,
+      "signal": null
+    },
+    {
+      "pid": 6628,
+      "close": true,
+      "stdoutEof": true,
+      "stderrEof": true,
+      "code": 0,
+      "signal": null
+    },
+    {
+      "pid": 6630,
+      "close": true,
+      "stdoutEof": true,
+      "stderrEof": true,
+      "code": 0,
+      "signal": null
+    },
+    {
+      "pid": 6966,
+      "close": true,
+      "stdoutEof": true,
+      "stderrEof": true,
+      "code": 0,
+      "signal": null
+    },
+    {
+      "pid": 6968,
+      "close": true,
+      "stdoutEof": true,
+      "stderrEof": true,
+      "code": 0,
+      "signal": null
+    },
+    {
+      "pid": 7435,
+      "close": true,
+      "stdoutEof": true,
+      "stderrEof": true,
+      "code": 0,
+      "signal": null
+    },
+    {
+      "pid": 7436,
+      "close": true,
+      "stdoutEof": true,
+      "stderrEof": true,
+      "code": 0,
+      "signal": null
+    },
+    {
+      "pid": 7963,
+      "close": true,
+      "stdoutEof": true,
+      "stderrEof": true,
+      "code": null,
+      "signal": "SIGKILL"
+    },
+    {
+      "pid": 14705,
+      "close": true,
+      "stdoutEof": true,
+      "stderrEof": true,
+      "code": 0,
+      "signal": null
+    },
+    {
+      "pid": 14804,
+      "close": true,
+      "stdoutEof": true,
+      "stderrEof": true,
+      "code": 0,
+      "signal": null
+    }
+  ],
+  "joined": true,
+  "actualPauseMs": 1602,
+  "error": "Completed native conversation expired at the tool deadline\n\n0 !== 1\n",
+  "finalNativeHash": "8c01ef82307dc01455418eb2e6e82f2989a3fa8b815c4b192efaaa89a55bef8d"
+}

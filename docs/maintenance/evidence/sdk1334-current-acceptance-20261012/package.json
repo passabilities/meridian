@@ -1,0 +1,15 @@
+{
+  "source": "35784e08",
+  "treeEquivalentMerge": "8e778b99",
+  "packages": [
+    {
+      "name": "@rynfar/meridian",
+      "version": "1.81.0",
+      "size": 1647193,
+      "unpackedSize": 6076567,
+      "shasum": "26b4ad9877635a44351629b698a4b1aa6a9cc4aa",
+      "integrity": "sha512-KwWFkNNa5HuzEWHnumXkgAT3+Ymrghmc6e7LVrYM+J6F9MpqClmY2T5OGqUckMz4/tx7cjlnUDdnSHZL50IU8w==",
+      "filename": "rynfar-meridian-1.81.0.tgz"
+    }
+  ]
+}

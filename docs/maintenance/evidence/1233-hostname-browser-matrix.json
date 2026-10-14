@@ -1,0 +1,680 @@
+{
+  "platform": "macOS26.6.2arm64",
+  "browser": "T3Code Electron44.4.2 Chromium152.0.7977.130",
+  "productHead": "a6be2cd3d5c3a168610c5a94a67adfa1d1dabba7",
+  "harnessHead": "f33f93a1acfd93fdd73db89b3b1f05ac7a91b65e",
+  "baseline": "9d77d8e282cb9c58d99b8962b900777e9f4b0803",
+  "probe": "scripts/e2e-hostname-header-browser.js",
+  "matrix": [
+    {
+      "width": 320,
+      "path": "/settings",
+      "result": {
+        "actualHostname": "Mac.lan",
+        "actualSettingsPersistence": true,
+        "baseline": {
+          "header": 305,
+          "page": 323,
+          "viewport": 320
+        },
+        "consentOffAfterProbe": true,
+        "failedPollClearsLabel": true,
+        "labels": [
+          {
+            "bounds": {
+              "header": 305,
+              "page": 323,
+              "viewport": 320
+            },
+            "clipped": true,
+            "full": "very-long-machine-hostname-for-fleet-operations-and-build-workers-123456789.fleet.example",
+            "maxWidth": "97.002px",
+            "provenance": "version",
+            "text": "very-long-machine-hostname-for-fleet-operations-and-build-workers-123456789",
+            "title": "Running on very-long-machine-hostname-for-fleet-operations-and-build-workers-123456789.fleet.example",
+            "width": 97
+          },
+          {
+            "bounds": {
+              "header": 305,
+              "page": 323,
+              "viewport": 320
+            },
+            "clipped": false,
+            "full": "203.0.113.27",
+            "maxWidth": "97.002px",
+            "provenance": "version",
+            "text": "203.0.113.27",
+            "title": "Running on 203.0.113.27",
+            "width": 65.8203125
+          },
+          {
+            "bounds": {
+              "header": 305,
+              "page": 323,
+              "viewport": 320
+            },
+            "clipped": false,
+            "full": "2001:db8::f00d",
+            "maxWidth": "97.002px",
+            "provenance": "version",
+            "text": "2001:db8::f00d",
+            "title": "Running on 2001:db8::f00d",
+            "width": 81.4375
+          }
+        ],
+        "noAddedPageOverflow": true,
+        "olderPollIgnored": true,
+        "oneSaveAtATime": true,
+        "path": "/settings",
+        "result": "PASS",
+        "syntheticAuth": true,
+        "syntheticLongAndIpLabels": true,
+        "width": 320
+      }
+    },
+    {
+      "width": 375,
+      "path": "/settings",
+      "result": {
+        "actualHostname": "Mac.lan",
+        "actualSettingsPersistence": true,
+        "baseline": {
+          "header": 360,
+          "page": 360,
+          "viewport": 375
+        },
+        "consentOffAfterProbe": true,
+        "failedPollClearsLabel": true,
+        "labels": [
+          {
+            "bounds": {
+              "header": 360,
+              "page": 360,
+              "viewport": 375
+            },
+            "clipped": true,
+            "full": "very-long-machine-hostname-for-fleet-operations-and-build-workers-123456789.fleet.example",
+            "maxWidth": "97.002px",
+            "provenance": "version",
+            "text": "very-long-machine-hostname-for-fleet-operations-and-build-workers-123456789",
+            "title": "Running on very-long-machine-hostname-for-fleet-operations-and-build-workers-123456789.fleet.example",
+            "width": 97
+          },
+          {
+            "bounds": {
+              "header": 360,
+              "page": 360,
+              "viewport": 375
+            },
+            "clipped": false,
+            "full": "203.0.113.27",
+            "maxWidth": "97.002px",
+            "provenance": "version",
+            "text": "203.0.113.27",
+            "title": "Running on 203.0.113.27",
+            "width": 65.8203125
+          },
+          {
+            "bounds": {
+              "header": 360,
+              "page": 360,
+              "viewport": 375
+            },
+            "clipped": false,
+            "full": "2001:db8::f00d",
+            "maxWidth": "97.002px",
+            "provenance": "version",
+            "text": "2001:db8::f00d",
+            "title": "Running on 2001:db8::f00d",
+            "width": 81.4375
+          }
+        ],
+        "noAddedPageOverflow": true,
+        "olderPollIgnored": true,
+        "oneSaveAtATime": true,
+        "path": "/settings",
+        "result": "PASS",
+        "syntheticAuth": true,
+        "syntheticLongAndIpLabels": true,
+        "width": 375
+      }
+    },
+    {
+      "width": 414,
+      "path": "/settings",
+      "result": {
+        "actualHostname": "Mac.lan",
+        "actualSettingsPersistence": true,
+        "baseline": {
+          "header": 399,
+          "page": 399,
+          "viewport": 414
+        },
+        "consentOffAfterProbe": true,
+        "failedPollClearsLabel": true,
+        "labels": [
+          {
+            "bounds": {
+              "header": 399,
+              "page": 399,
+              "viewport": 414
+            },
+            "clipped": true,
+            "full": "very-long-machine-hostname-for-fleet-operations-and-build-workers-123456789.fleet.example",
+            "maxWidth": "97.002px",
+            "provenance": "version",
+            "text": "very-long-machine-hostname-for-fleet-operations-and-build-workers-123456789",
+            "title": "Running on very-long-machine-hostname-for-fleet-operations-and-build-workers-123456789.fleet.example",
+            "width": 97
+          },
+          {
+            "bounds": {
+              "header": 399,
+              "page": 399,
+              "viewport": 414
+            },
+            "clipped": false,
+            "full": "203.0.113.27",
+            "maxWidth": "97.002px",
+            "provenance": "version",
+            "text": "203.0.113.27",
+            "title": "Running on 203.0.113.27",
+            "width": 65.8203125
+          },
+          {
+            "bounds": {
+              "header": 399,
+              "page": 399,
+              "viewport": 414
+            },
+            "clipped": false,
+            "full": "2001:db8::f00d",
+            "maxWidth": "97.002px",
+            "provenance": "version",
+            "text": "2001:db8::f00d",
+            "title": "Running on 2001:db8::f00d",
+            "width": 81.4375
+          }
+        ],
+        "noAddedPageOverflow": true,
+        "olderPollIgnored": true,
+        "oneSaveAtATime": true,
+        "path": "/settings",
+        "result": "PASS",
+        "syntheticAuth": true,
+        "syntheticLongAndIpLabels": true,
+        "width": 414
+      }
+    },
+    {
+      "width": 768,
+      "path": "/settings",
+      "result": {
+        "actualHostname": "Mac.lan",
+        "actualSettingsPersistence": true,
+        "baseline": {
+          "header": 753,
+          "page": 753,
+          "viewport": 768
+        },
+        "consentOffAfterProbe": true,
+        "failedPollClearsLabel": true,
+        "labels": [
+          {
+            "bounds": {
+              "header": 753,
+              "page": 753,
+              "viewport": 768
+            },
+            "clipped": true,
+            "full": "very-long-machine-hostname-for-fleet-operations-and-build-workers-123456789.fleet.example",
+            "maxWidth": "166.289px",
+            "provenance": "commit",
+            "text": "very-long-machine-hostname-for-fleet-operations-and-build-workers-123456789",
+            "title": "Running on very-long-machine-hostname-for-fleet-operations-and-build-workers-123456789.fleet.example",
+            "width": 166.2890625
+          },
+          {
+            "bounds": {
+              "header": 753,
+              "page": 753,
+              "viewport": 768
+            },
+            "clipped": false,
+            "full": "203.0.113.27",
+            "maxWidth": "166.289px",
+            "provenance": "commit",
+            "text": "203.0.113.27",
+            "title": "Running on 203.0.113.27",
+            "width": 75.15625
+          },
+          {
+            "bounds": {
+              "header": 753,
+              "page": 753,
+              "viewport": 768
+            },
+            "clipped": false,
+            "full": "2001:db8::f00d",
+            "maxWidth": "166.289px",
+            "provenance": "commit",
+            "text": "2001:db8::f00d",
+            "title": "Running on 2001:db8::f00d",
+            "width": 90.7734375
+          }
+        ],
+        "noAddedPageOverflow": true,
+        "olderPollIgnored": true,
+        "oneSaveAtATime": true,
+        "path": "/settings",
+        "result": "PASS",
+        "syntheticAuth": true,
+        "syntheticLongAndIpLabels": true,
+        "width": 768
+      }
+    },
+    {
+      "width": 1280,
+      "path": "/settings",
+      "result": {
+        "actualHostname": "Mac.lan",
+        "actualSettingsPersistence": true,
+        "baseline": {
+          "header": 1265,
+          "page": 1265,
+          "viewport": 1280
+        },
+        "consentOffAfterProbe": true,
+        "failedPollClearsLabel": true,
+        "labels": [
+          {
+            "bounds": {
+              "header": 1265,
+              "page": 1265,
+              "viewport": 1280
+            },
+            "clipped": true,
+            "full": "very-long-machine-hostname-for-fleet-operations-and-build-workers-123456789.fleet.example",
+            "maxWidth": "166.289px",
+            "provenance": "commit",
+            "text": "very-long-machine-hostname-for-fleet-operations-and-build-workers-123456789",
+            "title": "Running on very-long-machine-hostname-for-fleet-operations-and-build-workers-123456789.fleet.example",
+            "width": 166.2890625
+          },
+          {
+            "bounds": {
+              "header": 1265,
+              "page": 1265,
+              "viewport": 1280
+            },
+            "clipped": false,
+            "full": "203.0.113.27",
+            "maxWidth": "166.289px",
+            "provenance": "full",
+            "text": "203.0.113.27",
+            "title": "Running on 203.0.113.27",
+            "width": 75.15625
+          },
+          {
+            "bounds": {
+              "header": 1265,
+              "page": 1265,
+              "viewport": 1280
+            },
+            "clipped": false,
+            "full": "2001:db8::f00d",
+            "maxWidth": "166.289px",
+            "provenance": "full",
+            "text": "2001:db8::f00d",
+            "title": "Running on 2001:db8::f00d",
+            "width": 90.7734375
+          }
+        ],
+        "noAddedPageOverflow": true,
+        "olderPollIgnored": true,
+        "oneSaveAtATime": true,
+        "path": "/settings",
+        "result": "PASS",
+        "syntheticAuth": true,
+        "syntheticLongAndIpLabels": true,
+        "width": 1280
+      }
+    },
+    {
+      "width": 320,
+      "path": "/fixture/provider",
+      "result": {
+        "actualHostname": "Mac.lan",
+        "actualSettingsPersistence": true,
+        "baseline": {
+          "header": 305,
+          "page": 305,
+          "viewport": 320
+        },
+        "consentOffAfterProbe": true,
+        "failedPollClearsLabel": null,
+        "labels": [
+          {
+            "bounds": {
+              "header": 305,
+              "page": 305,
+              "viewport": 320
+            },
+            "clipped": true,
+            "full": "very-long-machine-hostname-for-fleet-operations-and-build-workers-123456789.fleet.example",
+            "maxWidth": "97.002px",
+            "provenance": "version",
+            "text": "very-long-machine-hostname-for-fleet-operations-and-build-workers-123456789",
+            "title": "Running on very-long-machine-hostname-for-fleet-operations-and-build-workers-123456789.fleet.example",
+            "width": 97
+          },
+          {
+            "bounds": {
+              "header": 305,
+              "page": 305,
+              "viewport": 320
+            },
+            "clipped": false,
+            "full": "203.0.113.27",
+            "maxWidth": "97.002px",
+            "provenance": "version",
+            "text": "203.0.113.27",
+            "title": "Running on 203.0.113.27",
+            "width": 65.8203125
+          },
+          {
+            "bounds": {
+              "header": 305,
+              "page": 305,
+              "viewport": 320
+            },
+            "clipped": false,
+            "full": "2001:db8::f00d",
+            "maxWidth": "97.002px",
+            "provenance": "version",
+            "text": "2001:db8::f00d",
+            "title": "Running on 2001:db8::f00d",
+            "width": 81.4375
+          }
+        ],
+        "noAddedPageOverflow": true,
+        "olderPollIgnored": null,
+        "oneSaveAtATime": null,
+        "path": "/fixture/provider",
+        "result": "PASS",
+        "syntheticAuth": true,
+        "syntheticLongAndIpLabels": true,
+        "width": 320
+      }
+    },
+    {
+      "width": 375,
+      "path": "/fixture/provider",
+      "result": {
+        "actualHostname": "Mac.lan",
+        "actualSettingsPersistence": true,
+        "baseline": {
+          "header": 360,
+          "page": 360,
+          "viewport": 375
+        },
+        "consentOffAfterProbe": true,
+        "failedPollClearsLabel": null,
+        "labels": [
+          {
+            "bounds": {
+              "header": 360,
+              "page": 360,
+              "viewport": 375
+            },
+            "clipped": true,
+            "full": "very-long-machine-hostname-for-fleet-operations-and-build-workers-123456789.fleet.example",
+            "maxWidth": "97.002px",
+            "provenance": "version",
+            "text": "very-long-machine-hostname-for-fleet-operations-and-build-workers-123456789",
+            "title": "Running on very-long-machine-hostname-for-fleet-operations-and-build-workers-123456789.fleet.example",
+            "width": 97
+          },
+          {
+            "bounds": {
+              "header": 360,
+              "page": 360,
+              "viewport": 375
+            },
+            "clipped": false,
+            "full": "203.0.113.27",
+            "maxWidth": "97.002px",
+            "provenance": "version",
+            "text": "203.0.113.27",
+            "title": "Running on 203.0.113.27",
+            "width": 65.8203125
+          },
+          {
+            "bounds": {
+              "header": 360,
+              "page": 360,
+              "viewport": 375
+            },
+            "clipped": false,
+            "full": "2001:db8::f00d",
+            "maxWidth": "97.002px",
+            "provenance": "version",
+            "text": "2001:db8::f00d",
+            "title": "Running on 2001:db8::f00d",
+            "width": 81.4375
+          }
+        ],
+        "noAddedPageOverflow": true,
+        "olderPollIgnored": null,
+        "oneSaveAtATime": null,
+        "path": "/fixture/provider",
+        "result": "PASS",
+        "syntheticAuth": true,
+        "syntheticLongAndIpLabels": true,
+        "width": 375
+      }
+    },
+    {
+      "width": 414,
+      "path": "/fixture/provider",
+      "result": {
+        "actualHostname": "Mac.lan",
+        "actualSettingsPersistence": true,
+        "baseline": {
+          "header": 399,
+          "page": 399,
+          "viewport": 414
+        },
+        "consentOffAfterProbe": true,
+        "failedPollClearsLabel": null,
+        "labels": [
+          {
+            "bounds": {
+              "header": 399,
+              "page": 399,
+              "viewport": 414
+            },
+            "clipped": true,
+            "full": "very-long-machine-hostname-for-fleet-operations-and-build-workers-123456789.fleet.example",
+            "maxWidth": "97.002px",
+            "provenance": "version",
+            "text": "very-long-machine-hostname-for-fleet-operations-and-build-workers-123456789",
+            "title": "Running on very-long-machine-hostname-for-fleet-operations-and-build-workers-123456789.fleet.example",
+            "width": 97
+          },
+          {
+            "bounds": {
+              "header": 399,
+              "page": 399,
+              "viewport": 414
+            },
+            "clipped": false,
+            "full": "203.0.113.27",
+            "maxWidth": "97.002px",
+            "provenance": "version",
+            "text": "203.0.113.27",
+            "title": "Running on 203.0.113.27",
+            "width": 65.8203125
+          },
+          {
+            "bounds": {
+              "header": 399,
+              "page": 399,
+              "viewport": 414
+            },
+            "clipped": false,
+            "full": "2001:db8::f00d",
+            "maxWidth": "97.002px",
+            "provenance": "version",
+            "text": "2001:db8::f00d",
+            "title": "Running on 2001:db8::f00d",
+            "width": 81.4375
+          }
+        ],
+        "noAddedPageOverflow": true,
+        "olderPollIgnored": null,
+        "oneSaveAtATime": null,
+        "path": "/fixture/provider",
+        "result": "PASS",
+        "syntheticAuth": true,
+        "syntheticLongAndIpLabels": true,
+        "width": 414
+      }
+    },
+    {
+      "width": 768,
+      "path": "/fixture/provider",
+      "result": {
+        "actualHostname": "Mac.lan",
+        "actualSettingsPersistence": true,
+        "baseline": {
+          "header": 768,
+          "page": 768,
+          "viewport": 768
+        },
+        "consentOffAfterProbe": true,
+        "failedPollClearsLabel": null,
+        "labels": [
+          {
+            "bounds": {
+              "header": 768,
+              "page": 768,
+              "viewport": 768
+            },
+            "clipped": true,
+            "full": "very-long-machine-hostname-for-fleet-operations-and-build-workers-123456789.fleet.example",
+            "maxWidth": "166.289px",
+            "provenance": "version",
+            "text": "very-long-machine-hostname-for-fleet-operations-and-build-workers-123456789",
+            "title": "Running on very-long-machine-hostname-for-fleet-operations-and-build-workers-123456789.fleet.example",
+            "width": 166.2890625
+          },
+          {
+            "bounds": {
+              "header": 768,
+              "page": 768,
+              "viewport": 768
+            },
+            "clipped": false,
+            "full": "203.0.113.27",
+            "maxWidth": "166.289px",
+            "provenance": "version",
+            "text": "203.0.113.27",
+            "title": "Running on 203.0.113.27",
+            "width": 75.15625
+          },
+          {
+            "bounds": {
+              "header": 768,
+              "page": 768,
+              "viewport": 768
+            },
+            "clipped": false,
+            "full": "2001:db8::f00d",
+            "maxWidth": "166.289px",
+            "provenance": "commit",
+            "text": "2001:db8::f00d",
+            "title": "Running on 2001:db8::f00d",
+            "width": 90.7734375
+          }
+        ],
+        "noAddedPageOverflow": true,
+        "olderPollIgnored": null,
+        "oneSaveAtATime": null,
+        "path": "/fixture/provider",
+        "result": "PASS",
+        "syntheticAuth": true,
+        "syntheticLongAndIpLabels": true,
+        "width": 768
+      }
+    },
+    {
+      "width": 1280,
+      "path": "/fixture/provider",
+      "result": {
+        "actualHostname": "Mac.lan",
+        "actualSettingsPersistence": true,
+        "baseline": {
+          "header": 1280,
+          "page": 1280,
+          "viewport": 1280
+        },
+        "consentOffAfterProbe": true,
+        "failedPollClearsLabel": null,
+        "labels": [
+          {
+            "bounds": {
+              "header": 1280,
+              "page": 1280,
+              "viewport": 1280
+            },
+            "clipped": true,
+            "full": "very-long-machine-hostname-for-fleet-operations-and-build-workers-123456789.fleet.example",
+            "maxWidth": "166.289px",
+            "provenance": "commit",
+            "text": "very-long-machine-hostname-for-fleet-operations-and-build-workers-123456789",
+            "title": "Running on very-long-machine-hostname-for-fleet-operations-and-build-workers-123456789.fleet.example",
+            "width": 166.2890625
+          },
+          {
+            "bounds": {
+              "header": 1280,
+              "page": 1280,
+              "viewport": 1280
+            },
+            "clipped": false,
+            "full": "203.0.113.27",
+            "maxWidth": "166.289px",
+            "provenance": "commit",
+            "text": "203.0.113.27",
+            "title": "Running on 203.0.113.27",
+            "width": 75.15625
+          },
+          {
+            "bounds": {
+              "header": 1280,
+              "page": 1280,
+              "viewport": 1280
+            },
+            "clipped": false,
+            "full": "2001:db8::f00d",
+            "maxWidth": "166.289px",
+            "provenance": "commit",
+            "text": "2001:db8::f00d",
+            "title": "Running on 2001:db8::f00d",
+            "width": 90.7734375
+          }
+        ],
+        "noAddedPageOverflow": true,
+        "olderPollIgnored": null,
+        "oneSaveAtATime": null,
+        "path": "/fixture/provider",
+        "result": "PASS",
+        "syntheticAuth": true,
+        "syntheticLongAndIpLabels": true,
+        "width": 1280
+      }
+    }
+  ]
+}

@@ -1,0 +1,65 @@
+{
+  "mode": "synthetic-read-only-review",
+  "variant": "sql",
+  "sourceHead": "6558c209f8bddf8e59b554d16c9834381c7817c2",
+  "sourceStoreSha256": "524f9685e46616fef77336f0f3d0258df26f00484083834f9a5b9eb4a2529b5a",
+  "runtime": {
+    "platform": "darwin",
+    "arch": "arm64",
+    "nodeCompat": "v24.3.0",
+    "bun": "1.3.14"
+  },
+  "libsqlVersion": "0.5.29",
+  "sqlite": {
+    "version": "3.45.1",
+    "sourceId": "2024-01-30 16:01:20 e876e51a0ed5c5b3126f52e532044363a014bc594cfefa87ffb5b82257ccalt1",
+    "_metadata": {
+      "duration": 7.91e-7
+    }
+  },
+  "modelCalls": 0,
+  "credentialReads": 0,
+  "findings": [
+    {
+      "case": "immutable-priority-authority",
+      "variant": "sql",
+      "assignmentFrozen": false,
+      "assignmentMutationAccepted": true,
+      "cachedProfileAfterMutation": "mutated-in-memory",
+      "persistedProfile": "work",
+      "attemptFrozen": false,
+      "attemptMutationAccepted": true,
+      "persistedBlockedIssueTimeBeforeSecondClaim": 200,
+      "olderTrustedTurnAcceptedAfterCacheMutation": true,
+      "safetyAssertion": "FAIL"
+    },
+    {
+      "case": "retained-arrival-eviction-hold",
+      "variant": "sql",
+      "gateEntries": 0,
+      "evictionSettledBeforeRelease": true,
+      "safetyAssertion": "FAIL"
+    },
+    {
+      "case": "retirement-digest-rename-race",
+      "variant": "sql",
+      "interceptedRenames": 1,
+      "canonicalFileStillPresent": false,
+      "importedDigest": "a38b08bc515c3966973c2ed2bbbcff0a0e636b6e5df17fbbc05c0372a7bd8a6f",
+      "archivedDigest": "f776ea685a396f9a5b971ea1599848bdfc60a8a1bb4707084066ba8311cd56b7",
+      "unimportedUpdateArchived": true,
+      "safetyAssertion": "FAIL"
+    },
+    {
+      "case": "legacy-journal-preserves-publication-owner",
+      "variant": "sql",
+      "publicationLeasesBefore": 1,
+      "publicationLeasesAfter": 0,
+      "stateAfterMerge": "retired",
+      "syntheticDeletions": 2,
+      "targetDeletions": 1,
+      "finalTargetState": "deleted",
+      "safetyAssertion": "FAIL"
+    }
+  ]
+}

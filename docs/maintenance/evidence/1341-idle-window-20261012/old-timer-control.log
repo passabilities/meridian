@@ -1,0 +1,40 @@
+bun test v1.3.14 (0d9b296a)
+
+src/__tests__/antigravity-idle-conversation.test.ts:
+29 |   }
+30 | 
+31 |   it("keeps a finished conversation for idleConversationMs, beyond the tool-result deadline", async () => {
+32 |     const runtime = await twoTurns({ pendingToolTimeoutMs: 100, idleConversationMs: 3000 })
+33 |     expect(runtime.idleConversationMs).toBe(3000)
+34 |     expect(runtime.reused).toBe(1)
+                                ^
+error: expect(received).toBe(expected)
+
+Expected: 1
+Received: 0
+
+      at <anonymous> (/Users/rynfar/repos/meridian-agy-idle-window-1341-20261012/src/__tests__/antigravity-idle-conversation.test.ts:34:28)
+(fail) Antigravity idle conversation retention > keeps a finished conversation for idleConversationMs, beyond the tool-result deadline [857.78ms]
+(pass) Antigravity idle conversation retention > defaults to the tool-result deadline [820.50ms]
+40 |     expect(runtime.reused).toBe(0)
+41 |   })
+42 | 
+43 |   it("expires a shorter explicit idle window independently of the tool deadline", async () => {
+44 |     const runtime = await twoTurns({ pendingToolTimeoutMs: 3000, idleConversationMs: 100 })
+45 |     expect(runtime.reused).toBe(0)
+                                ^
+error: expect(received).toBe(expected)
+
+Expected: 0
+Received: 1
+
+      at <anonymous> (/Users/rynfar/repos/meridian-agy-idle-window-1341-20261012/src/__tests__/antigravity-idle-conversation.test.ts:45:28)
+(fail) Antigravity idle conversation retention > expires a shorter explicit idle window independently of the tool deadline [790.68ms]
+(pass) Antigravity idle conversation retention > preserves an existing long tool deadline when the new option is unset [0.17ms]
+(pass) Antigravity idle conversation retention > resolves independent environment deadlines and lets explicit configuration win [0.18ms]
+(pass) Antigravity idle conversation retention > rejects values outside 1..86400000 ms [0.14ms]
+
+ 4 pass
+ 2 fail
+ 17 expect() calls
+Ran 6 tests across 1 file. [2.88s]

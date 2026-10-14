@@ -1,0 +1,23 @@
+bun test v1.3.14 (0d9b296a)
+
+src/__tests__/antigravity-idle-conversation.test.ts:
+(pass) Antigravity idle conversation retention > keeps a finished conversation for idleConversationMs, beyond the tool-result deadline [674.64ms]
+(pass) Antigravity idle conversation retention > defaults to the tool-result deadline [715.78ms]
+466 |     this.maxConcurrent = options.maxConcurrent ?? 4
+467 |     this.turnTimeoutMs = options.turnTimeoutMs ?? 300_000
+468 |     this.pendingToolTimeoutMs = options.pendingToolTimeoutMs ?? 60_000
+469 |     for (const value of [this.maxConcurrent, this.turnTimeoutMs, this.pendingToolTimeoutMs]) if (!Number.isSafeInteger(value) || value <= 0) throw new Error("Antigravity limits must be positive integers")
+470 |     this.idleConversationMs = options.idleConversationMs ?? this.pendingToolTimeoutMs
+471 |     if (!Number.isSafeInteger(this.idleConversationMs) || this.idleConversationMs <= 0 || this.idleConversationMs > 86_400_000) throw new Error("Antigravity idle conversation time must be an integer from 1 to 86400000 ms")
+                                                                                                                                                                                                                                   ^
+error: Antigravity idle conversation time must be an integer from 1 to 86400000 ms
+      at new AntigravityRuntime (/Users/rynfar/repos/meridian-agy-idle-window-1341-20261012/src/proxy/backends/antigravityRuntime.ts:471:222)
+      at <anonymous> (/Users/rynfar/repos/meridian-agy-idle-window-1341-20261012/src/__tests__/antigravity-idle-conversation.test.ts:44:21)
+(fail) Antigravity idle conversation retention > preserves an existing long tool deadline when the new option is unset [0.18ms]
+(pass) Antigravity idle conversation retention > resolves independent environment deadlines and lets explicit configuration win [0.11ms]
+(pass) Antigravity idle conversation retention > rejects values outside 1..86400000 ms [0.05ms]
+
+ 4 pass
+ 1 fail
+ 13 expect() calls
+Ran 5 tests across 1 file. [1.97s]

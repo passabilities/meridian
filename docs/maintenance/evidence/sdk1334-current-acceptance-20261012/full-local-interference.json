@@ -1,0 +1,11 @@
+{
+  "originalProcess": 91165,
+  "exit": 1,
+  "pass": 5288,
+  "skip": 35,
+  "fail": 3,
+  "cause": "Ancestry merge ran while the test suite read source files; error-reporting subprocesses encountered transient conflict markers",
+  "directEvidence": "Unexpected << at src/proxy/session/sdkProcessGate.ts:296:3",
+  "correction": "Complete current-main integration before rerunning the entire suite; keep checkout unchanged while verification runs",
+  "acceptance": false
+}

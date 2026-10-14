@@ -1,0 +1,151 @@
+{
+  "generatedUtc": "2026-10-05T00:39:29.495340+00:00",
+  "pr": 1243,
+  "sourceHead": "6558c209f8bddf8e59b554d16c9834381c7817c2",
+  "baseHead": "c159bf9befc49c823a94f48c8d554236115e827e",
+  "currentMain": "8e1c8bf738d7372ded01f28e99d6ec167acaf76f",
+  "sourceHashes": {
+    "src/proxy/sessionStore.ts": "524f9685e46616fef77336f0f3d0258df26f00484083834f9a5b9eb4a2529b5a",
+    "src/proxy/sessionLifecycle.ts": "d2352396aee0ea862eadc6abf23923c5652448b60bebfa6a7464e480318519bf",
+    "src/proxy/session/storeDatabase.ts": "0ebcd9dc4cb9a04f15d6442c00624636067aef298a4d1066998d386afe1b763d",
+    "src/__tests__/proxy-request-cancellation.test.ts": "7aa2e73e090078e55df17dc0f28a220b929d24626b18f257dcd6ff5bf433d036"
+  },
+  "sourceWorktree": {
+    "path": "/Users/rynfar/repos/meridian-sqlite-review-1243",
+    "trackedClean": true,
+    "preExistingUntrackedPreserved": "?? src/__tests__/session-store-migration-retirement-review.test.ts",
+    "untrackedTestOpened": false
+  },
+  "runtime": {
+    "actualProbe": "Bun1.3.14 macOSarm64",
+    "bunNodeCompatibilityString": "v24.3.0",
+    "separatelyInventoriedNode": "22.22.3; not probe execution runtime"
+  },
+  "probeRuns": [
+    {
+      "variant": "sql initial",
+      "processExit": 0,
+      "safetyAssertions": "four FAILs",
+      "stdout": "probe-sql.initial.stdout.json",
+      "stderr": "probe-sql.initial.stderr.log"
+    },
+    {
+      "variant": "async-json control",
+      "processExit": 0,
+      "safetyAssertions": "two PASSes",
+      "stdout": "probe-async-json.stdout.json",
+      "stderr": "probe-async-json.stderr.log"
+    },
+    {
+      "variant": "sql with target deletion counter",
+      "processExit": 0,
+      "safetyAssertions": "four FAILs",
+      "stdout": "probe-sql.stdout.json",
+      "stderr": "probe-sql.stderr.log"
+    }
+  ],
+  "scope": {
+    "rootPreparedNpmCiIgnoreScripts": true,
+    "reviewerInstalls": 0,
+    "modelCalls": 0,
+    "credentialReads": 0,
+    "sdkCalls": 0,
+    "githubMutations": 0,
+    "fullSuiteRuns": 0,
+    "sourceCorrections": 0,
+    "subagents": 0
+  },
+  "fixtureCleanup": "mode0700 mkdtemp stores; queued writes settled; native reader/writer connections closed; hooks restored; all fixture roots removed in finally; no owned server/model client launched",
+  "artifacts": {
+    "authored-commits.txt": {
+      "sha256": "8ad2a97a57905757cb29a3544e94340b8c96a1bd31b6a4a5bbbf4cd0bc97ff79",
+      "bytes": 8907
+    },
+    "probe-sql.initial.stderr.log": {
+      "sha256": "3fbd3b4fa8a77013ef6dfaf9852ec49d8a041b54bfba6f1151cd500fe73b60d4",
+      "bytes": 216
+    },
+    "pr-1219-comparison-live.json": {
+      "sha256": "a9ad66f77ae65b4d45c50776ac7969bd5fef0c3e0ec7c32a76edb399f0d66e0c",
+      "bytes": 4307
+    },
+    "review-report.md": {
+      "sha256": "3c4efeff228297f1446b228665643a3b57f5bef07af7ebc52d8ccac2505edc22",
+      "bytes": 27382
+    },
+    "npm-ci.log": {
+      "sha256": "ca99a866242ccf6d015d7efe2c90f68bb218c8dba97d7cda878cd549aac0a3f2",
+      "bytes": 396
+    },
+    "probe-async-json.stderr.log": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "sqlite-safety-probes.mjs": {
+      "sha256": "9409fa5b16970ed6c7585c155ab85dc5c5888ff7017e7a3cdf269cc893b97981",
+      "bytes": 11894
+    },
+    "source-vs-current-main.stat": {
+      "sha256": "ccef8cc5e177e9da8a44719c7c3e0fda54b18f2c38e3fa5a0ffa8bc857d97e15",
+      "bytes": 15391
+    },
+    "pr-1243-live.json": {
+      "sha256": "108e17e17189348b92fa075e2004bec4cfe47e32f03bb5a2787fd4b914095799",
+      "bytes": 23563
+    },
+    "stack-base-remaining-changes.txt": {
+      "sha256": "f2ac5d1f06680b7a04fdfe04988e664d8578ef9bde81aad9db8658ab126985e8",
+      "bytes": 66269
+    },
+    "probe-sql.stdout.json": {
+      "sha256": "31e9708f498044b99cc1f091daa1b4616eeb989b4fbe14c7b34ee0d1c2d25a9a",
+      "bytes": 2016
+    },
+    "source-status-final.txt": {
+      "sha256": "63bae6e9486c8297bc931e6a8528b8a7dccae6103fc8f6aa1b693cbc6f14f17e",
+      "bytes": 67
+    },
+    "stack-base-async.diff": {
+      "sha256": "2bdd6cafa837840448d2cada46fee64ad4b93a039b24eb2bb6118215c521a724",
+      "bytes": 302117
+    },
+    "probe-sql.stderr.log": {
+      "sha256": "bfb8f47dba42d6f25258b013c7eb9550b279f2d8f74c5deaec1a26a9e2edec5c",
+      "bytes": 216
+    },
+    "sql-complete.diff": {
+      "sha256": "d2be6d38fad1f849b5712bf685c35b5e0bf0e83d7b61c6a9c9683633f0cca9a7",
+      "bytes": 269238
+    },
+    "probe-sql.initial.stdout.json": {
+      "sha256": "d37cab46f21cc63e7d651be1045a5a6a00446444baf596b8359f56f36ab48232",
+      "bytes": 1989
+    },
+    "probe-async-json.stdout.json": {
+      "sha256": "9be823e561c951f51556c1100dbef5ffb76f791b9a68ab2f23a5fc66845658c4",
+      "bytes": 1281
+    },
+    "file-coverage.json": {
+      "sha256": "be132a07e2113fac4753aaf6aa2f785677ad9425e30d71ecf1bec57bb75de278",
+      "bytes": 34323
+    },
+    "file-coverage.md": {
+      "sha256": "5e7f46ad6e6d33455e53265277b33d7031a869b33258ba02f7ad8ca64c626684",
+      "bytes": 6147
+    },
+    "review-findings.json": {
+      "sha256": "8b9a2cc85062d80a9151a4cd127b3bfeacec15cf07e77b4b2d1032e73eb7d1f7",
+      "bytes": 4377
+    },
+    "libsql-provenance/provenance-report.md": {
+      "sha256": "ef3eb8948d37db5156bc02a5fed74ca23cde853978338ec456894aab326e5369",
+      "bytes": 6871
+    },
+    "libsql-provenance/provenance-manifest.json": {
+      "sha256": "2eb3dfde30e0fcafaa9b8f602cfefce3d33bc97068743f19582bb16467656c0a",
+      "bytes": 2163
+    }
+  },
+  "durability": "durable-ready escrow; root must persist report/harness/results to review handoff/repository or durable CI artifact; /tmp alone insufficient",
+  "provenanceManifest": "libsql-provenance/provenance-manifest.json"
+}

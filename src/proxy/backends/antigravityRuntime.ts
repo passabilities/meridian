@@ -167,7 +167,7 @@ export class AntigravityRun {
               clearTimeout(this.timer)
               this.idle = true
               this.queue.push({ kind: "end" })
-              this.pendingTimer = setTimeout(() => this.abort(new Error("Idle conversation expired"), "retired"), this.runtime.pendingToolTimeoutMs)
+              this.pendingTimer = setTimeout(() => this.abort(new Error("Idle conversation expired"), "retired"), this.runtime.idleConversationMs)
               this.pendingTimer.unref()
             }
           }
@@ -379,6 +379,7 @@ export class AntigravityRuntime {
   readonly executable: string
   readonly turnTimeoutMs: number
   readonly pendingToolTimeoutMs: number
+  readonly idleConversationMs: number
   readonly maxConcurrent: number
   readonly childEnv: NodeJS.ProcessEnv
   // Warm live conversations; expired or restarted processes replay client history.
@@ -466,6 +467,10 @@ export class AntigravityRuntime {
     this.turnTimeoutMs = options.turnTimeoutMs ?? 300_000
     this.pendingToolTimeoutMs = options.pendingToolTimeoutMs ?? 60_000
     for (const value of [this.maxConcurrent, this.turnTimeoutMs, this.pendingToolTimeoutMs]) if (!Number.isSafeInteger(value) || value <= 0) throw new Error("Antigravity limits must be positive integers")
+    this.idleConversationMs = options.idleConversationMs ?? this.pendingToolTimeoutMs
+    // The new option has its own range; leaving it unset retains every
+    // previously accepted tool deadline rather than adding a startup refusal.
+    if (options.idleConversationMs !== undefined && (!Number.isSafeInteger(this.idleConversationMs) || this.idleConversationMs <= 0 || this.idleConversationMs > 86_400_000)) throw new Error("Antigravity idle conversation time must be an integer from 1 to 86400000 ms")
     this.state = options.statePath ? new AgState(options.statePath) : undefined
     try {
     this.nativeSessions = this.state && options.statePath ? new AgNativeSessions(this.state, options.statePath, options) : undefined
@@ -542,7 +547,9 @@ export class AntigravityRuntime {
     // Validate the binary before asking it to inspect subscription configuration.
     if (this.cliVersion !== "1.2.7") throw new Error(`Unsupported agy version ${this.cliVersion}; this Meridian build validates agy 1.2.7. Validate a CLI upgrade before updating the compatibility gate.`)
     const config = await readAgProbe(this.executable, "configuration", options)
-    const settings = z.object({ command: z.object({ data: z.object({ config: z.object({ customModelsConfig: z.unknown().optional(), modelProvider: z.unknown().optional(), useG1Credits: z.unknown().optional(), gcp: z.unknown().optional() }) }) }) }).parse(JSON.parse(config)).command.data.config
+    // The verified 1.2.7 effective settings expose an explicit boolean here.
+    // Missing or malformed credits are indeterminate, not verified disabled.
+    const settings = z.object({ command: z.object({ data: z.object({ config: z.object({ customModelsConfig: z.unknown().optional(), modelProvider: z.unknown().optional(), useG1Credits: z.boolean(), gcp: z.unknown().optional() }) }) }) }).parse(JSON.parse(config)).command.data.config
     const customModels = settings.customModelsConfig
     if (customModels && (typeof customModels !== "object" || Object.keys(customModels).length > 0)) throw new Error("Antigravity custom model providers must be disabled for subscription-only access")
     if (settings.modelProvider || settings.useG1Credits || settings.gcp) throw new Error("Antigravity requires default account authentication with paid overage credits disabled; configure agy first")

@@ -242,13 +242,12 @@ function saveProfileConfig(profiles: ProfileConfig[]): void {
   publishProfileConfig(profilesConfigFile(), profiles)
 }
 
-function getAuthStatus(configDir: string): { loggedIn: boolean; email?: string; subscriptionType?: string } {
+function getAuthStatus(configDir: string, resolved = resolveClaudeExecutableSync()): { loggedIn: boolean; email?: string; subscriptionType?: string } {
   // Route through the synchronous resolver instead of relying on `claude`
   // being on PATH (#478). The CLI command runs in whatever environment
   // the user invokes it — under systemd or bunx-without-global-claude,
   // PATH won't have a claude binary even when meridian's own bundled or
   // platform-package binary is right there in node_modules.
-  const resolved = resolveClaudeExecutableSync()
   if (!resolved) {
     console.warn(`[meridian] Could not resolve a Claude executable for auth check (set MERIDIAN_CLAUDE_PATH or install @anthropic-ai/claude-code)`)
     return { loggedIn: false }
@@ -685,8 +684,18 @@ export async function profileAddOauthToken(id: string, tokenArg: string | undefi
   printEnvHint(profiles)
 }
 
-export function profileList(): void {
-  const profiles = loadProfileConfig()
+type ProfileListDeps = {
+  loadProfiles: typeof loadProfileConfig
+  resolveExecutable: typeof resolveClaudeExecutableSync
+  authStatus: typeof getAuthStatus
+}
+
+export function profileList(deps: ProfileListDeps = {
+  loadProfiles: loadProfileConfig,
+  resolveExecutable: resolveClaudeExecutableSync,
+  authStatus: getAuthStatus,
+}): void {
+  const profiles = deps.loadProfiles()
   if (profiles.length === 0) {
     console.log("No profiles configured.")
     console.log("  Add one: meridian profile add <name>")
@@ -694,12 +703,17 @@ export function profileList(): void {
   }
 
   console.log("Profiles:\n")
+  // Resolve once for this command, including a miss. A cold or hung PATH
+  // candidate must not repeat its version wait for every browser profile.
+  const resolvedForAuth = profiles.some(p => !p.oauthToken && p.type !== "oauth-token")
+    ? deps.resolveExecutable()
+    : null
   for (const p of profiles) {
     if (p.oauthToken || p.type === "oauth-token") {
       console.log(`  ${p.id.padEnd(20)} \x1b[32m✓ OAuth token\x1b[0m`)
       continue
     }
-    const auth = getAuthStatus(p.claudeConfigDir ?? "")
+    const auth = deps.authStatus(p.claudeConfigDir ?? "", resolvedForAuth)
     const status = auth.loggedIn
       ? `\x1b[32m✓ ${auth.email} (${auth.subscriptionType || "unknown"})\x1b[0m`
       : "\x1b[31m✗ not logged in\x1b[0m"

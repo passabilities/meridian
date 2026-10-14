@@ -1,0 +1,9 @@
+[PROXY] aaf720a7-cdbd-4c1d-83f4-3cd2e475e4b3 usage: input=10 output=50 cache=0%
+[PROXY] PRIORITY failover work -> personal (billing_error)
+(pass) priority routing > streams fail over when the service heartbeat precedes the account error [20479.66ms]
+
+ 1 pass
+ 83 filtered out
+ 0 fail
+ 5 expect() calls
+Ran 1 test across 1 file. [21.60s]

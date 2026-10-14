@@ -1,0 +1,40 @@
+checking outputs of '/nix/store/r7j247yfqqahqmibj9a72417scjwd0fm-meridian-node_modules.drv'...
+meridian-node_modules> Running phase: unpackPhase
+meridian-node_modules> unpacking source archive /nix/store/b4pfz6pxkk95ln0i2q4syj9pf3vbgbf9-source
+meridian-node_modules> source root is source
+meridian-node_modules> Running phase: patchPhase
+meridian-node_modules> Running phase: updateAutotoolsGnuConfigScriptsPhase
+meridian-node_modules> Running phase: buildPhase
+meridian-node_modules> bun install v1.4.2 (744846f84)
+meridian-node_modules> 
+meridian-node_modules> + @hono/node-server@1.19.15
+meridian-node_modules> + @opencode-ai/plugin@0.0.0-beta-18314
+meridian-node_modules> + @types/bun@1.3.11
+meridian-node_modules> + @types/cross-spawn@6.0.6
+meridian-node_modules> + @types/node@22.19.7
+meridian-node_modules> + glob@13.0.0
+meridian-node_modules> + hono@4.12.34
+meridian-node_modules> + typescript@5.9.3
+meridian-node_modules> + @anthropic-ai/claude-agent-sdk@0.2.141
+meridian-node_modules> + @anthropic-ai/claude-code@2.1.296
+meridian-node_modules> + ajv@8.20.0
+meridian-node_modules> + ajv-formats@3.0.1
+meridian-node_modules> + cross-spawn@7.0.6
+meridian-node_modules> + jsonc-parser@3.3.1
+meridian-node_modules> + libsql@0.5.29
+meridian-node_modules> + zod@4.4.3
+meridian-node_modules> 
+meridian-node_modules> 227 packages installed [10.80s]
+meridian-node_modules> bun install v1.4.2 (744846f84)
+meridian-node_modules> 
+meridian-node_modules> + @anthropic-ai/claude-agent-sdk@0.2.141
+meridian-node_modules> + @anthropic-ai/claude-code@2.1.296
+meridian-node_modules> + ajv@8.20.0
+meridian-node_modules> + ajv-formats@3.0.1
+meridian-node_modules> + cross-spawn@7.0.6
+meridian-node_modules> + jsonc-parser@3.3.1
+meridian-node_modules> + libsql@0.5.29
+meridian-node_modules> + zod@4.4.3
+meridian-node_modules> 
+meridian-node_modules> 128 packages installed [44.00ms]
+meridian-node_modules> Running phase: installPhase

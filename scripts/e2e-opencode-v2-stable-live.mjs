@@ -7,6 +7,8 @@ import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
 
+const expectedClientVersion = process.env.E2E_OPENCODE_VERSION ?? '2.0.16'
+assert(['2.0.16','2.0.21'].includes(expectedClientVersion), 'Pin a qualified stable host')
 const client = process.env.E2E_OPENCODE_BIN
 assert(client, 'Set E2E_OPENCODE_BIN to the exact OpenCode 2.0.16 executable')
 const repo = resolve(process.env.E2E_MERIDIAN_ROOT ?? '.')
@@ -112,7 +114,7 @@ try {
   })
   const versionRun = Bun.spawnSync([client, '--version'], { env: clientEnv })
   assert.equal(versionRun.exitCode, 0)
-  assert.equal(new TextDecoder().decode(versionRun.stdout).trim(), 'opencode v2.0.16')
+  assert.equal(new TextDecoder().decode(versionRun.stdout).trim(), `opencode v${expectedClientVersion}`)
   const setup = Bun.spawnSync(['node', join(repo, 'dist', 'cli.js'), 'setup', '--v2', '--opencode-bin', client],
     { cwd: project, env: clientEnv })
   assert.equal(setup.exitCode, 0, `Meridian setup rejected 2.0.16: ${new TextDecoder().decode(setup.stderr)}`)
@@ -224,7 +226,7 @@ try {
     writeFileSync(join(root, 'server.stderr'), stderr)
   }
   writeFileSync(join(root, 'requests.json'), JSON.stringify(observed, null, 2))
-  console.log(JSON.stringify({ result: 'PASS', root, client: '2.0.16', meridian: version, model,
+  console.log(JSON.stringify({ result: 'PASS', root, client: expectedClientVersion, meridian: version, model,
     requests: observed.length, primary: observed.filter(row => row.agent === 'build'),
     auxiliary: observed.filter(row => row.agent === 'generate' || row.source === 'subagent-compaction') }))
 } finally {

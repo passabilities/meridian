@@ -3,7 +3,7 @@
  */
 import { afterEach, beforeEach, describe, it, expect, mock } from "bun:test"
 
-import { mapModelToClaudeModel, isClosedControllerError, resetCachedClaudeAuthStatus, stripExtendedContext, hasExtendedContext, recordExtendedContextUnavailable, recordExtendedContextRateLimited, isExtendedContextKnownUnavailable, resetExtendedContextUnavailable, resetWarnedTierOverrides, resolveSdkModelDefaults, subscriptionIncludesExtendedContext, CANONICAL_FABLE_MODEL, CANONICAL_OPUS_MODEL, CANONICAL_SONNET_MODEL, CANONICAL_HAIKU_MODEL } from "../proxy/models"
+import { mapModelToClaudeModel, isClosedControllerError, resetCachedClaudeAuthStatus, stripExtendedContext, hasExtendedContext, sonnetHasNative1mContext, recordExtendedContextUnavailable, recordExtendedContextRateLimited, isExtendedContextKnownUnavailable, resetExtendedContextUnavailable, resetWarnedTierOverrides, resolveSdkModelDefaults, subscriptionIncludesExtendedContext, CANONICAL_FABLE_MODEL, CANONICAL_OPUS_MODEL, CANONICAL_SONNET_MODEL, CANONICAL_HAIKU_MODEL } from "../proxy/models"
 
 describe("mapModelToClaudeModel", () => {
   const originalSonnetModel = process.env.CLAUDE_PROXY_SONNET_MODEL
@@ -29,6 +29,8 @@ describe("mapModelToClaudeModel", () => {
 
   it("maps haiku models to haiku", () => {
     expect(mapModelToClaudeModel("claude-haiku-4-5")).toBe("haiku")
+    expect(mapModelToClaudeModel("claude-haiku-5-5", "max")).toBe("haiku")
+    expect(mapModelToClaudeModel("claude-haiku-5-5[1m]", "pro")).toBe("haiku")
     expect(mapModelToClaudeModel("haiku")).toBe("haiku")
   })
 
@@ -418,6 +420,26 @@ describe("hasExtendedContext", () => {
   })
 })
 
+describe("sonnetHasNative1mContext (#1212)", () => {
+  it("is true for Sonnet 5 and later, including the canonical pin", () => {
+    expect(sonnetHasNative1mContext(CANONICAL_SONNET_MODEL)).toBe(true)
+    expect(sonnetHasNative1mContext("claude-sonnet-5-5")).toBe(true)
+    expect(sonnetHasNative1mContext("claude-sonnet-5")).toBe(true)
+    expect(sonnetHasNative1mContext("claude-sonnet-5[1m]")).toBe(true)
+    expect(sonnetHasNative1mContext(" Claude-Sonnet-6-0 ")).toBe(true)
+  })
+
+  it("is false for Sonnet 4.x, other tiers, aliases and unknown ids", () => {
+    expect(sonnetHasNative1mContext("claude-sonnet-4-6")).toBe(false)
+    expect(sonnetHasNative1mContext("claude-sonnet-4-5-20250929")).toBe(false)
+    expect(sonnetHasNative1mContext("claude-sonnet-4-20250514")).toBe(false)
+    expect(sonnetHasNative1mContext("claude-opus-5-5")).toBe(false)
+    expect(sonnetHasNative1mContext("sonnet")).toBe(false)
+    expect(sonnetHasNative1mContext("")).toBe(false)
+    expect(sonnetHasNative1mContext(undefined)).toBe(false)
+  })
+})
+
 describe("subscriptionIncludesExtendedContext", () => {
   it("includes max and its usage variants", () => {
     expect(subscriptionIncludesExtendedContext("max")).toBe(true)
@@ -543,6 +565,7 @@ describe("resolveSdkModelDefaults", () => {
     expect(pins.ANTHROPIC_DEFAULT_OPUS_MODEL).toBe(CANONICAL_OPUS_MODEL)
     expect(pins.ANTHROPIC_DEFAULT_SONNET_MODEL).toBe(CANONICAL_SONNET_MODEL)
     expect(pins.ANTHROPIC_DEFAULT_HAIKU_MODEL).toBe(CANONICAL_HAIKU_MODEL)
+    expect(pins.ANTHROPIC_DEFAULT_HAIKU_MODEL).toBe("claude-haiku-5-5")
   })
 
   it("MERIDIAN_DEFAULT_OPUS_MODEL override wins over the canonical default", () => {

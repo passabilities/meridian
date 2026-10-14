@@ -1,0 +1,58 @@
+{
+  "exit": 1,
+  "scope": "Credentialless beta19271 warm readiness succeeds; later offline live-completion assertion deliberately remains failing",
+  "observations": [
+    {
+      "warmCatalogReady": true,
+      "model": "claude-haiku-5-5"
+    },
+    {
+      "variantProbe": {
+        "model": "anthropic/claude-haiku-5-5#xhigh",
+        "selected": true,
+        "errors": [],
+        "efforts": [
+          "low",
+          "xhigh"
+        ],
+        "completed": false,
+        "answered": false
+      },
+      "wireControl": [
+        {
+          "model": "claude-haiku-5-5",
+          "effort": "low",
+          "fields": {
+            "top": "low"
+          }
+        },
+        {
+          "model": "claude-haiku-5-5",
+          "fields": {}
+        },
+        {
+          "model": "claude-haiku-5-5",
+          "fields": {}
+        },
+        {
+          "model": "claude-haiku-5-5",
+          "fields": {}
+        },
+        {
+          "model": "claude-haiku-5-5",
+          "effort": "low",
+          "fields": {
+            "top": "low"
+          }
+        },
+        {
+          "model": "claude-haiku-5-5",
+          "effort": "xhigh",
+          "fields": {
+            "top": "xhigh"
+          }
+        }
+      ]
+    }
+  ]
+}

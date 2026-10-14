@@ -1,0 +1,8 @@
+{
+  "pass": 4,
+  "fail": 0,
+  "processExit": 0,
+  "assertions": 26,
+  "evidence": "HTTP_FOCUSED_AFTER.log retained externally",
+  "qualification": "mocked SDK JSON/SSE; no real provider"
+}

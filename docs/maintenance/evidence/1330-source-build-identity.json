@@ -1,0 +1,380 @@
+{
+  "scope": "Meridian #1330 credentialless source HTTP; no model requests",
+  "baselineSourceSha": "6e510dbcb7713997e0299a7f954ee73bb45ceae7",
+  "contributorSourceSha": "c040c19be36d0ae24cace6eac7c27db023627a5d",
+  "incorporatedSha": "d2c2a6463d4463b82d21f61042275909fbbb5434",
+  "correctedSourceSha": "9b7fbda5159e908a83b573ee2cb14fd13a227c55",
+  "harnessSha256": "9d7bfee6d5a2bebe2d250e9f8527e63f6fe32bd0949e169f9d5a13a75c8a59ff",
+  "httpBefore": [
+    {
+      "phase": "fixture",
+      "sourceSha": "6e510dbcb7713997e0299a7f954ee73bb45ceae7",
+      "fixtureSha": "39b4199c086d76a43633dfe441b8bd503c34c6f7",
+      "sparseUntrackedBytes": 68157440,
+      "git": "git version 2.54.0 (Apple Git-157)",
+      "driverNode": "v24.20.0",
+      "limitation": "deterministic fingerprint file-cap failure, not a reproduced loaded Linux host"
+    },
+    {
+      "phase": "source-http-evidence",
+      "before": {
+        "health": {
+          "status": 503,
+          "body": {
+            "status": "unhealthy",
+            "version": "1.80.0",
+            "backend": "claude",
+            "build": {
+              "source": "local",
+              "version": "1.80.0",
+              "kind": "source"
+            },
+            "error": "Not logged in. Run: claude login",
+            "auth": {
+              "loggedIn": false
+            }
+          }
+        },
+        "status": {
+          "status": 200,
+          "body": {
+            "runtime": {
+              "source": "local",
+              "version": "unknown",
+              "kind": "source"
+            },
+            "state": "unknown"
+          }
+        }
+      },
+      "after": {
+        "health": {
+          "status": 503,
+          "body": {
+            "status": "unhealthy",
+            "version": "1.80.0",
+            "backend": "claude",
+            "build": {
+              "source": "local",
+              "version": "1.80.0",
+              "kind": "source"
+            },
+            "error": "Not logged in. Run: claude login",
+            "auth": {
+              "loggedIn": false
+            }
+          }
+        },
+        "status": {
+          "status": 200,
+          "body": {
+            "runtime": {
+              "source": "local",
+              "version": "unknown",
+              "kind": "source"
+            },
+            "state": "unknown"
+          }
+        }
+      },
+      "expectedSha": "39b4199c086d76a43633dfe441b8bd503c34c6f7",
+      "movedSha": "f4b94642a53df35063fffdfff1f57deaf26ae09e",
+      "sourceEntry": "src/proxy/server.ts",
+      "routes": [
+        "/health",
+        "/build-status"
+      ],
+      "modelRequests": 0,
+      "node": "v24.3.0",
+      "bun": "1.3.14",
+      "platform": "darwin",
+      "arch": "arm64",
+      "sdk": "0.2.141",
+      "claudeCodePackage": "2.1.284",
+      "claudeCodeExecutableVersion": "2.1.284 (Claude Code)",
+      "listenerClosed": true,
+      "backendClosed": true,
+      "credentialsAbsent": true
+    },
+    {
+      "phase": "worker-join",
+      "exit": 1,
+      "signal": null,
+      "error": null,
+      "directChildAndPipesReturned": true,
+      "listenerClosed": true,
+      "backendClosed": true
+    }
+  ],
+  "httpAfter": [
+    {
+      "phase": "fixture",
+      "sourceSha": "9b7fbda5159e908a83b573ee2cb14fd13a227c55",
+      "fixtureSha": "a457cc9bd27ad0c35a06ec5276b146954e480918",
+      "sparseUntrackedBytes": 68157440,
+      "git": "git version 2.54.0 (Apple Git-157)",
+      "driverNode": "v24.20.0",
+      "limitation": "deterministic fingerprint file-cap failure, not a reproduced loaded Linux host"
+    },
+    {
+      "phase": "source-http-evidence",
+      "before": {
+        "health": {
+          "status": 503,
+          "body": {
+            "status": "unhealthy",
+            "version": "1.80.0",
+            "backend": "claude",
+            "build": {
+              "sha": "a457cc9bd27ad0c35a06ec5276b146954e480918",
+              "branch": "source-build-fixture",
+              "dirty": true,
+              "version": "1.80.0",
+              "source": "local",
+              "kind": "source"
+            },
+            "error": "Not logged in. Run: claude login",
+            "auth": {
+              "loggedIn": false
+            }
+          }
+        },
+        "status": {
+          "status": 200,
+          "body": {
+            "runtime": {
+              "sha": "a457cc9bd27ad0c35a06ec5276b146954e480918",
+              "branch": "source-build-fixture",
+              "dirty": true,
+              "version": "unknown",
+              "source": "local",
+              "kind": "source"
+            },
+            "state": "unknown"
+          }
+        }
+      },
+      "after": {
+        "health": {
+          "status": 503,
+          "body": {
+            "status": "unhealthy",
+            "version": "1.80.0",
+            "backend": "claude",
+            "build": {
+              "sha": "a457cc9bd27ad0c35a06ec5276b146954e480918",
+              "branch": "source-build-fixture",
+              "dirty": true,
+              "version": "1.80.0",
+              "source": "local",
+              "kind": "source"
+            },
+            "error": "Not logged in. Run: claude login",
+            "auth": {
+              "loggedIn": false
+            }
+          }
+        },
+        "status": {
+          "status": 200,
+          "body": {
+            "runtime": {
+              "sha": "a457cc9bd27ad0c35a06ec5276b146954e480918",
+              "branch": "source-build-fixture",
+              "dirty": true,
+              "version": "unknown",
+              "source": "local",
+              "kind": "source"
+            },
+            "state": "unknown"
+          }
+        }
+      },
+      "expectedSha": "a457cc9bd27ad0c35a06ec5276b146954e480918",
+      "movedSha": "b7cb128f5aac53c8e329ef4d45eee3667be91fe2",
+      "sourceEntry": "src/proxy/server.ts",
+      "routes": [
+        "/health",
+        "/build-status"
+      ],
+      "modelRequests": 0,
+      "node": "v24.3.0",
+      "bun": "1.3.14",
+      "platform": "darwin",
+      "arch": "arm64",
+      "sdk": "0.2.141",
+      "claudeCodePackage": "2.1.284",
+      "claudeCodeExecutableVersion": "2.1.284 (Claude Code)",
+      "listenerClosed": true,
+      "backendClosed": true,
+      "credentialsAbsent": true
+    },
+    {
+      "phase": "assertions",
+      "result": "PASS"
+    },
+    {
+      "phase": "worker-join",
+      "exit": 0,
+      "signal": null,
+      "error": null,
+      "directChildAndPipesReturned": true,
+      "listenerClosed": true,
+      "backendClosed": true
+    }
+  ],
+  "controlledGitBefore": [
+    {
+      "case": "shared-recovery-budget",
+      "info": {
+        "sha": "e0742b446e27ba7d1073e60da01f50872602c9b4",
+        "branch": "main",
+        "dirty": false
+      },
+      "elapsed": 3462.517666,
+      "calls": [
+        [
+          "rev-parse",
+          "--show-toplevel"
+        ],
+        [
+          "rev-parse",
+          "HEAD"
+        ],
+        [
+          "rev-parse",
+          "--abbrev-ref",
+          "HEAD"
+        ],
+        [
+          "status",
+          "--porcelain=v1",
+          "--untracked-files=all"
+        ],
+        [
+          "config",
+          "--get",
+          "remote.origin.url"
+        ]
+      ],
+      "directChildrenJoined": true
+    },
+    {
+      "case": "exhausted-root",
+      "rejected": true,
+      "elapsed": 3292.461458,
+      "calls": [
+        [
+          "rev-parse",
+          "--show-toplevel"
+        ]
+      ],
+      "directChildrenJoined": true
+    },
+    {
+      "case": "term-resistant-git",
+      "rejected": false,
+      "elapsed": 1778.5473749999999,
+      "calls": [
+        [
+          "rev-parse",
+          "HEAD"
+        ]
+      ],
+      "directChildrenJoined": true
+    },
+    {
+      "case": "fingerprint-timeout",
+      "rejected": true,
+      "elapsed": 3291.4459580000002,
+      "calls": [
+        [
+          "rev-parse",
+          "--show-toplevel"
+        ]
+      ],
+      "directChildrenJoined": true
+    }
+  ],
+  "controlledGitFinal": [
+    {
+      "case": "shared-recovery-budget",
+      "info": {
+        "sha": "4882ff8f4506592d6cc441f911902120cf1700ca"
+      },
+      "elapsed": 2002.3371670000001,
+      "calls": [
+        [
+          "rev-parse",
+          "--show-toplevel"
+        ],
+        [
+          "rev-parse",
+          "HEAD"
+        ],
+        [
+          "rev-parse",
+          "--abbrev-ref",
+          "HEAD"
+        ],
+        [
+          "status",
+          "--porcelain=v1",
+          "--untracked-files=all"
+        ]
+      ],
+      "directChildrenJoined": true
+    },
+    {
+      "case": "exhausted-root",
+      "rejected": true,
+      "elapsed": 2002.0545,
+      "calls": [
+        [
+          "rev-parse",
+          "--show-toplevel"
+        ]
+      ],
+      "directChildrenJoined": true
+    },
+    {
+      "case": "term-resistant-git",
+      "rejected": true,
+      "elapsed": 403.673791,
+      "calls": [
+        [
+          "rev-parse",
+          "HEAD"
+        ]
+      ],
+      "directChildrenJoined": true
+    },
+    {
+      "case": "fingerprint-timeout",
+      "rejected": true,
+      "elapsed": 2002.69975,
+      "calls": [
+        [
+          "rev-parse",
+          "--show-toplevel"
+        ]
+      ],
+      "directChildrenJoined": true
+    }
+  ],
+  "localFinalGates": {
+    "npmTestExit": 0,
+    "typecheckExit": 0,
+    "buildExit": 0,
+    "pass": 5574,
+    "fail": 0,
+    "skip": 35,
+    "invocations": 21
+  },
+  "limits": [
+    "Darwin arm64, not an actual loaded Linux symptom reproduction",
+    "Deterministic 65 MiB sparse-file cap exercises the same fingerprint catch",
+    "SIGKILL/spawnSync direct-child and captured-pipe custody, not process-tree or realtime guarantees",
+    "No final-head CI, independent review, PR, merge, source closure or release performed"
+  ]
+}

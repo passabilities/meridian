@@ -105,7 +105,7 @@ Configure V2's Anthropic provider to use Meridian. Keep the existing settings in
 ```json
 {
   "model": "anthropic/claude-opus-4-6",
-  "small_model": "anthropic/claude-haiku-4-5",
+  "small_model": "anthropic/claude-haiku-5-5",
   "providers": {
     "anthropic": {
       "settings": {
@@ -114,7 +114,7 @@ Configure V2's Anthropic provider to use Meridian. Keep the existing settings in
       },
       "models": {
         "claude-opus-4-6": { "name": "Claude Opus 4.6" },
-        "claude-haiku-4-5": { "name": "Claude Haiku 4.5" }
+        "claude-haiku-5-5": { "name": "Claude Haiku 5.5" }
       }
     }
   }
@@ -142,8 +142,9 @@ input are unchanged.
 The V2 plugin also reads `GET /v1/models` from the configured Meridian base URL
 and writes what it finds into V2's model catalog: the context window your
 subscription actually gets, and one model variant per effort level the proxy
-accepts. This corrects OpenCode's built-in models.dev entries, which advertise a
-1M Sonnet that Meridian deliberately serves at 200k. Select an effort with
+accepts. This corrects OpenCode's built-in models.dev entries where they differ
+from what Meridian serves, such as a 1M Sonnet 4.6 that Meridian deliberately
+serves at 200k. Select an effort with
 `provider/model#variant`, for example `anthropic/claude-opus-5#high`. Discovery
 never blocks startup: if Meridian is unreachable or answers with anything
 unexpected, and nothing has been discovered before, the catalog is left exactly
@@ -154,7 +155,7 @@ first request against a freshly started server used to see only the built-in
 entries and reject a Meridian-only variant with `provider.no-route`. The plugin
 now caches each successful discovery in
 `~/.config/meridian/opencode-v2-catalog.json` and seeds the catalog from it
-before the first request, so a cold `anthropic/claude-haiku-4-5#xhigh` works.
+before the first request, so a cold `anthropic/claude-haiku-5-5#xhigh` works.
 The cache is refreshed by every successful discovery and is ignored after seven
 days.
 
@@ -171,7 +172,7 @@ For either generation, the plugin enables:
 
 - **Session tracking** — reliable conversation continuity across requests
 - **Safe hidden-agent concurrency** — title and summary work cannot advance the primary lineage
-- **Model defaults** — Opus requests 1M context; Sonnet uses 200k by default ([defaults and account eligibility](configuration.md#configuration))
+- **Model defaults** — Opus requests 1M context; Sonnet 5+ has a native 1M window, while Sonnet 4.x uses 200k by default ([defaults and account eligibility](configuration.md#configuration))
 - **Subagent model selection** — subagents use the 200k tier, preserving rate-limit budget
 
 If the plugin is missing, Meridian warns at request time. Restart OpenCode after
@@ -209,7 +210,7 @@ Add a provider to `~/.config/crush/crush.json`:
         { "id": "claude-opus-4-7",   "name": "Claude Opus 4.7 (1M)",    "context_window": 1000000, "default_max_tokens": 32768, "can_reason": true, "supports_attachments": true },
         { "id": "claude-sonnet-4-6", "name": "Claude Sonnet 4.6",       "context_window": 200000, "default_max_tokens": 64000, "can_reason": true, "supports_attachments": true },
         { "id": "claude-opus-4-6",   "name": "Claude Opus 4.6 (1M)",    "context_window": 1000000, "default_max_tokens": 32768, "can_reason": true, "supports_attachments": true },
-        { "id": "claude-haiku-4-5-20251001", "name": "Claude Haiku 4.5", "context_window": 200000,  "default_max_tokens": 16384, "can_reason": true, "supports_attachments": true }
+        { "id": "claude-haiku-5-5", "name": "Claude Haiku 5.5", "context_window": 1000000, "default_max_tokens": 16384, "can_reason": true, "supports_attachments": true }
       ]
     }
   }
@@ -237,7 +238,7 @@ Add Meridian as a custom model provider in `~/.factory/settings.json`:
     { "model": "claude-opus-4-7",         "name": "Opus 4.7 (Meridian)",   "provider": "anthropic", "baseUrl": "http://127.0.0.1:3456", "apiKey": "x" },
     { "model": "claude-sonnet-4-6",       "name": "Sonnet 4.6 (Meridian)", "provider": "anthropic", "baseUrl": "http://127.0.0.1:3456", "apiKey": "x" },
     { "model": "claude-opus-4-6",         "name": "Opus 4.6 (Meridian)",   "provider": "anthropic", "baseUrl": "http://127.0.0.1:3456", "apiKey": "x" },
-    { "model": "claude-haiku-4-5-20251001", "name": "Haiku 4.5 (Meridian)", "provider": "anthropic", "baseUrl": "http://127.0.0.1:3456", "apiKey": "x" }
+    { "model": "claude-haiku-5-5", "name": "Haiku 5.5 (Meridian)", "provider": "anthropic", "baseUrl": "http://127.0.0.1:3456", "apiKey": "x" }
   ]
 }
 ```
@@ -731,7 +732,9 @@ providers:
 
 Polytoken selection signals (full precedence follows below):
 
-1. A valid `X-Polytoken-Session` header — Polytoken is selected and that header **is the session identity**.
+1. A nonblank `X-Polytoken-Conversation` or `X-Polytoken-Session` header selects Polytoken. The trimmed conversation header is the identity used for resume, turn coordination, and routing; the session header is a legacy fallback when the conversation header is absent or blank. Modern Polytoken sessions can contain several independent subagent conversations, so the session correlation ID must not override their conversation IDs.
+
+   Polytoken 0.8.21 gives sibling subagents distinct conversation IDs, but observed title-inference requests still share the main conversation ID. The adapter isolates the native title-only contract (the sole `_infer_title` tool plus its system instruction) under a separate deterministic key. Ordinary same-conversation conflict checks stay strict.
 2. A `Polytoken <version>` or `Polytoken/<version>` User-Agent (token-boundary match; `PolytokenImpostor` does not match). UA-only selection never manufactures identity: without a valid native header there is no session key, so tool-result continuations run independent and are never resumed (plain text turns still fall back to the generic first-message fingerprint, as for any other headerless client).
 3. `x-meridian-agent: polytoken` / `MERIDIAN_DEFAULT_AGENT=polytoken` for explicit selection.
 

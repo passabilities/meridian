@@ -1,0 +1,12 @@
+{
+  "mode": "codec-order",
+  "source": "0bf16b0d83f2fcc8c9b55df06bf20f97d763a23f",
+  "node": "v22.22.3",
+  "platform": "darwin",
+  "arch": "arm64",
+  "writerStartsWithMetadata": true,
+  "codecStartsWithNumericMapping": true,
+  "bytesEqual": false,
+  "semanticKeysEqual": true,
+  "assertions": "PASS (defect reproduced; not product acceptance)"
+}

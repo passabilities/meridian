@@ -1,0 +1,6 @@
+{
+  "exit": 1,
+  "pass": 3,
+  "fail": 3,
+  "qualification": "Two mixed-context regressions and unsupported account-coverage explanation fail; three recognized-provider/bound controls already pass."
+}

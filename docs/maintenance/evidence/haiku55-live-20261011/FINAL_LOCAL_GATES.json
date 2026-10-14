@@ -1,0 +1,15 @@
+{
+  "npmTest": {
+    "pass": 5615,
+    "fail": 0,
+    "skip": 35,
+    "invocations": 21
+  },
+  "npmCommandExit": 0,
+  "typecheckExit": 0,
+  "buildExit": 0,
+  "syntaxExit": 0,
+  "trackedWhitespaceExit": 0,
+  "scope": "integrated actual-flow/Nix harness and implementation; final R7 documentation corrections need content/link/diff validation",
+  "productCoreUnchanged": true
+}

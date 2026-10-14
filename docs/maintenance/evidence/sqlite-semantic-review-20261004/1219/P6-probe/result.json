@@ -1,0 +1,52 @@
+{
+  "cliControl": {
+    "status": 3,
+    "signal": null,
+    "error": "indeterminate process at 204524a3ad166f20948b54e2739257c86a71e2d88fb429c46815c914fd8b2855/lease/90438be3-163d-4a6c-8ae5-d804942c650b/owner; pid=12638 startId=\"Mon Oct  5 00:26:16 2026\"; stop all writers",
+    "gateRetained": true,
+    "allFilesUnchanged": true,
+    "phase": "PREPARED"
+  },
+  "directCall": {
+    "errorClass": "BookkeepingMaintenanceRequiredError",
+    "error": "indeterminate process at 204524a3ad166f20948b54e2739257c86a71e2d88fb429c46815c914fd8b2855/lease/90438be3-163d-4a6c-8ae5-d804942c650b/owner; pid=12638 startId=\"Mon Oct  5 00:26:16 2026\"; stop all writers",
+    "gateRetained": false,
+    "archiveRetainsExactBytes": true,
+    "ledgerBytesUnchanged": true,
+    "phase": "PREPARED",
+    "databaseCreated": false
+  },
+  "owner": {
+    "probeVerdict": "indeterminate",
+    "pid": 12638,
+    "startIdKind": "darwin-ps-lstart",
+    "meaning": "Disposable probe process; Darwin equality is indeterminate, never death proof"
+  },
+  "positiveControl": {
+    "status": 0,
+    "phase": "ready",
+    "gateArchived": true,
+    "resources": 0,
+    "mappings": 0,
+    "archivedResidues": 1
+  },
+  "runtime": {
+    "execPath": "/Users/rynfar/.bun/bin/bun",
+    "bun": "1.3.14",
+    "nodeCompatibility": "v24.3.0",
+    "platform": "darwin",
+    "arch": "arm64",
+    "filesystemType": 26,
+    "sourceSha": "0bf16b0d83f2fcc8c9b55df06bf20f97d763a23f",
+    "sdkQueries": 0,
+    "actualCli": "bin/session-bookkeeping.ts under Bun; no compiled or independently installed package claim"
+  },
+  "cleanup": {
+    "syntheticRootRemoved": true,
+    "liveOwnedChildren": 0,
+    "ownership": "Synchronous child invocations are terminal before cleanup; no long-lived children started"
+  },
+  "started": "2026-10-05T00:26:16.847Z",
+  "finished": "2026-10-05T00:26:17.330Z",
+  "result": "PASS causal characterization; direct call mutation reproduced, CLI preflight protected"
+}

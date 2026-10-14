@@ -1,0 +1,9 @@
+{
+  "pass": 0,
+  "fail": 4,
+  "processExit": 1,
+  "assertions": 16,
+  "source": "159ad97d0 (authored submitted source before correction)",
+  "evidence": "HTTP_FAILED_BEFORE.log retained externally",
+  "qualification": "mocked SDK JSON/SSE; no real provider"
+}

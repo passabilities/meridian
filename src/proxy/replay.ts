@@ -1,4 +1,5 @@
 /** Pure rendering of client tool history for SDK replay. */
+import { createHash } from "node:crypto"
 import { sanitizeAssistantText } from "./sanitize"
 import { describeToolCall, MULTIMODAL_TYPES, REPLAY_CONTEXT_OPEN, REPLAY_CONTEXT_CLOSE, type ToolCallInfo } from "./messages"
 
@@ -31,6 +32,24 @@ function record(value: unknown): value is Record<string, unknown> {
 function mediaType(block: unknown): string | undefined {
   return record(block) && typeof block.type === "string" && MULTIMODAL_TYPES.has(block.type)
     ? block.type : undefined
+}
+
+/** Deduplicate only explicit inline image bytes. URLs can change their
+ * contents; malformed or extended source shapes remain for normal validation.
+ * MIME remains part of identity so a conflicting declaration is not hidden. */
+function historicalImageKey(block: unknown): string | undefined {
+  if (!record(block) || block.type !== "image" || !record(block.source)) return
+  if (Object.keys(block).some(key => key !== "type" && key !== "source")) return
+  const source = block.source
+  if (source.type !== "base64" || typeof source.media_type !== "string" || typeof source.data !== "string") return
+  if (Object.keys(source).some(key => !["type", "media_type", "data"].includes(key))) return
+  const encoded = source.data.replace(/\s/g, "")
+  if (!encoded || !/^[A-Za-z0-9+/]+={0,2}$/.test(encoded)) return
+  const bytes = Buffer.from(encoded, "base64")
+  const canonical = bytes.toString("base64")
+  if (encoded.includes("=") && encoded !== canonical) return
+  if (canonical.replace(/=+$/, "") !== encoded.replace(/=+$/, "")) return
+  return createHash("sha256").update(source.media_type).update("\0").update(bytes).digest("hex")
 }
 
 function mediaCounts(content: unknown): Record<"image" | "document" | "file", number> {
@@ -79,6 +98,7 @@ export function frameStructuredReplay<T extends { message: { content: unknown } 
       `Earlier replayed turns contain ${mediaSummary(historical)}. ` +
       `Those historical media are not new user attachments in this turn.]`
     : ""
+  const historicalImages = new Map<string, number>()
   const framed = messages.map((entry, index) => {
     const isHistory = endsWithUser && index < lastIndex
     const prefix = !endsWithUser ? "" : index === 0 ? REPLAY_CONTEXT_OPEN : index === lastIndex
@@ -91,10 +111,19 @@ export function frameStructuredReplay<T extends { message: { content: unknown } 
       if (!prefix && !suffix) return entry
       return { ...entry, message: { ...entry.message, content: prefix + String(content ?? "") + suffix } }
     }
-    const blocks = isHistory ? content.flatMap(block => {
+    const blocks = (isHistory || !endsWithUser) ? content.flatMap(block => {
+      const key = historicalImageKey(block)
+      let visualIndex: number | undefined
+      if (key) {
+        const previous = historicalImages.get(key)
+        if (previous !== undefined) return [{type:"text", text:
+          `[Repeated historical image: identical visual bytes to ${endsWithUser ? `historical image #${previous}` : "an earlier inline image"} above. This occurrence remains recorded here; its visual copy is shared.]\n`}]
+        visualIndex = historicalImages.size + 1
+        historicalImages.set(key, visualIndex)
+      }
       const type = mediaType(block)
-      return type
-        ? [{ type: "text", text: `Historical ${type} from an earlier turn, not an attachment to the current user message:\n` }, block]
+      return type && isHistory
+        ? [{ type: "text", text: `Historical ${type}${visualIndex ? ` #${visualIndex}` : ""} from an earlier turn, not an attachment to the current user message:\n` }, block]
         : [block]
     }) : content
     if (!prefix && !suffix && blocks === content) return entry

@@ -1,0 +1,239 @@
+{
+  "result": "FAIL",
+  "root": "/var/folders/ks/xnz659y11jl44j80b_lfws6r0000gn/T/meridian-opencode-instruction-update-9zDPPU",
+  "expected": "baseline",
+  "model": "claude-haiku-5-5",
+  "idleMs": 15000,
+  "platform": "darwin/arm64",
+  "node": "v22.22.3",
+  "environment": "unspecified",
+  "actors": [
+    {
+      "command": "/tmp/meridian-1301-opencode-20261012/node_modules/.bin/opencode",
+      "pid": 44120,
+      "close": true,
+      "stdoutClose": true,
+      "stderrClose": true,
+      "code": 0,
+      "signal": null
+    },
+    {
+      "command": "/tmp/meridian-1301-opencode-20261012/node_modules/.bin/opencode",
+      "pid": 44124,
+      "close": true,
+      "stdoutClose": true,
+      "stderrClose": true,
+      "code": 0,
+      "signal": null
+    },
+    {
+      "command": "/bin/sh",
+      "pid": 44563,
+      "close": true,
+      "stdoutClose": true,
+      "stderrClose": true,
+      "code": 0,
+      "signal": null
+    },
+    {
+      "command": "/bin/sh",
+      "pid": 44634,
+      "close": true,
+      "stdoutClose": true,
+      "stderrClose": true,
+      "code": 1,
+      "signal": null
+    },
+    {
+      "command": "/bin/sh",
+      "pid": 44877,
+      "close": true,
+      "stdoutClose": true,
+      "stderrClose": true,
+      "code": 1,
+      "signal": null
+    },
+    {
+      "command": "/bin/sh",
+      "pid": 44938,
+      "close": true,
+      "stdoutClose": true,
+      "stderrClose": true,
+      "code": 0,
+      "signal": null
+    }
+  ],
+  "requests": [
+    {
+      "requestId": "instruction-805bfa78-ce2f-4046-a953-9a242917636c",
+      "attested": false,
+      "agent": "title",
+      "source": "subagent-title",
+      "toolChars": 0,
+      "toolDeltas": 0,
+      "maxGapMs": 0,
+      "toolDurationMs": 0,
+      "model": "claude-haiku-5-5",
+      "hasToolResult": false,
+      "roles": [
+        {
+          "role": "user",
+          "types": [
+            "text"
+          ]
+        }
+      ],
+      "trailingSystem": false,
+      "hasInstructionMarker": true,
+      "status": 200
+    },
+    {
+      "requestId": "instruction-82d350b0-307d-46c3-b1dc-f0852b4dbec8",
+      "attested": false,
+      "session": "ses_ece14f227ffeWDVtrJXUqOPVFP",
+      "agent": "build",
+      "toolChars": 135,
+      "toolDeltas": 11,
+      "maxGapMs": 95.61537500000031,
+      "toolDurationMs": 312.56341599999996,
+      "model": "claude-haiku-5-5",
+      "hasToolResult": false,
+      "roles": [
+        {
+          "role": "user",
+          "types": [
+            "text"
+          ]
+        }
+      ],
+      "trailingSystem": false,
+      "hasInstructionMarker": true,
+      "tool": "write",
+      "status": 200
+    },
+    {
+      "requestId": "instruction-9220f116-070b-46af-81bc-496b4f5afd7f",
+      "attested": false,
+      "session": "ses_ece14f227ffeWDVtrJXUqOPVFP",
+      "agent": "build",
+      "toolChars": 22,
+      "toolDeltas": 1,
+      "maxGapMs": 4.436499999999796,
+      "toolDurationMs": 4.474500000000262,
+      "model": "claude-haiku-5-5",
+      "hasToolResult": true,
+      "roles": [
+        {
+          "role": "user",
+          "types": [
+            "text"
+          ]
+        },
+        {
+          "role": "assistant",
+          "types": [
+            "thinking",
+            "tool_use"
+          ]
+        },
+        {
+          "role": "user",
+          "types": [
+            "tool_result"
+          ]
+        },
+        {
+          "role": "system",
+          "types": [
+            "text"
+          ]
+        }
+      ],
+      "trailingSystem": true,
+      "hasInstructionMarker": true,
+      "tool": "read",
+      "status": 200
+    },
+    {
+      "requestId": "instruction-3b0c59ac-a9d6-436e-8549-957132d3cfd5",
+      "attested": false,
+      "session": "ses_ece14f227ffeWDVtrJXUqOPVFP",
+      "agent": "build",
+      "toolChars": 0,
+      "toolDeltas": 0,
+      "maxGapMs": 0,
+      "toolDurationMs": 0,
+      "model": "claude-haiku-5-5",
+      "hasToolResult": true,
+      "roles": [
+        {
+          "role": "user",
+          "types": [
+            "text"
+          ]
+        },
+        {
+          "role": "assistant",
+          "types": [
+            "thinking",
+            "tool_use"
+          ]
+        },
+        {
+          "role": "user",
+          "types": [
+            "tool_result"
+          ]
+        },
+        {
+          "role": "system",
+          "types": [
+            "text"
+          ]
+        },
+        {
+          "role": "assistant",
+          "types": [
+            "thinking",
+            "tool_use"
+          ]
+        },
+        {
+          "role": "user",
+          "types": [
+            "tool_result"
+          ]
+        }
+      ],
+      "trailingSystem": false,
+      "hasInstructionMarker": true,
+      "status": 200
+    }
+  ],
+  "harnessSha256": "09b06c7a44086db0fce711f30dcaf2f362d17a3bf5de4f1d5892fe2f85b6db88",
+  "client": "opencode v2.0.21",
+  "scrubPreflight": {
+    "path": "/private/tmp/meridian-scrub-preflight-package-20261012/node_modules/@rynfar/meridian-plugin-opencode-scrub/dist/index.js",
+    "packageName": "@rynfar/meridian-plugin-opencode-scrub",
+    "packageVersion": "0.2.3",
+    "sha256": "4ab89412e6a59fad812a3f6e5500c84f3bdfc41863320bc794f5274a251da656",
+    "runtimeVersion": "0.2.3",
+    "invocations": 0,
+    "errors": 0
+  },
+  "setupQualification": "manual-owned-fixture; setup does not qualify 2.0.21",
+  "plugin": "/private/tmp/meridian-1301-baseline-installed-20261012/node_modules/@rynfar/meridian/dist/meridian-v2",
+  "clientExit": 0,
+  "scrubRequest": {
+    "path": "/private/tmp/meridian-scrub-preflight-package-20261012/node_modules/@rynfar/meridian-plugin-opencode-scrub/dist/index.js",
+    "packageName": "@rynfar/meridian-plugin-opencode-scrub",
+    "packageVersion": "0.2.3",
+    "sha256": "4ab89412e6a59fad812a3f6e5500c84f3bdfc41863320bc794f5274a251da656",
+    "runtimeVersion": "0.2.3",
+    "invocations": 4,
+    "errors": 0
+  },
+  "instructionsChanged": false,
+  "failure": "AssertionError [ERR_ASSERTION]: Actual client did not edit the owned instructions",
+  "joined": true
+}

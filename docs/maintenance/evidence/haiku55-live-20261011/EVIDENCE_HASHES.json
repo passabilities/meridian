@@ -1,0 +1,50 @@
+[
+  {
+    "path": "FINAL_LOCAL_GATES.json",
+    "sha256": "3ebfc7adefa2ac9a09cb99a8c2b3a870f031b009d2ba8b9b645e059cf72376ad"
+  },
+  {
+    "path": "FINAL_REVIEW.md",
+    "sha256": "706b187a610de47b59af48c5602df20efba1830982b86c3c5e2b150d160e4e6b"
+  },
+  {
+    "path": "README.md",
+    "sha256": "fe76762d87cb6f626cdb5bb50ea1eafe1e5cfbdfc93d1d7a0d9b0d286da0c60f"
+  },
+  {
+    "path": "availability.json",
+    "sha256": "42320769f34bba478c81183c19267c4f880c2c529a47dcbc3876af26ef923217"
+  },
+  {
+    "path": "build-actual-flows-final-r7.log.gz",
+    "sha256": "ad8febcd3070bcfcceec834913ce7c3df9db230f0be5e5c7753a204af3fd0a7c"
+  },
+  {
+    "path": "identities.json",
+    "sha256": "3e8292b046945c691ac4658ec92d7e9d70d414ef9e0ad7e09d7cf771f71e54ee"
+  },
+  {
+    "path": "installedPack.json",
+    "sha256": "abdb7b6f8f5163e54323a30e86380cd19505aa44cd2dfbbfe9e8a979f9803e37"
+  },
+  {
+    "path": "nativeHeaderFailure.json",
+    "sha256": "1ec25d833ce288ae28f857cf5b02f6fe395f4b948ac32437f5f0955875e6a580"
+  },
+  {
+    "path": "npm-test-actual-flows-final-r7.log.gz",
+    "sha256": "a32d2bcf156bcad17d3d4adbc1ce1056ba69fa562ed2eb6691f62c712bd3fe1a"
+  },
+  {
+    "path": "public-history-corroboration.json",
+    "sha256": "1cdb2b3a0cc16edd257cade0d11c0797083f6c032198b0d3b0f9eda6056562ca"
+  },
+  {
+    "path": "source.json",
+    "sha256": "8d77c1640b074f7228d671c3baaf60ce6efbe392f17b82f2c373ffb6a0bfa109"
+  },
+  {
+    "path": "typecheck-actual-flows-final-r7.log.gz",
+    "sha256": "afb7a1d88b4d1875198db63d10647f464105362f6b27e01e0aeb8d3c38f28e0e"
+  }
+]

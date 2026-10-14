@@ -1,8 +1,8 @@
 /**
  * Polytoken adapter identity — direct unit tests.
  *
- * The native adapter's identity comes ONLY from the X-Polytoken-Session
- * header: no parent identity, no routing attestation, no agent-mode scoping,
+ * The native adapter prefers X-Polytoken-Conversation, falling back to the
+ * legacy session header: no parent identity, no routing attestation, no agent-mode scoping,
  * no OpenCode lineage normalization. Content normalization reuses the generic
  * helper. CWD extraction returns undefined (the client environment may differ
  * from the proxy) rather than parsing client prose.
@@ -29,6 +29,46 @@ describe("polytokenAdapter identity", () => {
   it("reads session identity only from the native header", () => {
     const c = ctx({ "x-polytoken-session": "native-1" })
     expect(polytokenAdapter.getSessionId(c)).toBe("native-1")
+  })
+
+  it("prefers a trimmed conversation identity over the session correlation header", () => {
+    expect(polytokenAdapter.getSessionId(ctx({
+      "x-polytoken-session": "shared-session",
+      "x-polytoken-conversation": "  thread.worker:a  ",
+    }))).toBe("thread.worker:a")
+    expect(polytokenAdapter.getSessionId(ctx({
+      "x-polytoken-conversation": "thread-only",
+    }))).toBe("thread-only")
+  })
+
+  it("isolates the native title-only contract without changing ordinary conversation identity", () => {
+    const c = ctx({ "x-polytoken-conversation": "thread" })
+    const title = {
+      system: "You summarize the conversation so far into a short session title. Respond ONLY by calling the provided tool with a single `title` string.\n\nThe title must be plain text.",
+      tools: [{ name: "_infer_title", input_schema: { type: "object" } }],
+    }
+    const key = polytokenAdapter.getSessionId(c, title)
+    expect(key).not.toBe("thread")
+    expect(key).toBe(polytokenAdapter.getSessionId(c, title))
+    expect(polytokenAdapter.getSessionId(ctx({ "x-polytoken-conversation": "other" }), title)).not.toBe(key)
+    expect(polytokenAdapter.getSessionId(ctx(), title)).toBeUndefined()
+    for (const body of [
+      { ...title, system: "User-defined title tool" },
+      { ...title, tools: [...title.tools, { name: "file_read" }] },
+      { ...title, tools: [{ name: "infer_title" }] },
+      { ...title, tools: [] },
+    ]) expect(polytokenAdapter.getSessionId(c, body)).toBe("thread")
+  })
+
+  it("falls back to legacy session identity only when conversation identity is absent or blank", () => {
+    expect(polytokenAdapter.getSessionId(ctx({
+      "x-polytoken-session": " legacy ",
+      "x-polytoken-conversation": "  ",
+    }))).toBe("legacy")
+    expect(polytokenAdapter.getSessionId(ctx({
+      "x-polytoken-session": "  ",
+      "x-polytoken-conversation": "  ",
+    }))).toBeUndefined()
   })
 
   it("ignores OpenCode, affinity, and litellm identity headers entirely", () => {
