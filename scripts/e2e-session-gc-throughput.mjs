@@ -4,11 +4,13 @@
 // does that take against a large lifecycle file? No model calls.
 //
 // Live, 2026-10-09: every turn leaves its fork's transcript for the GC, and
-// parallel runs left 1,100-1,700 an hour. The GC deleted 16 a sweep, once a
-// minute, behind a fixed 256-transcript backlog. Orphaned transcripts stayed
-// live until they filled the ownership ceiling, and every request that needed
-// a new one was refused 503 overloaded_error ("session transcript ownership
-// capacity is full").
+// parallel runs left 1,100-1,700 an hour. Sweeps run on the interval and
+// after every managed fork publication, so under load they ran back to back,
+// but a fixed 256-transcript backlog over the 11-minute grace let only about
+// 23 transcripts a minute be retired. Orphaned transcripts stayed live until
+// they filled the ownership ceiling, and every request that needed a new one
+// was refused 503 overloaded_error ("session transcript ownership capacity is
+// full").
 //
 // The gate makes ORPHANS live transcripts, each a real file where the SDK
 // keeps sessions, none pinned by a mapping. The first REGISTERED are
@@ -25,7 +27,9 @@
 //   E2E_MERIDIAN_ROOT=<checkout> bun scripts/e2e-session-gc-throughput.mjs     # another tree's src
 //
 // MAX_DELETES sets MERIDIAN_SESSION_GC_MAX_DELETES and the count expected
-// (64 when unset, the build's default).
+// (64 when unset, the build's default). DRAINING=1 starts the proxy's drain
+// before the deleting sweep, as close() does before its final one, and
+// expects at most 16.
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, statSync, writeFileSync } from "node:fs"
 import { randomUUID } from "node:crypto"
 import { tmpdir } from "node:os"
@@ -36,7 +40,8 @@ const repo = resolve(process.env.E2E_MERIDIAN_ROOT ?? ".")
 const ORPHANS = Number(process.env.ORPHANS ?? 300)
 const REGISTERED = Math.max(1, Math.min(ORPHANS, Number(process.env.REGISTERED ?? 300)))
 const MAX_PENDING = process.env.MAX_PENDING ?? "1000"
-const EXPECTED_DELETES = Number(process.env.MAX_DELETES ?? 64)
+const DRAINING = process.env.DRAINING === "1"
+const EXPECTED_DELETES = DRAINING ? Math.min(16, Number(process.env.MAX_DELETES ?? 64)) : Number(process.env.MAX_DELETES ?? 64)
 const root = realpathSync(mkdtempSync(join(tmpdir(), "meridian-gc-throughput-")))
 const profileDir = join(root, "profile")
 const projectDir = join(root, "project")
@@ -103,7 +108,7 @@ function stateCounts() {
 }
 
 try {
-  console.log(`${ORPHANS} orphaned transcripts (${REGISTERED} registered, ${ORPHANS - REGISTERED} written in bulk), backlog ${MAX_PENDING}, proxy ${repo}`)
+  console.log(`${ORPHANS} orphaned transcripts (${REGISTERED} registered, ${ORPHANS - REGISTERED} written in bulk), backlog ${MAX_PENDING}${DRAINING ? ", draining" : ""}, proxy ${repo}`)
   const files = []
   for (let i = 0; i < REGISTERED; i++) {
     const sessionId = randomUUID()
@@ -119,6 +124,7 @@ try {
   const retireSeconds = (Date.now() - startedAt) / 1000
   console.log(`  note  the first sweep retired ${stateCounts().retired ?? 0} in ${retireSeconds.toFixed(1)} s`)
   await new Promise(resolve => setTimeout(resolve, 1_500))
+  if (DRAINING) proxy.beginDrain()
   startedAt = Date.now()
   await proxy.sweepSessionGc()
   const seconds = (Date.now() - startedAt) / 1000
