@@ -13,7 +13,7 @@ import { describe, it, expect, mock, beforeEach, afterEach } from "bun:test"
 import { installSdkMock } from "./sdkMock"
 import { installLoggerMock } from "./loggerMock"
 import { installMcpToolsMock } from "./mcpToolsMock"
-import { assistantMessage, blockStop, messageDelta, messageStart, messageStop, resolveMockSdkSessionId, textBlockStart, textDelta } from "./helpers"
+import { assistantMessage, blockStop, messageDelta, messageStart, messageStop, resolveMockSdkSessionId, streamEvent, textBlockStart, textDelta } from "./helpers"
 
 let capturedEnvs: string[] = []
 let failingDirs = new Set<string>()
@@ -43,6 +43,8 @@ let servedEvents = new Map<string, Record<string, unknown>>()
  * Sonnet.
  */
 let requestedModel = ""
+/** Config dirs whose Fable refusal arrives behind an SDK keepalive ping. */
+let fablePingFirstDirs = new Set<string>()
 /** The rate-limit event the SDK emits ahead of that refusal, by config dir. */
 let fableLimitEvents = new Map<string, Record<string, unknown>>()
 /** That event as the SDK gave it on 2026-10-05: seconds, and this type. */
@@ -66,6 +68,9 @@ installSdkMock(() => ({
       // The tier the proxy runs a request as: Sonnet for a model it does not know.
       const tier = /fable|mythos/.test(requestedModel) ? "fable" : /opus|haiku/.test(requestedModel) ? "other" : "sonnet"
       if (tier === "fable" && [...fableSpentDirs].some((f) => dir.includes(f))) {
+        if ([...fablePingFirstDirs].some((f) => dir.includes(f))) {
+          yield { ...streamEvent({ type: "ping" }), session_id: sessionId }
+        }
         const event = [...fableLimitEvents].find(([f]) => dir.includes(f))?.[1]
         if (event) yield { type: "rate_limit_event", rate_limit_info: event, session_id: sessionId }
         throw new Error(fableRefusal)
@@ -181,6 +186,7 @@ beforeEach(() => {
   sonnetSpentDirs = new Set()
   servedEvents = new Map()
   fableLimitEvents = new Map()
+  fablePingFirstDirs = new Set()
   resetOAuthUsageCache()
   requestedModel = ""
   clearSessionCache()
@@ -315,6 +321,32 @@ describe("an allowance spent for one model", () => {
     const state = await health(app)
     expect(state.exhausted).toEqual([])
     expect(state.exhaustedModels.map(e => [e.id, e.model])).toEqual([["work", "fable"]])
+  }, 20_000)
+
+  it("benches only Fable when the streamed refusal arrives behind a keepalive ping", async () => {
+    // The stream's headers are already out when the refusal comes, so the
+    // next account is tried inside the client's stream: the mark it leaves
+    // must still be the model's own, and the account keep serving the rest.
+    const app = createTestApp()
+    await setActive(app, "work")
+    fableSpentDirs.add("ap-work")
+    fablePingFirstDirs.add("ap-work")
+    fableLimitEvents.set("ap-work", fableLimitEvent(Date.now() + 2 * 24 * 60 * 60_000))
+    const res = await post(app, { "x-opencode-session": "sub" }, "a subagent's first turn", FABLE, true)
+    expect(res.status).toBe(200)
+    const stream = await res.text()
+    expect(stream).toContain("ok from /tmp/meridian-ap-personal")
+    expect(stream).not.toContain("event: error")
+
+    const state = await health(app)
+    expect(state.exhausted).toEqual([])
+    expect(state.exhaustedModels.map(e => [e.id, e.model])).toEqual([["work", "fable"]])
+    expect(state.exhaustedModels[0]!.until).toBeGreaterThan(Date.now() + 24 * 60 * 60_000)
+
+    capturedEnvs = []
+    const other = await post(app, { "x-opencode-session": "main" }, "the main thread's next turn", "claude-sonnet-4-5", true)
+    expect(await other.text()).toContain("ok from /tmp/meridian-ap-work")
+    expect(capturedEnvs).toEqual(["/tmp/meridian-ap-work"])
   }, 20_000)
 
   it("keeps every other model on the account that refused Fable", async () => {

@@ -281,6 +281,18 @@ describe("ProfileExhaustion tracker", () => {
     expect(ex.snapshot()).toEqual([{ id: "spare", until: T0 + 60_000, reason: "rate_limit_error" }])
     expect(ex.modelSnapshot()).toEqual([{ id: "work", model: "fable", until: T0 + 120_000, reason: "rate_limit_error" }])
   })
+
+  it("forgets a profile's model marks along with its account-wide one", () => {
+    const ex = new ProfileExhaustion(() => T0)
+    ex.mark("work", T0 + 60_000, "rate_limit_error")
+    ex.mark("work", T0 + 600_000, "rate_limit_error", "fable")
+    ex.mark("spare", T0 + 600_000, "rate_limit_error", "fable")
+    ex.forget("work")
+    expect(ex.isExhausted("work", "fable")).toBe(false)
+    expect(ex.benchedUntil("work", "fable")).toBeNull()
+    expect(ex.snapshot()).toEqual([])
+    expect(ex.modelSnapshot()).toEqual([{ id: "spare", model: "fable", until: T0 + 600_000, reason: "rate_limit_error" }])
+  })
 })
 
 describe("AssignmentStore", () => {
