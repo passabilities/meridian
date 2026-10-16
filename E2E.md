@@ -6734,6 +6734,10 @@ Run `bun scripts/e2e-claude-code-client.mjs` for the full installed Claude Code 
 
 ## Claude Code system turns across tool rounds (E77)
 
+"E77" is the label this gate carried where it was written; it is unrelated to
+"E77: Progress captions from the interactive client" above. Code and the gate
+script refer to this section by its name.
+
 **What it proves:** every tool round of a Claude Code conversation resumes its
 SDK session, where on `claude-fable-5-1` every round after the first replayed
 the whole conversation into a new one.
@@ -6794,7 +6798,7 @@ untouched: the reminder is still delivered with its round.
 
 #### A system turn that is the reminder alone (claude-cli 2.1.294)
 
-On 2026-10-07/08 the user's orchestrators (client 2.1.294) sent Fable
+On 2026-10-07/08 a contributor's orchestrators (client 2.1.294) sent Fable
 subagent rounds ending in a system turn that held the reminder and nothing
 else, and the next request carried no trace of it: the reply sat where the
 turn had been.
@@ -6835,7 +6839,11 @@ No model calls and no credentials: the client talks to the proxy with a dummy
 token, and the proxy's one profile is an API key against the scripted API.
 `ROUNDS` sets the number of tool rounds (default 5), `E2E_CLAUDE_CLIENT` the
 client (default `claude` on PATH) and `E2E_CLAUDE_PATH` the CLI the SDK
-drives. Not in CI: it has not been run on Linux.
+drives. Not in CI: it needs the `claude` client binary.
+
+The gate tells the conversation's own SDK queries from the client's side calls
+by the client tools they are handed, not by their turn budget: tools the
+client defers lift the one-turn cap, and current clients defer.
 
 ### Pass criteria
 
@@ -6875,16 +6883,34 @@ hook.
 ("reminder-only system turn", streamed and not) failed before the change. The
 pure test failed with the live diagnosis exactly (`modified-history`, stored
 digest `eff8768460e3…`). The integration test also holds where the reply's
-SDK UUID is recorded. The E77 gate with client 2.1.294 still passes, main
-thread and subagent, but it does not reach this shape: that client sent the
-two-block turn on every round, and `CLAUDE_CODE_TOTAL_TOKENS_REMINDER=off` in
-the gate's environment did not change that. The real-traffic check is
-whether `eff8768460e3` replays stop once the user's proxy runs this build.
+SDK UUID is recorded. The gate with client 2.1.294 still passed (that run
+also covered an Agent-tool subagent with a later revision of the script that
+is not part of this change), but it does not reach this shape: that client
+sent the two-block turn on every round, and
+`CLAUDE_CODE_TOTAL_TOKENS_REMINDER=off` in the gate's environment did not
+change that. The real-traffic check is whether `eff8768460e3` replays stop
+once a proxy that saw them runs this build.
+
+The runs above were made on macOS arm64 with clients and SDK child CLIs
+2.1.284 through 2.1.294, by the change's author on the fork it was written
+on; they were not re-run for this branch. Rebased onto current main, the gate
+was run on Linux x86_64 (2026-10-16, SDK child CLI 2.1.301, five tool rounds):
+
+| Client | Model | Fix | Lineage of the six requests | Result |
+|---|---|---|---|---|
+| 2.1.301 | `claude-fable-5-1` | off | new, continuation, new, new, new, new | FAIL (5 checks) |
+| 2.1.301 | `claude-fable-5-1` | on | new, then five continuation | PASS |
+| 2.1.296 | `claude-fable-5-1` | on | new, then five continuation | PASS |
+| 2.1.301 | `claude-opus-5-5` | on | new, then five continuation (no reminder sent) | PASS |
+
+Both clients still append the one-request reminder on Fable. No client sent
+a reminder-only turn in these runs either.
 
 ### Not covered
 
 - A subagent of a live session on the real model. The shapes are the client's
-  own, but no Fable call has been made through a proxy with the fix.
+  own, but no Fable call has been made through a proxy with the fix. A live
+  Fable run through this build is owed.
 - A system turn that is nothing but a one-request reminder anywhere but the
   end of a request. It keeps its place, since resume indexes are by position;
   the client has only been seen sending it last.
@@ -6892,7 +6918,7 @@ whether `eff8768460e3` replays stop once the user's proxy runs this build.
   it (see Verified).
 - Sessions stored before either fix. Their lineage has the reminder in it, so
   their next tool round replays once more and resumes from then on.
-- Linux and Windows.
+- Windows. Linux was run only against the scripted API (see Verified).
 
 ## CLI model-version rejection
 

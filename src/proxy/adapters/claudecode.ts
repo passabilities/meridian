@@ -318,7 +318,8 @@ export function isClaudeCodeClient(c: Context): boolean {
  * the first look like edited history, so each one replayed the whole
  * conversation into a fresh SDK session. Measured on a live proxy on
  * 2026-10-05: 32 such turns wrote 5.4M tokens to the cache, 168K each, where
- * the turns that did resume wrote 10K (E2E.md E77).
+ * the turns that did resume wrote 10K (E2E.md, "Claude Code system turns
+ * across tool rounds").
  *
  * The client says which part it keeps: the cache breakpoint sits on the last
  * block it will send again, and anything it adds for one request has to come

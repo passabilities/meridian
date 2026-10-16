@@ -3,7 +3,8 @@ import { canonicalizeClaudeCodeMessagesForLineage as canonicalize, claudeCodeAda
 import { computeLineageHash, computeMessageHashes, computeMessageBlockHashes, verifyLineage, type SessionState } from "../proxy/session/lineage"
 
 // The wire shapes below are what claude-cli 2.1.289 sent for claude-fable-5-1,
-// captured turn by turn against a scripted API on 2026-10-05 (E2E.md E77).
+// captured turn by turn against a scripted API on 2026-10-05 (E2E.md,
+// "Claude Code system turns across tool rounds").
 const text = (value: string) => ({ type: "text", text: value })
 const cached = (value: string) => ({ type: "text", text: value, cache_control: { type: "ephemeral" } })
 const tokensLeft = (count: number) => `<total_tokens>${count} tokens left</total_tokens>`

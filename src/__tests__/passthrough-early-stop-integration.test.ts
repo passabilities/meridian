@@ -1527,7 +1527,8 @@ describe("Integration: passthrough early stop", () => {
   // appends a reminder to the trailing system turn that lives for that one
   // request: the next request carries the turn without it. Hashed into the
   // lineage, it made every tool round after the first replay the conversation
-  // (E2E.md E77). The shapes are the captured ones.
+  // (E2E.md, "Claude Code system turns across tool rounds"). The shapes are
+  // the captured ones.
   for (const stream of [false, true]) {
     it(`resumes the tool round after a system turn that carried a one-request reminder (stream=${stream})`, async () => {
       const sessionId = `cc-one-request-reminder-${stream}-${TEST_RUN_ID}`
