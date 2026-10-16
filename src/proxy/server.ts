@@ -7071,7 +7071,7 @@ function createProxyServerWithAuthOwner(config: Partial<ProxyConfig>, authOwner:
                   recoveryCompleted && silentTurnRecovered && recoverySessionId &&
                   !isIndependentSession && !sawDuplicateToolUse
                 ) {
-                  const recoverySdkUuidMap = allMessages.map(() => null)
+                  const recoverySdkUuidMap: Array<string | null> = Array.from({ length: replyPosition }, () => null)
                   await commitFork(recoveryForkTarget, admissionLifecycleOptions)
                   assertDurableWritesAllowed()
                   const recoveryMappingStored = await publishPinnedTranscript(
