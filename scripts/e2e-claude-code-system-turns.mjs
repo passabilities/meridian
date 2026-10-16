@@ -111,6 +111,7 @@ const realQuery = sdk.query
 const observer = spyOn(sdk, "query").mockImplementation(input => {
   queries.push({ model: input.options?.model, sessionId: input.options?.sessionId, resume: input.options?.resume,
     resumeSessionAt: input.options?.resumeSessionAt, maxTurns: input.options?.maxTurns,
+    toolServer: Object.keys(input.options?.mcpServers ?? {}).length > 0,
     textPrompt: typeof input.prompt === "string" ? input.prompt : undefined })
   return realQuery(input)
 })
@@ -185,9 +186,10 @@ try {
   check(lineage[0] === "new" && lineage.slice(1).every(type => type === "continuation") && rows.slice(1).every(row => row.isResume === true),
     "every request after the first is a continuation that resumes", lineage.join(", "))
 
-  // The conversation's own queries: the client's side calls carry no tools
-  // and are not held to the one-turn cap.
-  const main = queries.filter(query => query.maxTurns === 1)
+  // The conversation's own queries are the ones handed the client's tools;
+  // its side calls carry none. The turn budget is no marker: tools the
+  // client defers lift the one-turn cap.
+  const main = queries.filter(query => query.toolServer)
   const chained = main.slice(1).every((query, index) => typeof query.resume === "string" && query.resume.length > 0 && typeof query.resumeSessionAt === "string")
   check(main.length === ROUNDS + 1 && chained && !main[0].resume, "each SDK query after the first resumes at the round before it",
     main.map(query => query.resume ? "resume" : "fresh").join(", "))
