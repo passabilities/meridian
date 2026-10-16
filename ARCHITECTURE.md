@@ -247,6 +247,7 @@ src/
 │   │   ├── processIncarnation.ts ← Process/host identity for lock ownership
 │   │   └── durableFileSystem.ts ← Durable file operations
 │   ├── sessionStore.ts        ← Shared file store (cross-proxy session resume)
+│   ├── sessionGcLimits.ts     ← Default session GC deletion and backlog limits (PURE)
 │   ├── profiles.ts            ← Multi-profile support: resolve, list, switch auth contexts (leaf)
 │   ├── profileCli.ts          ← CLI commands for profile management (leaf, I/O)
 │   ├── profileConfigStore.ts  ← cross-process profile writer lock and atomic snapshots (leaf, I/O)

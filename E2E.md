@@ -6963,6 +6963,79 @@ Final packaged arm64 validation on September 18:
 These results supersede the earlier Mac sign-in, notification and handoff gates.
 Windows/Linux desktop runtime evidence remains absent. No release was published.
 
+## Session GC keeps up with the transcripts turns leave (source E95)
+
+**What it proves:** at its default limits the session GC retires and deletes
+orphaned transcripts faster than parallel runs leave them, so they cannot
+fill the transcript ownership ceiling.
+
+Every managed turn runs on a fork of its conversation's SDK session, so every
+turn leaves one transcript for the GC. One that no mapping pins is retired,
+waits out the grace (`MERIDIAN_SESSION_GC_GRACE_MS`, the session turn's hold
+and a minute: 11 minutes by default) and is then deleted through the Agent
+SDK in a gated child. A sweep runs every `MERIDIAN_SESSION_GC_INTERVAL_MS`
+(60 s).
+- A sweep now deletes up to 64 (`MERIDIAN_SESSION_GC_MAX_DELETES`, was 16):
+  3,840 an hour against the 1,100–1,700 an hour parallel runs left in the
+  source's live report.
+- The backlog (`MERIDIAN_SESSION_GC_MAX_PENDING`, was a fixed 256) defaults to
+  three graces of deletions at that rate, never under 256: 64 × 11 × 3 =
+  **2,112**. A fixed 256 over 11 minutes would cap retirement at about 23 a
+  minute, under 64. The ownership ceiling (twice `MERIDIAN_MAX_STORED_SESSIONS`
+  plus the backlog) rises with it, 20,256 → 22,112.
+- `sessionGcLimits.ts` holds both defaults. The lifecycle lock, deferral,
+  generation fencing and publication leases are unchanged.
+
+### Run it
+
+```bash
+bun test src/__tests__/session-gc-limits.test.ts src/__tests__/proxy-session-gc-capacity.test.ts
+bun scripts/e2e-session-gc-throughput.mjs                                  # 300 orphans
+ORPHANS=20000 MAX_PENDING=2112 bun scripts/e2e-session-gc-throughput.mjs   # a large lifecycle file
+MAX_DELETES=16 ORPHANS=20000 MAX_PENDING=2112 bun scripts/e2e-session-gc-throughput.mjs   # the old rate
+```
+
+The proxy test registers 300 orphaned transcripts and runs one sweep at the
+default limits. The gate makes real transcript files where the SDK keeps
+sessions, none pinned; past the first 300 they are written straight into the
+lifecycle file. One sweep retires them up to the backlog; after a 1-second
+grace a second sweep deletes as many as it may, each through the SDK's
+`deleteSession` in a gated child. No model calls, no accounts.
+
+**Pass criteria** (asserted, non-zero exit on any), at the default 300:
+- The proxy test: one sweep retires all 300 (main at ca716c36: 255).
+- The gate: one sweep deletes 64 transcript files within the sweep's 30-second
+  budget (`MERIDIAN_SESSION_GC_RUN_TIMEOUT_MS`).
+
+**Measured 2026-10-16** on this build, Linux, Bun 1.3.14, Agent SDK 0.2.141,
+a shared 20-core host (load average about 11):
+
+| Live transcripts | Lifecycle file | Deletes per sweep | Deleted | Sweep | Per deletion |
+|---|---|---|---|---|---|
+| 300 | 0.1 MB | 64 | 64 | 11.3–14.1 s | 177–220 ms |
+| 2,000 | 1.0 MB | 64 | 64 | 19.9 s | 310 ms |
+| 10,000 | 4.8 MB | 64 | 64 | 25.9 s | 405 ms |
+| 20,000 | 9.6 MB | 64 | 49, 51 | 30.5, 30.7 s (budget) | 601–623 ms |
+| 20,000 | 9.6 MB | 16 (main) | 16 | 9.8–11.3 s | 613–705 ms |
+| 300 | 0.1 MB | 16 (main) | 16 | 3.5 s | 217 ms |
+
+Each deletion rewrites the whole lifecycle file under its lock (claim,
+executor handshake, settlement), so a deletion costs more as the file grows.
+Past about 10,000 live transcripts a sweep stops at its 30-second budget short
+of 64; at 20,000 it still deletes about 50 a minute, about 3,000 an hour, three
+times main's 16. The deletion the budget cuts short goes back to retired and
+is retried; none were left `deleting`. The gate reports FAIL at 20,000 for
+that reason; it is the measured limit, not a regression against main.
+
+**Live evidence owed.** The source runs (macOS, Claude CLI 2.1.284–2.1.294)
+were not re-run against this build. Owed before release, on the affected
+platform with real parallel Claude Code runs through the proxy:
+- `session.gc` log lines and `deleted` tombstones per minute keep pace with the
+  transcripts turns create, over an hour of parallel runs.
+- No `session transcript ownership capacity is full` 503s.
+- Request admission latency on the lifecycle lock while a large sweep runs:
+  the lock is now busy up to about 20 s of each minute at 20,000 transcripts.
+
 ## Windows session garbage collection (#895 / #896)
 
 ```powershell
