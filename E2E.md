@@ -5421,13 +5421,19 @@ for. It is held by the mocked-SDK suite and was not run live again, the window
 having reopened.
 
 `src/__tests__/active-priority-integration.test.ts` ("an allowance spent for
-one model") holds the routing through the mocked SDK, twenty-one cases, three
-of them streamed as the Claude Code client asks (one with the refusal behind a
-keepalive ping) and one in `priority` routing. On the source branch, with the
-mark left unscoped, thirteen of them failed. On this build, with the model
-left out of the in-stream failure path, the three streamed cases fail; with
-the pool-wide wait left out of the in-stream terminal frame, the streamed
-whole-pool case fails. `errors.test.ts`, `limit-detection.test.ts`,
+one model") holds the routing through the mocked SDK, twenty-three cases,
+three of them streamed as the Claude Code client asks (one with the refusal
+behind a keepalive ping) and one in `priority` routing. On the source branch,
+with the mark left unscoped, thirteen of them failed. On this build, with the
+model left out of the in-stream failure path, the three streamed cases fail;
+with the pool-wide wait left out of the in-stream terminal frame, the streamed
+whole-pool case fails; with a refusal on record that predates the attempt read
+as this attempt's, the case that holds the freshness check fails; with the
+wait taken from the tried accounts only, the case whose benched active account
+was skipped fails. `src/__tests__/priority-routing-integration.test.ts` holds
+a turn kept on its retained account to that account's own wait: given the
+whole pool's, it was told ten minutes for an account out for three hours.
+`errors.test.ts`, `limit-detection.test.ts`,
 `routing.test.ts` and `retry-after-unit.test.ts` hold the wording, the scope
 rule, the marks and the wait.
 
