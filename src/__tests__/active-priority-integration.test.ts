@@ -9,7 +9,7 @@
  * moves conversations already under way - plus the refusal surfaces that make
  * a spent account visible in EVERY mode.
  */
-import { describe, it, expect, mock, beforeEach, afterEach } from "bun:test"
+import { describe, it, expect, mock, setSystemTime, beforeEach, afterEach } from "bun:test"
 import { installSdkMock } from "./sdkMock"
 import { installLoggerMock } from "./loggerMock"
 import { installMcpToolsMock } from "./mcpToolsMock"
@@ -47,6 +47,13 @@ let requestedModel = ""
 let fablePingFirstDirs = new Set<string>()
 /** The rate-limit event the SDK emits ahead of that refusal, by config dir. */
 let fableLimitEvents = new Map<string, Record<string, unknown>>()
+/**
+ * Config dirs whose Fable refusal is recorded on a clock running behind the
+ * attempt, by how far: what the attempt then finds on record is older than it.
+ */
+let fableRecordLagDirs = new Map<string, number>()
+/** Puts the clock right again once a lagged refusal's request has returned. */
+let restoreClock = (): void => {}
 /** That event as the SDK gave it on 2026-10-05: seconds, and this type. */
 const fableLimitEvent = (resetsAtMs: number): Record<string, unknown> => ({
   status: "rejected",
@@ -73,6 +80,11 @@ installSdkMock(() => ({
         }
         const event = [...fableLimitEvents].find(([f]) => dir.includes(f))?.[1]
         if (event) yield { type: "rate_limit_event", rate_limit_info: event, session_id: sessionId }
+        const lag = [...fableRecordLagDirs].find(([f]) => dir.includes(f))?.[1]
+        if (lag !== undefined) {
+          setSystemTime(new Date(Date.now() - lag))
+          restoreClock = () => setSystemTime()
+        }
         throw new Error(fableRefusal)
       }
       if (tier === "sonnet" && [...sonnetSpentDirs].some((f) => dir.includes(f))) throw new Error(SONNET_LIMIT)
@@ -187,6 +199,7 @@ beforeEach(() => {
   servedEvents = new Map()
   fableLimitEvents = new Map()
   fablePingFirstDirs = new Set()
+  fableRecordLagDirs = new Map()
   resetOAuthUsageCache()
   requestedModel = ""
   clearSessionCache()
@@ -203,6 +216,8 @@ beforeEach(() => {
 })
 
 afterEach(() => {
+  restoreClock()
+  restoreClock = () => {}
   for (const [k, v] of Object.entries(savedEnv)) {
     if (v === undefined) delete process.env[k]
     else process.env[k] = v
@@ -527,6 +542,24 @@ describe("an allowance spent for one model", () => {
     expect(state.exhausted[0]?.until).toBeLessThanOrEqual(Date.now() + 10 * 60_000)
   }, 20_000)
 
+  it("benches the account as before when the refusal on record is older than the attempt", async () => {
+    // The wording names the Fable allowance and needs no SDK event, so only
+    // the record's age says whether this attempt was the one refused for it.
+    // A record that predates the attempt is some other request's word.
+    fableRecordLagDirs.set("ap-work", 60_000)
+    const app = createTestApp()
+    await setActive(app, "work")
+    fableSpentDirs.add("ap-work")
+    const res = await post(app, {}, "first", FABLE)
+    restoreClock()
+    expect(await servedBy(res)).toContain("ap-personal")
+
+    const state = await health(app)
+    expect(state.spent.find(s => s.profileId === "work")?.diagnosis.bucket).toBe("seven_day_fable")
+    expect(state.exhaustedModels).toEqual([])
+    expect(state.exhausted.map(e => e.id)).toEqual(["work"])
+  }, 20_000)
+
   it("does not keep Fable off an account that serves it on usage credits because one request was throttled", async () => {
     // What CLI 2.1.284 reports with a request it serves past the allowance,
     // here with the request that is then throttled.
@@ -639,6 +672,31 @@ describe("an allowance spent for one model", () => {
     expect(wait).toBeLessThanOrEqual(Math.ceil((soon - Date.now()) / 1000) + 2)
     // The body carries the same wait as the header, not the tried account's.
     expect((await again.json() as { error: { retry_after?: number } }).error.retry_after).toBe(wait)
+  }, 40_000)
+
+  it("counts the active account toward the wait once it is skipped as benched", async () => {
+    // The order puts the active account last. It is tried first all the
+    // same, and once benched is skipped, and may still be the first to get
+    // Fable back.
+    process.env.MERIDIAN_PROFILE_ORDER = "personal,spare"
+    const soon = Date.now() + 20 * 60_000
+    fableLimitEvents.set("ap-work", fableLimitEvent(soon))
+    fableLimitEvents.set("ap-personal", fableLimitEvent(Date.now() + 5 * 24 * 60 * 60_000))
+    fableLimitEvents.set("ap-spare", fableLimitEvent(Date.now() + 3 * 24 * 60 * 60_000))
+    const app = createTestApp()
+    await setActive(app, "work")
+    fableSpentDirs.add("ap-work")
+    fableSpentDirs.add("ap-personal")
+    expect(await servedBy(await post(app, {}, "first", FABLE))).toContain("ap-spare")
+
+    fableSpentDirs.add("ap-spare")
+    capturedEnvs = []
+    const refused = await post(app, {}, "the next Fable request", FABLE)
+    expect(refused.status).toBe(429)
+    expect(capturedEnvs).toEqual(["/tmp/meridian-ap-spare"])
+    const wait = Number(refused.headers.get("retry-after"))
+    expect(wait).toBeGreaterThan(18 * 60)
+    expect(wait).toBeLessThanOrEqual(Math.ceil((soon - Date.now()) / 1000) + 2)
   }, 40_000)
 
   it("answers 429 when no account has Fable allowance left, and still serves the other models", async () => {
