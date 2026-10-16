@@ -2591,10 +2591,8 @@ function createProxyServerWithAuthOwner(config: Partial<ProxyConfig>, authOwner:
                 }, 503, TRANSIENT_RETRY_AFTER_HEADERS)
               }
               let candidates: string[]
-              let pool: readonly string[] = order
               if (routingMode === ACTIVE_PRIORITY) {
                 const activeId = resolveProfile(finalConfig.profiles, finalConfig.defaultProfile).id
-                if (!order.includes(activeId)) pool = [activeId, ...order]
                 candidates = retainOnlyProfile
                   ? [retainOnlyProfile]
                   : chooseActivePriorityCandidates(
@@ -2624,7 +2622,8 @@ function createProxyServerWithAuthOwner(config: Partial<ProxyConfig>, authOwner:
                 requestMeta,
                 candidateIds: candidates,
                 // A request held to one account has nobody else to wait for.
-                poolIds: retainOnlyProfile ? candidates : pool,
+                // `order` lists every configured profile, the active one too.
+                poolIds: retainOnlyProfile ? candidates : order,
                 sessionKey,
                 wantsStream: body.stream === true,
                 currentProfileId: assignedProfile,
