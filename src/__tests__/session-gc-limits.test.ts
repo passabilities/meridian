@@ -32,6 +32,7 @@ describe("resolveSessionGcLimits", () => {
   it("resolves the defaults from the turn hold", () => {
     expect(resolveSessionGcLimits(settings({}), 600_000)).toEqual({
       maxDeletesPerRun: 64,
+      shutdownMaxDeletesPerRun: 16,
       retiredGraceMs: 660_000,
       maxPending: 2_112,
       intervalMs: 60_000,
@@ -60,11 +61,24 @@ describe("resolveSessionGcLimits", () => {
     })
     expect(resolveSessionGcLimits(settings({ SESSION_GC_MAX_DELETES: 32 }), 600_000)).toMatchObject({
       maxDeletesPerRun: 32,
+      shutdownMaxDeletesPerRun: 16,
       maxPending: 1_056,
     })
     expect(resolveSessionGcLimits(settings({ SESSION_GC_GRACE_MS: -1 }), 600_000)).toMatchObject({
       retiredGraceMs: 0,
       maxPending: 256,
+    })
+  })
+
+  it("keeps the shutdown sweep at 16 deletions, or fewer when the cap is lower", () => {
+    expect(resolveSessionGcLimits(settings({ SESSION_GC_MAX_DELETES: 500 }), 600_000).shutdownMaxDeletesPerRun).toBe(16)
+    expect(resolveSessionGcLimits(settings({ SESSION_GC_MAX_DELETES: 4 }), 600_000)).toMatchObject({
+      maxDeletesPerRun: 4,
+      shutdownMaxDeletesPerRun: 4,
+    })
+    expect(resolveSessionGcLimits(settings({ SESSION_GC_MAX_DELETES: 0 }), 600_000)).toMatchObject({
+      maxDeletesPerRun: 1,
+      shutdownMaxDeletesPerRun: 1,
     })
   })
 

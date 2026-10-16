@@ -20,6 +20,14 @@
  */
 export const DEFAULT_SESSION_GC_MAX_DELETES = 64
 
+/**
+ * The most the final sweep of a draining proxy may delete, whatever
+ * `MERIDIAN_SESSION_GC_MAX_DELETES` says: the 16 every sweep deleted before
+ * the default rose, so stopping the proxy costs no more than it did. What it
+ * leaves, the next process deletes.
+ */
+export const SHUTDOWN_SESSION_GC_MAX_DELETES = 16
+
 /** The deletion backlog's bound before it followed the grace. */
 const SESSION_GC_MAX_PENDING_FLOOR = 256
 
@@ -57,6 +65,8 @@ export type SessionGcSetting = (name: string, fallback: number) => number
 export interface SessionGcLimits {
   /** Deletions one sweep may make. */
   maxDeletesPerRun: number
+  /** Deletions the sweeps of a draining proxy may make. */
+  shutdownMaxDeletesPerRun: number
   /** How long a retired transcript waits before it may be deleted. */
   retiredGraceMs: number
   /** Transcripts retired or prepared and not yet deleted, at most. */
@@ -76,6 +86,7 @@ export function resolveSessionGcLimits(setting: SessionGcSetting, turnMaxHoldMs:
   const intervalMs = Math.max(0, setting("SESSION_GC_INTERVAL_MS", DEFAULT_SESSION_GC_INTERVAL_MS))
   return {
     maxDeletesPerRun,
+    shutdownMaxDeletesPerRun: Math.min(maxDeletesPerRun, SHUTDOWN_SESSION_GC_MAX_DELETES),
     retiredGraceMs,
     maxPending: Math.max(1, setting(
       "SESSION_GC_MAX_PENDING",

@@ -903,7 +903,13 @@ function createProxyServerWithAuthOwner(config: Partial<ProxyConfig>, authOwner:
     if (sessionGcRunning) return sessionGcRunning
     sessionGcRunning = (async () => {
       if (profileCopyPruningEnabled) await pruneSupersededProfileCopies()
-      const result = await runSessionGc(collectSessionGcPins(), sessionGcOptions)
+      // A draining proxy's sweeps, close()'s final one among them, delete no
+      // more than they did before the per-sweep default rose, so stopping the
+      // proxy stays short. The next process deletes what they leave.
+      const runOptions = draining
+        ? { ...sessionGcOptions, maxDeletesPerRun: sessionGcLimits.shutdownMaxDeletesPerRun }
+        : sessionGcOptions
+      const result = await runSessionGc(collectSessionGcPins(), runOptions)
       if (result.deleted || result.notFound || result.failed) {
         claudeLog("session.gc", { ...result })
         if (result.failed) {

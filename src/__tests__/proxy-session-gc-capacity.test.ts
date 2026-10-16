@@ -9,7 +9,7 @@
  * request that needed a new one was refused 503 `session transcript ownership
  * capacity is full`.
  */
-import { afterEach, beforeEach, describe, expect, it } from "bun:test"
+import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test"
 import { mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync } from "node:fs"
 import { join } from "node:path"
 import { tmpdir } from "node:os"
@@ -25,9 +25,10 @@ installSdkMock(() => ({
 installLoggerMock(() => ({ claudeLog: () => {}, withClaudeLogContext: (_ctx, fn) => fn() }))
 installMcpToolsMock(() => ({ createOpencodeMcpServer: () => ({ type: "sdk", name: "opencode", instance: {} }) }))
 
-const { createProxyServer } = await import("../proxy/server")
+const { createProxyServer, startProxyServer } = await import("../proxy/server")
 const { setSessionStoreDir } = await import("../proxy/sessionStore")
-const { registerLiveTranscript } = await import("../proxy/sessionLifecycle")
+const lifecycle = await import("../proxy/sessionLifecycle")
+const { registerLiveTranscript } = lifecycle
 
 const GC_SETTINGS = [
   "MERIDIAN_SESSION_GC_MAX_PENDING", "MERIDIAN_SESSION_GC_MAX_DELETES", "MERIDIAN_SESSION_GC_GRACE_MS",
@@ -73,5 +74,36 @@ describe("session GC capacity", () => {
     }
     const states = Object.values(sidecar.resources).map(resource => resource.state)
     expect(states.filter(state => state === "retired")).toHaveLength(300)
+  }, 60_000)
+
+  it("keeps a draining proxy's sweeps, close()'s final one among them, to 16 deletions", async () => {
+    process.env.MERIDIAN_SESSION_GC_INTERVAL_MS = "0"
+    const runGc = lifecycle.runGc
+    const limits: number[] = []
+    const sweeps: Promise<unknown>[] = []
+    const spy = spyOn(lifecycle, "runGc").mockImplementation((pins, options) => {
+      limits.push(options?.maxDeletesPerRun ?? -1)
+      const sweep = runGc(pins, options)
+      sweeps.push(sweep)
+      return sweep
+    })
+    try {
+      const proxy = createProxyServer({ port: 0, host: "127.0.0.1" })
+      await proxy.sweepSessionGc?.()
+      proxy.beginDrain?.()
+      await proxy.sweepSessionGc?.()
+      expect(limits).toEqual([64, 16])
+
+      limits.length = 0
+      const instance = await startProxyServer({ port: 0, host: "127.0.0.1", silent: true })
+      // Let the startup sweep finish, so close() starts its own.
+      while (sweeps.length < 3) await new Promise(resolve => setTimeout(resolve, 5))
+      await Promise.all(sweeps)
+      expect(limits).toEqual([64])
+      await instance.close()
+      expect(limits).toEqual([64, 16])
+    } finally {
+      spy.mockRestore()
+    }
   }, 60_000)
 })
