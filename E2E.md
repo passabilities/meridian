@@ -6734,9 +6734,8 @@ Run `bun scripts/e2e-claude-code-client.mjs` for the full installed Claude Code 
 
 ## Claude Code system turns across tool rounds (E77)
 
-"E77" is the label this gate carried where it was written; it is unrelated to
-"E77: Progress captions from the interactive client" above. Code and the gate
-script refer to this section by its name.
+The title's label is the one this gate carried where it was written, unrelated
+to the progress-captions section above. Code refers to this section by its name.
 
 **What it proves:** every tool round of a Claude Code conversation resumes its
 SDK session, where on `claude-fable-5-1` every round after the first replayed
@@ -6796,7 +6795,7 @@ cached prefix. The known wording is matched as well, for a turn with no
 breakpoint. Message positions are kept, and the request the model reads is
 untouched: the reminder is still delivered with its round.
 
-#### A system turn that is the reminder alone (claude-cli 2.1.294)
+### A system turn that is the reminder alone (claude-cli 2.1.294)
 
 On 2026-10-07/08 a contributor's orchestrators (client 2.1.294) sent Fable
 subagent rounds ending in a system turn that held the reminder and nothing
@@ -6883,10 +6882,8 @@ hook.
 ("reminder-only system turn", streamed and not) failed before the change. The
 pure test failed with the live diagnosis exactly (`modified-history`, stored
 digest `eff8768460e3…`). The integration test also holds where the reply's
-SDK UUID is recorded. The gate with client 2.1.294 still passed (that run
-also covered an Agent-tool subagent with a later revision of the script that
-is not part of this change), but it does not reach this shape: that client
-sent the two-block turn on every round, and
+SDK UUID is recorded. The gate with client 2.1.294 still passed, but it does
+not reach this shape: that client sent the two-block turn on every round, and
 `CLAUDE_CODE_TOTAL_TOKENS_REMINDER=off` in the gate's environment did not
 change that. The real-traffic check is whether `eff8768460e3` replays stop
 once a proxy that saw them runs this build.
@@ -6919,6 +6916,15 @@ a reminder-only turn in these runs either.
 - Sessions stored before either fix. Their lineage has the reminder in it, so
   their next tool round replays once more and resumes from then on.
 - Windows. Linux was run only against the scripted API (see Verified).
+- Durable text after a breakpoint. The rule assumes the client never keeps
+  text after the last `cache_control` block of a system turn. If one does,
+  the stored turn is cut short, the next request (sent without that
+  breakpoint) no longer matches, and the round replays where main would have
+  resumed. No client has been seen doing this.
+- A resent reminder-only turn. If a client ever sends a trailing
+  reminder-only turn again in its next request, that turn takes the index
+  where the reply's SDK UUID was recorded, so the UUID map is off by one for
+  undo from then on. No client has been seen doing this.
 
 ## CLI model-version rejection
 
