@@ -5282,6 +5282,25 @@ use fixtures as substitutes or enable paid usage to manufacture a refusal.
 model, a request for that model is served by the next account in the pool,
 and every other model stays on the account that refused.
 
+**Status on this build: not live-verified.** The runs under *Verified* below
+were made on the contributor's source branch (macOS, Claude CLI
+2.1.284–2.1.294) before it was rebased. They were **not re-run against this
+build**, which differs from what they ran: priority dispatch now fails over a
+streamed request inside the client's stream once headers are out (see
+*Delayed refusal after an SSE heartbeat* above), and the model scope and the
+pool-wide wait were moved into that dispatcher's shared failure and terminal
+paths. Live evidence owed before this counts as verified:
+
+- The gate below, all parts including `ALSO_SPENT`, against this build with a
+  Claude Max account whose Fable allowance is spent while its account-wide
+  windows and other models still have room, and a second account with Fable
+  allowance left. Nothing but such an account produces the refusal.
+- The streamed part with a refusal that arrives after the proxy's SSE
+  heartbeat, so the failover happens inside an already-open stream.
+- The real Claude Code client as the caller, Fable subagent rounds failing
+  over while the main thread stays on the refusing account.
+- Linux, and the Claude CLI version this build ships with.
+
 A Claude Max account whose 7d Fable window is at 100% goes on serving Opus,
 Sonnet and Haiku. A Fable request it answers, through CLI 2.1.284 and 2.1.289
 in a headless session, with:
@@ -5379,7 +5398,7 @@ one-word requests: three of the model on `ROOM`, one of the other model on
   in a `rate_limit_error` frame whose `retry_after` is the pool's wait, and one
   not streamed is a `429` with that wait in its header and its body.
 
-### Verified
+### Verified on the source branch, not this build
 
 2026-10-05, macOS arm64, CLI 2.1.284 under the SDK, Claude Max profiles: the
 active one with its 7d Fable window at 100% (7d 87%, 5h 15%), a second with
@@ -5402,10 +5421,13 @@ for. It is held by the mocked-SDK suite and was not run live again, the window
 having reopened.
 
 `src/__tests__/active-priority-integration.test.ts` ("an allowance spent for
-one model") holds the routing through the mocked SDK, twenty cases, two of
-them streamed as the Claude Code client asks and one in `priority` routing.
-With the mark left unscoped thirteen of them fail, the one that keeps another
-model on the account among them. `errors.test.ts`, `limit-detection.test.ts`,
+one model") holds the routing through the mocked SDK, twenty-one cases, three
+of them streamed as the Claude Code client asks (one with the refusal behind a
+keepalive ping) and one in `priority` routing. On the source branch, with the
+mark left unscoped, thirteen of them failed. On this build, with the model
+left out of the in-stream failure path, the three streamed cases fail; with
+the pool-wide wait left out of the in-stream terminal frame, the streamed
+whole-pool case fails. `errors.test.ts`, `limit-detection.test.ts`,
 `routing.test.ts` and `retry-after-unit.test.ts` hold the wording, the scope
 rule, the marks and the wait.
 
