@@ -321,11 +321,9 @@ export function isClaudeCodeClient(c: Context): boolean {
  * the turns that did resume wrote 10K (E2E.md, "Claude Code system turns
  * across tool rounds").
  *
- * The client says which part it keeps: the cache breakpoint sits on the last
- * block it will send again, and anything it adds for one request has to come
- * after that or it would rewrite the cached prefix. So what follows the last
- * breakpoint of a system turn is not ancestry. The known wording is matched as
- * well, for a request that carries no breakpoint there.
+ * Only the exact known reminder at the end of a system turn is transient.
+ * A cache breakpoint does not prove that later blocks are transient: durable
+ * instructions after it must still participate in history verification.
  *
  * claude-cli 2.1.294 also ends a tool-result request with a system turn that
  * holds the reminder alone (no `<total_tokens>` block, which the CLI's own
@@ -340,10 +338,6 @@ export function isClaudeCodeClient(c: Context): boolean {
 const BATCHING_REMINDER_TEXT =
   "First privately list what you need next; then request every item that doesn't depend on another's result in this one response."
 
-function isCacheBreakpoint(block: unknown): boolean {
-  return block !== null && typeof block === "object" && (block as { cache_control?: unknown }).cache_control != null
-}
-
 function isBatchingReminder(block: unknown): boolean {
   return block !== null && typeof block === "object"
     && (block as { type?: unknown }).type === "text" && (block as { text?: unknown }).text === BATCHING_REMINDER_TEXT
@@ -352,20 +346,19 @@ function isBatchingReminder(block: unknown): boolean {
 /** A system turn with nothing in it the client will send again. */
 function holdsOnlyTheReminder(message: { role: string; content: unknown }): boolean {
   if (message.role !== "system") return false
-  if (typeof message.content === "string") return message.content.trim() === BATCHING_REMINDER_TEXT
-  return Array.isArray(message.content) && message.content.length > 0 && message.content.every(isBatchingReminder)
+  if (typeof message.content === "string") return message.content === BATCHING_REMINDER_TEXT
+  return Array.isArray(message.content) && message.content.length === 1 && isBatchingReminder(message.content[0])
 }
 
 export function canonicalizeClaudeCodeMessagesForLineage(
   messages: Array<{ role: string; content: unknown }>,
 ): Array<{ role: string; content: unknown }> {
   let end = messages.length
-  while (end > 0 && holdsOnlyTheReminder(messages[end - 1]!)) end--
-  // Preserve every remaining message's position; only a system turn's tail is dropped.
+  if (end > 0 && holdsOnlyTheReminder(messages[end - 1]!)) end--
+  // Preserve every remaining message's position and every unknown block.
   return messages.slice(0, end).map((message) => {
     if (message.role !== "system" || !Array.isArray(message.content)) return message
-    const breakpoint = message.content.findLastIndex(isCacheBreakpoint)
-    let content = breakpoint >= 0 ? message.content.slice(0, breakpoint + 1) : message.content
+    let content = message.content
     if (content.length > 1 && isBatchingReminder(content.at(-1))) content = content.slice(0, -1)
     return content.length === message.content.length ? message : { ...message, content }
   })

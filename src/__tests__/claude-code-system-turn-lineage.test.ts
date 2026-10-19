@@ -65,9 +65,37 @@ describe("Claude Code system turns in lineage", () => {
     expect(roundTwo).toEqual(before)
   })
 
-  it("drops whatever follows the cache breakpoint, not one known wording", () => {
+  it("retains every durable block after a cache breakpoint", () => {
     const messages = [{ role: "system", content: [cached(tokensLeft(1)), text("A reminder this client has not sent yet."), text("And another.")] }]
-    expect(canonicalize(messages)).toEqual([{ role: "system", content: [cached(tokensLeft(1))] }])
+    expect(canonicalize(messages)).toEqual(messages)
+  })
+
+  it("treats edited durable tails as modified history, with or without the known reminder", () => {
+    for (const reminder of [[], [text(BATCHING)]]) {
+      const before = [...head, { role: "system", content: [cached("Stable prefix."), text("Durable A."), ...reminder] }]
+      const after = [...head, { role: "system", content: [cached("Stable prefix."), text("Durable B."), ...reminder] },
+        { role: "user", content: "Continue." }]
+      expect(computeMessageHashes(canonicalize(before))).not.toEqual(computeMessageHashes(canonicalize(after).slice(0, before.length)))
+      expect(verifyLineage(stateFor(canonicalize(before)), canonicalize(after)))
+        .toMatchObject({ type: "diverged", reason: "modified-history" })
+    }
+  })
+
+  it("resumes unchanged durable tails when cache hints and the known reminder disappear", () => {
+    const before = [...head, { role: "system", content: [cached("Stable prefix."), text("Durable A."), text(BATCHING)] }]
+    const after = [...head, { role: "system", content: [text("Stable prefix."), text("Durable A.")] },
+      { role: "user", content: "Continue." }]
+    expect(verifyLineage(stateFor(canonicalize(before)), canonicalize(after)))
+      .toMatchObject({ type: "continuation", resumeFrom: before.length })
+  })
+
+  it("retains lookalikes and a known reminder followed by durable text", () => {
+    for (const tail of [text(`${BATCHING} Extra instruction.`), text(` ${BATCHING}`)]) {
+      const messages = [{ role: "system", content: [cached("Stable prefix."), tail] }]
+      expect(canonicalize(messages)).toEqual(messages)
+    }
+    const messages = [{ role: "system", content: [cached("Stable prefix."), text(BATCHING), text("Durable tail.")] }]
+    expect(canonicalize(messages)).toEqual(messages)
   })
 
   it("drops the known reminder from a system turn that carries no cache breakpoint", () => {
@@ -110,6 +138,15 @@ describe("Claude Code system turns in lineage", () => {
     const stored = canonicalize(reminderOnly)
     expect(verifyLineage(stateFor(stored), canonicalize(afterReminderOnly)))
       .toMatchObject({ type: "continuation", resumeFrom: reminderOnly.length - 1 })
+  })
+
+  it("retains reminder-only lookalikes and does not drop multiple trailing turns", () => {
+    for (const content of [` ${BATCHING}`, `${BATCHING}\n`, [text(` ${BATCHING}`)]]) {
+      const messages = [...head, { role: "system", content }]
+      expect(canonicalize(messages)).toEqual(messages)
+    }
+    const messages = [...head, { role: "system", content: BATCHING }, { role: "system", content: BATCHING }]
+    expect(canonicalize(messages)).toEqual(messages.slice(0, -1))
   })
 
   it("keeps a trailing system turn that holds anything besides the reminder", () => {

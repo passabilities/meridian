@@ -1629,6 +1629,77 @@ describe("Integration: passthrough early stop", () => {
     })
   }
 
+  for (const stream of [false, true]) {
+    for (const revised of [false, true]) {
+      for (const reminder of [false, true]) {
+        it(`preserves durable system tails after cache breakpoints (stream=${stream}, revised=${revised}, reminder=${reminder})`, async () => {
+          const sessionId = `cc-durable-tail-${stream}-${revised}-${reminder}-${TEST_RUN_ID}`
+          const batching = "First privately list what you need next; then request every item that doesn't depend on another's result in this one response."
+          const prefix = { type: "text", text: "Stable prefix.", cache_control: { type: "ephemeral" } }
+          const durable = (text: string) => ({ role: "system", content: [prefix, { type: "text", text },
+            ...(reminder ? [{ type: "text", text: batching }] : [])] })
+          const call = { type: "tool_use", id: "cc-tail-tu", name: "read", input: { file_path: "fixture.txt" } }
+          const firstTurn = assistantMessage([call])
+          const request = (messages: unknown[]) => postClaudeCode(app, {
+            model: "claude-fable-5-1", max_tokens: 400, stream, tools: [READ_TOOL], messages,
+          }, sessionId, { "x-meridian-agent": "claude-code", "x-opencode-session": sessionId })
+          mockMessages = [messageStart("msg_cc_tail"), toolUseBlockStart(0, "read", call.id),
+            inputJsonDelta(0, JSON.stringify(call.input)), blockStop(0), messageDelta("tool_use"),
+            firstTurn, userDenyMessage(call.id), assistantMessage([{ type: "text", text: "TAIL_DIGEST" }])]
+          const first = await request([{ role: "user", content: "read the fixture" }, durable("Durable A.")])
+          expect(first.status).toBe(200)
+          await first.text()
+          for (let i = 0; i < 500 && lookupSharedSession(sessionId)?.passthroughToolCallAssistantUuid !== firstTurn.uuid; i++) {
+            await new Promise((resolve) => setTimeout(resolve, 10))
+          }
+          expect(lookupSharedSession(sessionId)?.passthroughToolCallAssistantUuid).toBe(firstTurn.uuid)
+
+          mockMessages = [messageStart("msg_cc_tail_answer"), textBlockStart(0), textDelta(0, "fixture read"),
+            blockStop(0), messageDelta("end_turn"), messageStop(), assistantMessage([{ type: "text", text: "fixture read" }])]
+          const durableText = revised ? "Durable B." : "Durable A."
+          const requestId = `cc-durable-tail-request-${stream}-${revised}-${reminder}-${TEST_RUN_ID}`
+          const second = await postClaudeCode(app, {
+            model: "claude-fable-5-1", max_tokens: 400, stream, tools: [READ_TOOL], messages: [
+              { role: "user", content: "read the fixture" }, durable(durableText),
+              { role: "assistant", content: [call] },
+              { role: "user", content: [{ type: "tool_result", tool_use_id: call.id, content: "fixture value" }] },
+            ],
+          }, sessionId, { "x-meridian-agent": "claude-code", "x-opencode-session": sessionId, "x-request-id": requestId })
+          expect(second.status).toBe(200)
+          expect(await second.text()).toContain("fixture read")
+          const query = capturedQueryParamsAll[1]
+          if (revised) {
+            expect(query.options.resume).toBeUndefined()
+            expect(query.options.resumeSessionAt).toBeUndefined()
+            expect(typeof query.prompt).toBe("string")
+            expect(query.prompt).toContain("<conversation_history>")
+            expect(query.prompt).toContain("Durable B.")
+            expect(query.prompt).not.toContain("Durable A.")
+          } else {
+            expect(query.options.resume).toBe(capturedQueryParamsAll[0].options.sessionId)
+            expect(query.options.resumeSessionAt).toBe(firstTurn.uuid)
+            const promptMessages = []
+            for await (const message of query.prompt) promptMessages.push(message)
+            expect(promptMessages).toHaveLength(1)
+            expect(promptMessages[0].message.content).toEqual([
+              { type: "tool_result", tool_use_id: call.id, content: "fixture value" },
+            ])
+          }
+          let row = telemetryStore.getRecent({ limit: 200 }).find(message => message.requestId === requestId)
+          for (let i = 0; i < 500 && !row; i++) {
+            await new Promise((resolve) => setTimeout(resolve, 10))
+            row = telemetryStore.getRecent({ limit: 200 }).find(message => message.requestId === requestId)
+          }
+          expect(row).toMatchObject(revised
+            ? { lineageType: "new", isResume: false }
+            : { lineageType: "continuation", isResume: true })
+          if (revised) expect(diagnosticLog.getRecent({ limit: 200 }).some(entry =>
+            entry.message.includes(requestId) && entry.message.includes("diverged=modified-history"))).toBe(true)
+        })
+      }
+    }
+  }
+
   // NOTE: agent-specific (claude-code). claude-cli 2.1.294 on claude-fable-5-1
   // also ends a tool-result request with a system turn holding the reminder
   // alone, which the next request carries no trace of: the reply sits where
