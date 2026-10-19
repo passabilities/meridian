@@ -820,6 +820,11 @@ function createProxyServerWithAuthOwner(config: Partial<ProxyConfig>, authOwner:
   const sessionGcOptions: SessionLifecycleOptions = {
     maxPending: sessionGcLimits.maxPending,
     maxDeletesPerRun: sessionGcLimits.maxDeletesPerRun,
+    // Also reaches a sweep already running when beginDrain flips the state.
+    // The lifecycle lowers remaining work only between joined transactions.
+    maxRemainingDeletes: () => draining
+      ? sessionGcLimits.shutdownMaxDeletesPerRun
+      : sessionGcLimits.maxDeletesPerRun,
     // A prepared fork is an active write lease. Never age it out before the
     // request watchdog plus a drain margin, even if an unsafe lower value is configured.
     preparedGraceMs: Math.max(
@@ -903,9 +908,9 @@ function createProxyServerWithAuthOwner(config: Partial<ProxyConfig>, authOwner:
     if (sessionGcRunning) return sessionGcRunning
     sessionGcRunning = (async () => {
       if (profileCopyPruningEnabled) await pruneSupersededProfileCopies()
-      // A draining proxy's sweeps, close()'s final one among them, delete no
-      // more than they did before the per-sweep default rose, so stopping the
-      // proxy stays short. The next process deletes what they leave.
+      // New draining sweeps start at the shutdown cap; maxRemainingDeletes
+      // also lowers an existing sweep that close() joins. No deletion is
+      // abandoned. The next process deletes what the bounded sweep leaves.
       const runOptions = draining
         ? { ...sessionGcOptions, maxDeletesPerRun: sessionGcLimits.shutdownMaxDeletesPerRun }
         : sessionGcOptions
