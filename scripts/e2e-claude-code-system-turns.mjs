@@ -26,13 +26,15 @@
 // tool_use/tool_result turns and not as a replay, and the request's own
 // reminder delivered to the model.
 //
-//   bun scripts/e2e-claude-code-system-turns.mjs [model]
+//   bun scripts/e2e-claude-code-system-turns.mjs [model] [--expect-no-reminder]
 //
 // The model defaults to claude-fable-5-1. E2E_CLAUDE_CLIENT picks the client
 // (default: `claude` on PATH) and E2E_CLAUDE_PATH the CLI the SDK drives. Both
-// versions are printed. If a client stops sending a one-request reminder the
-// gate says so and still holds the resume claims.
+// versions are printed. The default requires the exact reminder to disappear
+// from a later request while its durable prefix stays. Models without it are
+// tested only as explicit --expect-no-reminder negative controls.
 import assert from "node:assert/strict"
+import { isDeepStrictEqual } from "node:util"
 import { mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs"
 import { randomUUID } from "node:crypto"
 import { tmpdir } from "node:os"
@@ -40,8 +42,12 @@ import { join, resolve } from "node:path"
 import { spyOn } from "bun:test"
 import * as sdk from "@anthropic-ai/claude-agent-sdk"
 
-const MODEL = process.argv[2] ?? "claude-fable-5-1"
+const args = process.argv.slice(2)
+const EXPECT_NO_REMINDER = args.includes("--expect-no-reminder")
+const MODEL = args.find(arg => arg !== "--expect-no-reminder") ?? "claude-fable-5-1"
 const ROUNDS = Number(process.env.ROUNDS ?? 5)
+assert(Number.isInteger(ROUNDS) && ROUNDS >= 2, "ROUNDS must be at least 2 to observe a reminder's historical form")
+const BATCHING_REMINDER_TEXT = "First privately list what you need next; then request every item that doesn't depend on another's result in this one response."
 // The client runs in the fixture directory, so a relative path is resolved here.
 const CLIENT = process.env.E2E_CLAUDE_CLIENT?.includes("/") ? resolve(process.env.E2E_CLAUDE_CLIENT) : process.env.E2E_CLAUDE_CLIENT ?? "claude"
 const root = realpathSync(mkdtempSync(join(tmpdir(), "meridian-cc-system-turns-")))
@@ -144,6 +150,9 @@ function check(ok, label, detail) {
   if (!ok) failures.push(label)
 }
 const blocksOf = message => Array.isArray(message?.content) ? message.content : typeof message?.content === "string" ? [{ type: "text", text: message.content }] : []
+const isReminder = block => block?.type === "text" && block.text === BATCHING_REMINDER_TEXT
+const withoutCacheHint = ({ cache_control, ...block }) => block
+let reminderTransitions = []
 
 let clientVersion = "unknown"
 try {
@@ -176,9 +185,19 @@ try {
     const position = earlier.messages.length - 1
     return blocksOf(earlier.messages[position]).length - blocksOf(body.messages[position]).length
   })
-  const sendsOneRequestReminder = tailBlocks.some(count => count > 1) && shed.some(count => count > 0)
+  reminderTransitions = clientRequests.slice(1, -1).flatMap((earlier, index) => {
+    const position = earlier.messages.length - 1
+    const active = earlier.messages[position]
+    const historical = clientRequests[index + 2].messages[position]
+    const blocks = blocksOf(active)
+    if (active?.role !== "system" || historical?.role !== "system" || blocks.length < 2 || !isReminder(blocks.at(-1))) return []
+    return isDeepStrictEqual(blocks.slice(0, -1).map(withoutCacheHint), blocksOf(historical).map(withoutCacheHint)) ? [index + 2] : []
+  })
+  const reminderRequests = clientRequests.filter(body => body.messages.some(message => message.role === "system" && blocksOf(message).some(isReminder)))
   console.log(`  note  trailing system turn blocks per request: [${tailBlocks.join(", ")}]; blocks gone from that turn one request later: [${shed.join(", ")}]`)
-  console.log(`  note  ${sendsOneRequestReminder ? "this client appends a one-request reminder to its trailing system turn" : "this client sends NO one-request reminder for this model: the resume claims below hold without the case the fix is for"}`)
+  check(EXPECT_NO_REMINDER ? reminderRequests.length === 0 : reminderTransitions.length > 0,
+    EXPECT_NO_REMINDER ? "negative control sends no known batching reminder" : "the exact batching reminder disappears while every durable block stays",
+    `${reminderRequests.length} reminder request(s), ${reminderTransitions.length} witnessed transition(s)`)
 
   const rows = telemetryStore.getRecent({ limit: 200 }).filter(row => (row.toolCount ?? 0) > 0).sort((a, b) => a.timestamp - b.timestamp)
   check(rows.length === ROUNDS + 1 && rows.every(row => row.status === 200), "the proxy answers each of them", `${rows.length} row(s), statuses ${[...new Set(rows.map(row => row.status))].join(",")}`)
@@ -202,10 +221,10 @@ try {
   const results = last.flatMap(message => blocksOf(message).filter(block => block.type === "tool_result"))
   check(structuredRounds === ROUNDS && results.length === ROUNDS + 1 && fixtures.slice(0, ROUNDS + 1).every((_, index) => JSON.stringify(results).includes(`fixture ${index} `)),
     "the last call carries every round as structured tool_use and tool_result turns", `${structuredRounds} tool round(s), ${results.length} result(s)`)
-  if (sendsOneRequestReminder) {
-    const reminder = blocksOf(clientRequests.at(-1).messages.at(-1)).at(-1)?.text ?? ""
-    const lastTurn = JSON.stringify(last.at(-1) ?? "")
-    check(reminder.length > 0 && lastTurn.includes(JSON.stringify(reminder).slice(1, -1)), "the request's own reminder reaches the model", JSON.stringify(reminder.slice(0, 48)))
+  for (const body of reminderRequests) {
+    const index = clientRequests.indexOf(body)
+    const lastTurn = JSON.stringify(upstreamCalls[index]?.messages.at(-1) ?? "")
+    check(lastTurn.includes(JSON.stringify(BATCHING_REMINDER_TEXT).slice(1, -1)), "the request's own reminder reaches the model", `request ${index + 1}`)
   }
   assert.deepEqual(upstreamErrors, [])
 } finally {
@@ -217,5 +236,6 @@ try {
 console.log(`\nclient ${clientVersion}; CLI on the wire: cc_version=${cliVersion ?? "unknown"} (${process.env.MERIDIAN_CLAUDE_PATH ?? "resolved by the proxy"})`)
 // A failed run keeps its sessions and transcripts for inspection.
 if (failures.length === 0) rmSync(root, { recursive: true, force: true })
-console.log(JSON.stringify({ result: failures.length === 0 ? "PASS" : "FAIL", model: MODEL, rounds: ROUNDS, failures, ...(failures.length === 0 ? {} : { root }) }))
+console.log(JSON.stringify({ result: failures.length === 0 ? "PASS" : "FAIL", coverage: EXPECT_NO_REMINDER ? "negative-control" : "affected-reminder",
+  reminderTransitions: reminderTransitions.length, model: MODEL, rounds: ROUNDS, failures, ...(failures.length === 0 ? {} : { root }) }))
 process.exit(failures.length === 0 ? 0 : 1)

@@ -6788,11 +6788,11 @@ output.
 
 The fix is `canonicalizeClaudeCodeMessagesForLineage`
 (`src/proxy/adapters/claudecode.ts`), the hook OpenCode already uses for
-text it sends with one request only. The lineage of a `system` turn stops at its last
-cache breakpoint: the client puts that on the last block it will send again,
-and anything it adds for one request has to follow it or it would rewrite the
-cached prefix. The known wording is matched as well, for a turn with no
-breakpoint. Message positions are kept, and the request the model reads is
+text it sends with one request only. Only the exact known batching reminder
+at the end of a `system` turn is excluded. Cache breakpoints do not establish
+that later text is transient: every other block, including durable text after
+a breakpoint and reminder lookalikes, remains significant. Message positions
+are kept, and the request the model reads is
 untouched: the reminder is still delivered with its round.
 
 ### A system turn that is the reminder alone (claude-cli 2.1.294)
@@ -6830,13 +6830,13 @@ so an undo there would have rolled back to the wrong message.
 
 ```bash
 bun scripts/e2e-claude-code-system-turns.mjs                    # claude-fable-5-1
-bun scripts/e2e-claude-code-system-turns.mjs claude-opus-5-5
+bun scripts/e2e-claude-code-system-turns.mjs claude-opus-5-5 --expect-no-reminder
 E2E_CLAUDE_CLIENT=node_modules/.bin/claude bun scripts/e2e-claude-code-system-turns.mjs
 ```
 
 No model calls and no credentials: the client talks to the proxy with a dummy
 token, and the proxy's one profile is an API key against the scripted API.
-`ROUNDS` sets the number of tool rounds (default 5), `E2E_CLAUDE_CLIENT` the
+`ROUNDS` sets the number of tool rounds (default 5, minimum 2), `E2E_CLAUDE_CLIENT` the
 client (default `claude` on PATH) and `E2E_CLAUDE_PATH` the CLI the SDK
 drives. Not in CI: it needs the `claude` client binary.
 
@@ -6854,9 +6854,13 @@ client defers lift the one-turn cap, and current clients defer.
   Messages call carries every round as structured `tool_use` and
   `tool_result` turns.
 - The request's own reminder is in the last user turn the model reads.
-- The gate prints whether the client sent a one-request reminder at all. If a
-  client stops, the resume claims still have to hold, and the note says the
-  case the fix is for was not exercised.
+- The default gate requires a consecutive request pair showing the exact
+  reminder disappear at the same system-message position while every durable
+  block stays (historical strings and text blocks are compared without cache
+  hints). Missing or changed wording fails this affected-case gate.
+- `--expect-no-reminder` explicitly selects a negative control: it requires
+  no known reminder and all resume checks, and labels its result
+  `coverage: negative-control`. It cannot establish affected-case acceptance.
 
 ### Verified
 
@@ -6916,11 +6920,6 @@ a reminder-only turn in these runs either.
 - Sessions stored before either fix. Their lineage has the reminder in it, so
   their next tool round replays once more and resumes from then on.
 - Windows. Linux was run only against the scripted API (see Verified).
-- Durable text after a breakpoint. The rule assumes the client never keeps
-  text after the last `cache_control` block of a system turn. If one does,
-  the stored turn is cut short, the next request (sent without that
-  breakpoint) no longer matches, and the round replays where main would have
-  resumed. No client has been seen doing this.
 - A resent reminder-only turn. If a client ever sends a trailing
   reminder-only turn again in its next request, that turn takes the index
   where the reply's SDK UUID was recorded, so the UUID map is off by one for
