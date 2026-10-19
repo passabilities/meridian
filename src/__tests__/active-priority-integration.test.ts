@@ -674,6 +674,180 @@ describe("an allowance spent for one model", () => {
     expect((await again.json() as { error: { retry_after?: number } }).error.retry_after).toBe(wait)
   }, 40_000)
 
+  for (const stream of [false, true]) {
+    describe(`effective pool retry waits (${stream ? "SSE" : "JSON"})`, () => {
+      async function waitFrom(res: Response): Promise<number> {
+        if (!stream) {
+          expect(res.status).toBe(429)
+          const wait = Number(res.headers.get("retry-after"))
+          const payload = await res.json() as { error: { type: string; retry_after: number } }
+          expect(payload.error.type).toBe("rate_limit_error")
+          expect(payload.error.retry_after).toBe(wait)
+          return wait
+        }
+        expect(res.status).toBe(200)
+        expect(res.headers.get("content-type")).toContain("text/event-stream")
+        const frames = (await res.text()).split("\n\n").filter(frame => frame.startsWith("event: error\n"))
+        expect(frames).toHaveLength(1)
+        const payload = JSON.parse(frames[0]!.split("\n").find(line => line.startsWith("data: "))!.slice(6)) as {
+          error: { type: string; retry_after: number }
+        }
+        expect(payload.error.type).toBe("rate_limit_error")
+        return payload.error.retry_after
+      }
+
+      function expectWaitUntil(wait: number, reset: number): void {
+        expect(wait).toBeGreaterThanOrEqual(Math.ceil((reset - Date.now()) / 1000) - 2)
+        expect(wait).toBeLessThanOrEqual(Math.ceil((reset - Date.now()) / 1000) + 2)
+      }
+
+      async function benchFablePool(app: TestApp, resets: readonly number[]): Promise<void> {
+        for (const [index, profile] of PROFILES.entries()) {
+          const dir = `ap-${profile.id}`
+          fableSpentDirs.add(dir)
+          fableLimitEvents.set(dir, fableLimitEvent(resets[index]!))
+          if (stream) fablePingFirstDirs.add(dir)
+        }
+        const res = await post(app, {}, "establish the model benches", FABLE)
+        expect(res.status).toBe(429)
+        await res.json()
+        // The next refusal supplies no reset; it attempts a ten-minute mark.
+        fableLimitEvents.clear()
+        rateLimitStore.clear()
+      }
+
+      for (const [label, hours] of [
+        ["the retried account", [3, 4, 5]],
+        ["a skipped account", [5, 3, 4]],
+      ] as const) {
+        it(`keeps the longer model benches when a shorter repeat would hide ${label}'s opening`, async () => {
+          const app = createTestApp()
+          await setActive(app, "work")
+          const resets = hours.map(hours => Date.now() + hours * 60 * 60_000)
+          await benchFablePool(app, resets)
+
+          capturedEnvs = []
+          const wait = await waitFrom(await post(app, {}, "retry without a reset", FABLE, stream))
+          expect(capturedEnvs).toEqual(["/tmp/meridian-ap-work"])
+          expectWaitUntil(wait, Math.min(...resets))
+          const state = await health(app)
+          expect(state.exhausted).toEqual([])
+          for (const [index, profile] of PROFILES.entries()) {
+            expect(Math.abs((state.exhaustedModels.find(mark => mark.id === profile.id)?.until ?? 0) - resets[index]!)).toBeLessThan(1_000)
+          }
+          // A longer model bench must not move unrelated conversations.
+          capturedEnvs = []
+          expect(await servedBy(await post(app, {}, "another model"))).toContain("ap-work")
+          expect(capturedEnvs).toEqual(["/tmp/meridian-ap-work"])
+        }, 40_000)
+      }
+
+      it("waits for both account and model exclusions before comparing accounts", async () => {
+        const app = createTestApp()
+        await setActive(app, "work")
+        const now = Date.now()
+        const modelResets = [2, 4, 6].map(hours => now + hours * 60 * 60_000)
+        await benchFablePool(app, modelResets)
+        const accountResets = [3, 1, 1].map(hours => now + hours * 60 * 60_000)
+        for (const [index, profile] of PROFILES.entries()) {
+          rateLimitStore.record(profile.id, {
+            status: "rejected", rateLimitType: "five_hour", utilization: 1, resetsAt: accountResets[index]!,
+          })
+          failingDirs.add(`ap-${profile.id}`)
+        }
+        failureMessage = THROTTLED
+        const accountRefusal = await post(app, {}, "establish the account benches")
+        expect(accountRefusal.status).toBe(429)
+        await accountRefusal.json()
+        failingDirs.clear()
+        rateLimitStore.clear()
+
+        capturedEnvs = []
+        const wait = await waitFrom(await post(app, {}, "retry the overlapping benches", FABLE, stream))
+        expect(capturedEnvs).toEqual(["/tmp/meridian-ap-work"])
+        // Work needs its 3h account reset (not its 2h model reset);
+        // personal needs its 4h model reset (not its 1h account reset).
+        expectWaitUntil(wait, accountResets[0]!)
+        const state = await health(app)
+        for (const [index, profile] of PROFILES.entries()) {
+          expect(Math.abs((state.exhausted.find(mark => mark.id === profile.id)?.until ?? 0) - accountResets[index]!)).toBeLessThan(1_000)
+          expect(Math.abs((state.exhaustedModels.find(mark => mark.id === profile.id)?.until ?? 0) - modelResets[index]!)).toBeLessThan(1_000)
+        }
+      }, 40_000)
+
+      it("uses a bench extended while later accounts are still being tried", async () => {
+        const app = createTestApp()
+        await setActive(app, "work")
+        const reset = Date.now() + 3 * 60 * 60_000
+        type Usage = NonNullable<Awaited<ReturnType<typeof fetchOAuthUsage>>>
+        let refineWork: ((usage: Usage) => void) | undefined
+        __setFetchOAuthUsageOverride(async options => {
+          if (options?.profileId === "work") return new Promise<Usage>(resolve => { refineWork = resolve })
+          if (options?.profileId === "personal") {
+            expect(refineWork).toBeDefined()
+            refineWork!({
+              windows: [{ type: "seven_day_fable", utilization: 1, resetsAt: reset }],
+              extraUsage: null, fetchedAt: Date.now(),
+            })
+          }
+          return null
+        })
+        for (const profile of PROFILES) {
+          fableSpentDirs.add(`ap-${profile.id}`)
+          if (stream) fablePingFirstDirs.add(`ap-${profile.id}`)
+        }
+        fableLimitEvents.set("ap-personal", fableLimitEvent(Date.now() + 4 * 60 * 60_000))
+        fableLimitEvents.set("ap-spare", fableLimitEvent(Date.now() + 5 * 60 * 60_000))
+        // Work initially gets ten minutes, extended to three hours only
+        // after personal refuses. Its earlier observed wait is now obsolete.
+        const wait = await waitFrom(await post(app, {}, "refine during failover", FABLE, stream))
+        expectWaitUntil(wait, reset)
+        expect((await health(app)).exhaustedModels.find(mark => mark.id === "work")?.until).toBe(reset)
+      }, 40_000)
+
+      it("does not wait for another account once an eligible bench has expired", async () => {
+        const app = createTestApp()
+        await setActive(app, "work")
+        const now = Date.now()
+        __setFetchOAuthUsageOverride(async options => {
+          if (options?.profileId === "personal") {
+            setSystemTime(new Date(now + 2 * 60_000))
+            restoreClock = () => setSystemTime()
+          }
+          return null
+        })
+        for (const [index, profile] of PROFILES.entries()) {
+          const dir = `ap-${profile.id}`
+          fableSpentDirs.add(dir)
+          fableLimitEvents.set(dir, fableLimitEvent(now + [60_000, 3 * 60 * 60_000, 4 * 60 * 60_000][index]!))
+          if (stream) fablePingFirstDirs.add(dir)
+        }
+        const wait = await waitFrom(await post(app, {}, "a bench expires during failover", FABLE, stream))
+        // No effective exclusion remains on work: retain the ordinary
+        // retry fallback instead of waiting hours for personal or spare.
+        expect(wait).toBe(60)
+        expect((await health(app)).exhaustedModels.map(mark => mark.id)).toEqual(["personal", "spare"])
+      }, 40_000)
+
+      it("keeps the ordinary ten-minute first-mark wait model-local", async () => {
+        const app = createTestApp()
+        await setActive(app, "work")
+        for (const profile of PROFILES) {
+          fableSpentDirs.add(`ap-${profile.id}`)
+          if (stream) fablePingFirstDirs.add(`ap-${profile.id}`)
+        }
+        const before = Date.now()
+        const wait = await waitFrom(await post(app, {}, "first refusal without resets", FABLE, stream))
+        expectWaitUntil(wait, before + 10 * 60_000)
+        expect(capturedEnvs).toEqual(PROFILES.map(profile => profile.claudeConfigDir))
+        const state = await health(app)
+        expect(state.exhausted).toEqual([])
+        expect(state.exhaustedModels.map(mark => [mark.id, mark.model])).toEqual(PROFILES.map(profile => [profile.id, "fable"]))
+        expect(await servedBy(await post(app, {}, "another model"))).toContain("ap-work")
+      }, 40_000)
+    })
+  }
+
   it("counts the active account toward the wait once it is skipped as benched", async () => {
     // The order puts the active account last. It is tried first all the
     // same, and once benched is skipped, and may still be the first to get

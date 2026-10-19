@@ -1639,7 +1639,7 @@ function createProxyServerWithAuthOwner(config: Partial<ProxyConfig>, authOwner:
     reason: string,
     requestedModel: string | undefined,
     attemptStartedAt: number,
-  ): number {
+  ): void {
     // Only a quota refusal has a reset to look up. Both cooldown tiers read
     // the account's five-hour window, which says nothing about entitlement.
     const quotaRefusal = isQuotaRefusal(reason)
@@ -1673,12 +1673,11 @@ function createProxyServerWithAuthOwner(config: Partial<ProxyConfig>, authOwner:
       ...(scoped ? { model: scoped.model } : {}),
     })
     if (quotaRefusal) refinePriorityCooldown(candidate, scoped)
-    return until
   }
 
-  /** The earliest the pool can serve `requestedModel` again: the earliest of
-   *  the marks this request left (`earliest`) and of every account it could
-   *  have gone to, tried here or skipped as already benched.
+  /** The earliest the pool can serve `requestedModel` again, using each
+   *  account's effective exclusion after all attempts. Marks only extend:
+   *  a shorter repeat or an earlier observation must not understate a bench.
    *
    *  The wait belongs to the whole pool, not the accounts tried on this
    *  request: one benched before it was skipped, and may be the first back.
@@ -1688,12 +1687,14 @@ function createProxyServerWithAuthOwner(config: Partial<ProxyConfig>, authOwner:
   function poolEarliestReset(
     poolIds: readonly string[],
     requestedModel: string | undefined,
-    earliest: number | null,
   ): number | null {
-    let result = earliest
+    let result: number | null = null
     for (const id of poolIds) {
       const until = priorityExhaustion.benchedUntil(id, requestedModel)
-      if (until !== null && (result === null || until < result)) result = until
+      // A bench may expire while a later attempt is running. An account
+      // already free leaves no pool exclusion to wait for: use the fallback.
+      if (until === null) return null
+      if (result === null || until < result) result = until
     }
     return result
   }
@@ -1726,7 +1727,6 @@ function createProxyServerWithAuthOwner(config: Partial<ProxyConfig>, authOwner:
       lastError: unknown
       previous: string | null
       previousReason: string
-      earliestPoolReset: number | null
     },
   ): Promise<Response> {
     const encoder = new TextEncoder()
@@ -1757,7 +1757,7 @@ function createProxyServerWithAuthOwner(config: Partial<ProxyConfig>, authOwner:
         }
         let lastInner: Response | null = null
         try {
-          let { lastError, previous, previousReason, earliestPoolReset } = start
+          let { lastError, previous, previousReason } = start
           for (let attempt = start.attempt; attempt < options.candidateIds.length; attempt++) {
             const candidate = options.candidateIds[attempt]!
             const handed = attempt === start.attempt
@@ -1776,9 +1776,8 @@ function createProxyServerWithAuthOwner(config: Partial<ProxyConfig>, authOwner:
               await verdict.discard()
               await responseCompletions.get(inner)?.catch(() => {})
               const reason = verdict.errorType
-              const cooldownUntil = markPriorityFailure(candidate, reason, requestedModel, startedAt)
+              markPriorityFailure(candidate, reason, requestedModel, startedAt)
               if (isCancelled()) break
-              earliestPoolReset = Math.min(earliestPoolReset ?? cooldownUntil, cooldownUntil)
               lastError = verdict.errorPayload
               previous = candidate
               previousReason = reason
@@ -1858,7 +1857,7 @@ function createProxyServerWithAuthOwner(config: Partial<ProxyConfig>, authOwner:
             if (isQuotaRefusal(previousReason) && typeof lastError === "object") {
               const envelope = (lastError as { error?: unknown }).error
               if (envelope !== null && typeof envelope === "object") {
-                const resetAtMs = poolEarliestReset(options.poolIds, requestedModel, earliestPoolReset)
+                const resetAtMs = poolEarliestReset(options.poolIds, requestedModel)
                 Object.assign(envelope, retryAfterBodyFields(retryAfterSeconds({ status: 429, resetAtMs })))
               }
             }
@@ -1961,10 +1960,6 @@ function createProxyServerWithAuthOwner(config: Partial<ProxyConfig>, authOwner:
     let lastStatus = 429
     let previous: string | null = null
     let previousReason = "rate_limit_error"
-    // When every candidate is spent, the honest wait is until the FIRST one
-    // frees up, not the last one tried. Tracked across the loop so the caller's
-    // Retry-After names the pool's earliest opening (#901).
-    let earliestPoolReset: number | null = null
     const requestedModel = allowanceModel(options.body?.model)
     for (const [attempt, candidate] of options.candidateIds.entries()) {
       const { inner, exposure, startedAt } = await runPriorityAttempt(options, attempt, candidate, attemptOwnerToken)
@@ -1973,7 +1968,7 @@ function createProxyServerWithAuthOwner(config: Partial<ProxyConfig>, authOwner:
       // tried inside the stream.
       if (options.wantsStream && isEventStream(inner)) {
         return streamPriorityDispatch(options, attemptOwnerToken, settleAttempt, {
-          attempt, inner, exposure, startedAt, lastError, previous, previousReason, earliestPoolReset,
+          attempt, inner, exposure, startedAt, lastError, previous, previousReason,
         })
       }
       const sniffed = await sniffAccountFailure(inner)
@@ -2010,10 +2005,7 @@ function createProxyServerWithAuthOwner(config: Partial<ProxyConfig>, authOwner:
       }
       await responseCompletions.get(inner)?.catch(() => {})
       const reason = sniffed.errorType
-      const cooldownUntil = markPriorityFailure(candidate, reason, requestedModel, startedAt)
-      if (earliestPoolReset === null || cooldownUntil < earliestPoolReset) {
-        earliestPoolReset = cooldownUntil
-      }
+      markPriorityFailure(candidate, reason, requestedModel, startedAt)
       lastError = sniffed.errorPayload
       lastStatus = inner.status
       previous = candidate
@@ -2046,12 +2038,11 @@ function createProxyServerWithAuthOwner(config: Partial<ProxyConfig>, authOwner:
     if (!settleAttempt("release")) return unavailableAttemptResponse()
     // Surface the LAST tried profile's error (owner decision).
     // The wait belongs to the POOL, not to the last account tried: the caller
-    // can proceed as soon as ANY candidate frees up. `earliestPoolReset` is a
-    // real observed boundary when a quota refusal supplied one and the
-    // conservative default otherwise, so it is always safe to say (#901).
+    // can proceed as soon as ANY eligible account's effective exclusion ends,
+    // including accounts skipped because they were already benched (#901).
     const poolRetryAfter = retryAfterSeconds({
       status: lastStatus,
-      resetAtMs: poolEarliestReset(options.poolIds, requestedModel, earliestPoolReset),
+      resetAtMs: poolEarliestReset(options.poolIds, requestedModel),
     })
     // The body's `retry_after` names the pool's wait as the header does, in
     // place of the last account's own.
