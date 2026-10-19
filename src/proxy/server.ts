@@ -47,7 +47,7 @@ import { AdmissionHold, parseDrainOptions, type AdmissionReservation } from "./a
 import { DrainBodyError, readDrainBody } from "./drainBody"
 import { isGenerationSubmission, onGenerationResponseSettled } from "./generationAdmission"
 import { closeServerWithGracePeriod, trackServerConnections } from "./shutdown"
-import { fetchOAuthUsage, fetchOAuthUsageResult, toUsageEntry, peekOAuthUsage } from "./oauthUsage"
+import { fetchOAuthUsage, fetchOAuthUsageResult, toUsageEntry, peekOAuthUsage, clearOAuthUsageForProfile } from "./oauthUsage"
 import { resolveSdkWorkingDirectory } from "./cwd"
 import type { Context } from "hono"
 import { DEFAULT_PROXY_CONFIG, resolveBackendConfig } from "./types"
@@ -101,6 +101,7 @@ import { createSseRelayStream, relayStreamAttempt } from "./sseFailureSniff"
 import { refreshOAuthToken, ensureFreshToken, startBackgroundRefresh, stopBackgroundRefresh, createPlatformCredentialStore, readStoredCredentialSnapshot, getAuthRenewalStatus, getStoredPlanFields, renewalStatusFor, resolveRenewalWarnDays, type CredentialStore, type StoredPlanFields } from "./tokenRefresh"
 import { planAllowance } from "./planAllowance"
 import { isCredentialsReadOnly, logCredentialsModeBanner } from "./credentialsMode"
+import { runtimeCancelWarning } from "./runtimeCancelWarning"
 import {
   createFileDesignTokenStore,
   createDesignLogin,
@@ -121,7 +122,7 @@ import { livenessReport, readinessReport, renderProbe } from "./probes"
 import { UpstreamReachability, DEFAULT_OVERRIDE_TTL_MS, MAX_OVERRIDE_TTL_MS, unreachableDetail, withReachability } from "./upstreamReachability"
 import { resolveReachabilityThresholds } from "./upstreamReachabilityConfig"
 import type { AnthropicSseEvent } from "./openai"
-import { translateOpenAiToAnthropic, translateAnthropicToOpenAi, buildModelList, createSseTranslator } from "./openai"
+import { translateOpenAiToAnthropic, translateAnthropicToOpenAi, buildModelList, createSseTranslator, translateAnthropicSseError } from "./openai"
 import { normalizeJcodeSessionId } from "./adapters/jcode"
 import { extractLettaConversationId, LETTA_CONVERSATION_HEADER } from "./adapters/letta"
 import { isClaudeCodeClient } from "./adapters/claudecode"
@@ -10480,6 +10481,17 @@ function createProxyServerWithAuthOwner(config: Partial<ProxyConfig>, authOwner:
     return c.json(status)
   })
 
+  // Clear in-memory routing-health and quota caches observed under a profile's
+  // previous credential so a re-authenticated or explicitly refreshed profile
+  // can be probed again immediately without waiting for a stale reset deadline
+  // or restarting Meridian (#1385).
+  function clearStaleProfileHealth(profileId: string): void {
+    priorityExhaustion.forget(profileId)
+    spentProfiles.forget(profileId)
+    rateLimitStore.clear(profileId)
+    clearOAuthUsageForProfile(profileId)
+  }
+
   app.post("/profiles/login/complete", async (c) => {
     let body: { loginId?: string; code?: string }
     try {
@@ -10503,6 +10515,7 @@ function createProxyServerWithAuthOwner(config: Partial<ProxyConfig>, authOwner:
     // The auth-status cache holds a 60s "not logged in" answer for this profile;
     // drop it so /profiles/list reflects the login on the UI's next poll.
     expireAuthStatusCache()
+    clearStaleProfileHealth(result.profileId)
     claudeLog("profile.login_completed", {
       profile: result.profileId,
       userAgent: c.req.header("user-agent")?.slice(0, 120) ?? null,
@@ -10534,6 +10547,7 @@ function createProxyServerWithAuthOwner(config: Partial<ProxyConfig>, authOwner:
       return c.html(renderLoginCallbackPage({ ok: false, message: result.message }), result.status as 400)
     }
     expireAuthStatusCache()
+    clearStaleProfileHealth(result.profileId)
     claudeLog("profile.login_completed", { profile: result.profileId, via: "callback" })
     plog(`[PROXY] Profile login completed for "${result.profileId}" (browser redirect)`)
     return c.html(renderLoginCallbackPage({ ok: true, profileId: result.profileId }))
@@ -10600,6 +10614,7 @@ function createProxyServerWithAuthOwner(config: Partial<ProxyConfig>, authOwner:
     // the list-wide cache does — drop it so the new card renders authenticated
     // on the UI's next poll rather than after the 60s TTL.
     expireAuthStatusCache()
+    clearStaleProfileHealth(result.profileId)
     claudeLog("profile.add_completed", {
       profile: result.profileId,
       userAgent: c.req.header("user-agent")?.slice(0, 120) ?? null,
@@ -10661,11 +10676,11 @@ function createProxyServerWithAuthOwner(config: Partial<ProxyConfig>, authOwner:
     const store = credentialStoreForProfile(profile)
     const success = store ? await refreshOAuthToken(store) : false
     if (success) {
-      // Drop this profile's rate-limit snapshot — its quotas were observed
-      // under the previous credential. Scoped to the profile actually
-      // refreshed; other accounts' snapshots are untouched. The next SDK
-      // call repopulates.
-      rateLimitStore.clear(profile.id)
+      // Drop this profile's rate-limit snapshot and routing-health bench —
+      // its quotas and refusals were observed under the previous credential.
+      // Scoped to the profile actually refreshed; other accounts' snapshots
+      // are untouched. The next SDK call repopulates (#1385).
+      clearStaleProfileHealth(profile.id)
       return c.json({ success: true, message: "OAuth token refreshed successfully", profile: profile.id })
     }
     return c.json(
@@ -10893,6 +10908,15 @@ function createProxyServerWithAuthOwner(config: Partial<ProxyConfig>, authOwner:
               catch { continue }
               if (typeof event.type !== "string") continue
 
+              // Forward failures as OpenAI in-band errors; the translator
+              // below has no error shape and would drop them, leaving only the
+              // preceding max_tokens finish chunk.
+              const errorChunk = translateAnthropicSseError(event)
+              if (errorChunk) {
+                controller.enqueue(encoder.encode(`data: ${JSON.stringify(errorChunk)}\n\n`))
+                continue
+              }
+
               const chunk = translate(event as unknown as AnthropicSseEvent)
               if (chunk) controller.enqueue(encoder.encode(`data: ${JSON.stringify(chunk)}\n\n`))
             }
@@ -11064,8 +11088,8 @@ function createProxyServerWithAuthOwner(config: Partial<ProxyConfig>, authOwner:
   // --- Model Discovery ---
   // Returns available Claude models in OpenAI-compatible format, followed by
   // the ChatGPT models the backend's catalog offers when the gateway is on.
-  // Context window reflects the subscription tier: Max/Team/Enterprise get 1M
-  // on the Opus/Fable tiers, everything else 200k. The tier check is shared
+  // Only legacy Opus 4.6 uses subscription-tier eligibility for its 1M window.
+  // Opus 4.7+ and Fable have native 1M windows. The legacy tier check is shared
   // with models.ts (subscriptionIncludesExtendedContext) — an "=== max"
   // comparison here used to advertise 200k to Team accounts that Meridian was
   // already routing to opus[1m] (#826).
@@ -11077,8 +11101,9 @@ function createProxyServerWithAuthOwner(config: Partial<ProxyConfig>, authOwner:
       profileEnvOverrides,
     )
     const extendedContext = subscriptionIncludesExtendedContext(authStatus?.subscriptionType)
+    const disable1mContext = (profile.env.CLAUDE_CODE_DISABLE_1M_CONTEXT ?? process.env.CLAUDE_CODE_DISABLE_1M_CONTEXT) === "1"
     const chatGptModels = chatGptModelList(await chatGptOfferedModels(), Math.floor(Date.now() / 1000))
-    return c.json({ object: "list", data: [...buildModelList(extendedContext), ...chatGptModels] })
+    return c.json({ object: "list", data: [...buildModelList(extendedContext, undefined, disable1mContext), ...chatGptModels] })
   })
 
   // --- Subscription Quota ---
@@ -11680,6 +11705,8 @@ export async function startProxyServer(config: Partial<ProxyConfig> = {}): Promi
       // at startup, rather than letting the version string imply otherwise.
       const buildDrift = describeBuildDrift(buildRuntime.info(finalConfig.version ?? "unknown", getLatestVersion()))
       if (buildDrift) console.log(`Build: ${buildDrift}`)
+      const cancelWarning = runtimeCancelWarning()
+      if (cancelWarning) console.warn(cancelWarning)
       console.log(`\nPoint any Anthropic-compatible tool at this endpoint:`)
       console.log(`  ANTHROPIC_API_KEY=x ANTHROPIC_BASE_URL=http://${finalConfig.host}:${port}`)
     }

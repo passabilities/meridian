@@ -1,0 +1,188 @@
+bun test v1.3.14 (0d9b296a)
+
+src/__tests__/openai.test.ts:
+(pass) extractOpenAiContent > returns string content as-is [0.56ms]
+(pass) extractOpenAiContent > extracts text from content array [0.05ms]
+(pass) extractOpenAiContent > summarizes image parts in text extraction [0.01ms]
+(pass) extractOpenAiContent > returns empty string for empty array
+(pass) translateOpenAiToAnthropic > returns null for missing messages [0.40ms]
+(pass) translateOpenAiToAnthropic > returns null for empty messages array
+(pass) translateOpenAiToAnthropic > translates a single user message [0.35ms]
+(pass) translateOpenAiToAnthropic > extracts system message into system field [0.01ms]
+(pass) translateOpenAiToAnthropic > concatenates multiple system messages [0.01ms]
+(pass) translateOpenAiToAnthropic > packs multi-turn history into system context [0.29ms]
+(pass) translateOpenAiToAnthropic > preserves append-only history for keyed Jcode sessions [0.02ms]
+(pass) translateOpenAiToAnthropic > prepends system message before conversation history [0.16ms]
+(pass) translateOpenAiToAnthropic > defaults model to the canonical Sonnet
+(pass) translateOpenAiToAnthropic > passes through specified model
+(pass) translateOpenAiToAnthropic > defaults max_tokens to 8192 [0.01ms]
+(pass) translateOpenAiToAnthropic > uses max_completion_tokens as fallback
+(pass) translateOpenAiToAnthropic > max_tokens takes precedence over max_completion_tokens
+(pass) translateOpenAiToAnthropic > forwards temperature when present
+(pass) translateOpenAiToAnthropic > does not include temperature when absent
+(pass) translateOpenAiToAnthropic > forwards top_p when present
+(pass) translateOpenAiToAnthropic > maps assistant role correctly
+(pass) translateOpenAiToAnthropic > keeps multimodal history as placeholders in packed system context [0.07ms]
+(pass) translateOpenAiToAnthropic > handles structured text content in messages
+(pass) translateOpenAiToAnthropic > preserves data-url image blocks in the last user message [0.02ms]
+(pass) translateOpenAiToAnthropic > adds an explicit placeholder for unsupported external image urls [0.02ms]
+(pass) translateOpenAiToAnthropic > omits data URLs whose media type the API does not accept [0.01ms]
+(pass) translateOpenAiToAnthropic > normalizes the image/jpg misspelling to image/jpeg [0.01ms]
+(pass) translateOpenAiToAnthropic > sets stream from body [0.01ms]
+(pass) translateOpenAiToAnthropic > defaults stream to false when omitted
+(pass) translateOpenAiToAnthropic > tool role message → user message with tool_result block [0.13ms]
+(pass) translateOpenAiToAnthropic > tool role message with tool_call_id maps to tool_use_id [0.03ms]
+(pass) translateOpenAiToAnthropic > tool role message without tool_call_id uses empty string for tool_use_id [0.03ms]
+(pass) translateOpenAiToAnthropic > coalesces consecutive tool results of one assistant turn into a single user message [0.04ms]
+(pass) translateOpenAiToAnthropic > does not merge a tool result into a preceding plain user message [0.01ms]
+(pass) translateOpenAiToAnthropic > assistant message with tool_calls → tool_use blocks appended to content [0.02ms]
+(pass) translateOpenAiToAnthropic > assistant message with text + tool_call → both preserved [0.01ms]
+(pass) translateOpenAiToAnthropic > assistant message with multiple tool_calls → multiple tool_use blocks [0.02ms]
+(pass) translateOpenAiToAnthropic > assistant content starting with <think>...</think> is split into thinking + text blocks [0.02ms]
+(pass) translateOpenAiToAnthropic > assistant content with only <think> and no trailing text produces just a thinking block [0.06ms]
+(pass) translateOpenAiToAnthropic > function tool definition → AnthropicTool in result [0.03ms]
+(pass) translateOpenAiToAnthropic > multiple function tool definitions are all translated [0.02ms]
+(pass) translateOpenAiToAnthropic > function tool with strict flag preserves it
+(pass) translateOpenAiToAnthropic > custom tool type → returns null (unsupported)
+(pass) translateOpenAiToAnthropic > no tools provided → tools array is empty
+(pass) translateOpenAiToAnthropic > packs assistant tool_use into <tool_call name=...> markers [0.02ms]
+(pass) translateOpenAiToAnthropic > packs tool role string content into <tool_result> markers [0.02ms]
+(pass) translateOpenAiToAnthropic > packs <think> assistant content into <think>...</think> markers [0.02ms]
+(pass) translateOpenAiToAnthropic > tool role with array content: text parts wrapped in <tool_result> markers [0.26ms]
+(pass) translateOpenAiToAnthropic > assistant single text block flattens to string in turns [0.02ms]
+(pass) translateOpenAiToAnthropic > assistant content with tool_calls keeps array form (not flattened) [0.02ms]
+(pass) translateOpenAiToAnthropic > <think> without trailing newline preserves first character of answer [0.01ms]
+(pass) translateOpenAiToAnthropic > <think> with trailing newline strips exactly one newline
+(pass) translateOpenAiToAnthropic > <think> with two trailing newlines keeps the second one
+(pass) translateOpenAiToAnthropic > <think> without closing tag is treated as plain text (no thinking block)
+(pass) translateOpenAiToAnthropic > malformed tool_call arguments do not crash; raw string preserved under __raw [0.24ms]
+(pass) translateOpenAiToAnthropic > non-object JSON tool_call arguments fall back to __raw [0.03ms]
+(pass) translateOpenAiToAnthropic > valid JSON object tool_call arguments parse normally [0.02ms]
+(pass) translateOpenAiToAnthropic > function tool definition without description defaults to empty string [0.01ms]
+(pass) translateOpenAiToAnthropic > maps response_format json_schema to output_config.format [0.02ms]
+(pass) translateOpenAiToAnthropic > keeps response_format alongside output_config.effort [0.02ms]
+(pass) translateOpenAiToAnthropic > passes through an Anthropic-shaped output_config.format unchanged [0.01ms]
+(pass) translateOpenAiToAnthropic > forwards json_object intact so the boundary can reject it
+(pass) translateOpenAiToAnthropic > treats response_format text as no constraint
+(pass) translateOpenAiToAnthropic > treats an explicit null response_format as omission [0.01ms]
+(pass) translateOpenAiToAnthropic > keeps output_config.effort when response_format is null [0.01ms]
+(pass) translateOpenAiToAnthropic > forwards a non-object response_format for rejection downstream
+(pass) translateAnthropicToOpenAi > returns correct OpenAI completion shape [0.08ms]
+(pass) translateAnthropicToOpenAi > includes cache reads and writes in prompt usage [0.01ms]
+(pass) translateAnthropicToOpenAi > maps max_tokens stop_reason to length finish_reason [0.01ms]
+(pass) translateAnthropicToOpenAi > filters out thinking blocks [0.01ms]
+(pass) translateAnthropicToOpenAi > handles empty content
+(pass) translateAnthropicToOpenAi > handles missing usage
+(pass) translateAnthropicToOpenAi > tool_use block → tool_calls on message [0.02ms]
+(pass) translateAnthropicToOpenAi > multiple tool_use blocks → multiple tool_calls [0.02ms]
+(pass) translateAnthropicToOpenAi > no tool_use blocks → tool_calls is undefined on message
+(pass) translateAnthropicToOpenAi > thinking block → reasoning_content on message
+(pass) translateAnthropicToOpenAi > multiple thinking blocks → concatenated reasoning_content
+(pass) translateAnthropicToOpenAi > no thinking blocks → reasoning_content is undefined [0.01ms]
+(pass) translateAnthropicToOpenAi > tool_use stop_reason → tool_calls finish_reason
+(pass) translateAnthropicSseEvent > message_start → role announcement chunk [0.04ms]
+(pass) translateAnthropicSseEvent > content_block_delta text_delta → content chunk
+(pass) translateAnthropicSseEvent > content_block_delta thinking_delta → null (skipped) [0.01ms]
+(pass) translateAnthropicSseEvent > message_delta end_turn → finish chunk with stop
+(pass) translateAnthropicSseEvent > message_delta max_tokens → finish chunk with length
+(pass) translateAnthropicSseEvent > ping → null
+(pass) translateAnthropicSseEvent > content_block_start (non-tool) → null
+(pass) translateAnthropicSseEvent > content_block_stop → null
+(pass) translateAnthropicSseEvent > message_stop → null
+(pass) translateAnthropicSseEvent > chunk carries correct id, model, created, object
+(pass) translateAnthropicSseEvent > content_block_start with tool_use → tool call start chunk at index 0 (first tool) [0.01ms]
+(pass) translateAnthropicSseEvent > content_block_start with tool_use → second tool uses index 1
+(pass) translateAnthropicSseEvent > content_block_delta input_json_delta → tool call arguments chunk [0.01ms]
+(pass) translateAnthropicSseEvent > content_block_delta thinking_delta → reasoning_content chunk [0.01ms]
+(pass) translateAnthropicSseEvent > message_delta tool_use stop_reason → tool_calls finish_reason
+(pass) createSseTranslator > first tool_use start emits index 0 [0.04ms]
+(pass) createSseTranslator > sequential tool_use starts emit ascending indexes 0, 1, 2 [0.02ms]
+(pass) createSseTranslator > input_json_delta after tool start carries the same index as the start chunk [0.01ms]
+(pass) createSseTranslator > text content_block_start does not advance the counter
+(pass) createSseTranslator > malformed tool_use start (missing name) does not advance the counter [0.01ms]
+(pass) createSseTranslator > two translator instances have independent state [0.01ms]
+(pass) createSseTranslator > non-tool events round-trip through the translator unchanged [0.02ms]
+(pass) createSseTranslator > uses ctx fields for completionId, model, created on every chunk
+(pass) createSseTranslator > realistic stream: thinking → text → tool with args → finish, in correct order [0.05ms]
+(pass) createSseTranslator > buildUsageChunk returns null when includeUsage was not requested [0.03ms]
+(pass) createSseTranslator > buildUsageChunk returns null when no message_delta.usage was observed
+(pass) createSseTranslator > buildUsageChunk returns a populated trailing chunk with empty choices when requested [0.01ms]
+(pass) createSseTranslator > buildUsageChunk uses message_start usage when message_delta omits usage [0.02ms]
+(pass) createSseTranslator > buildUsageChunk preserves start fields and applies cumulative delta overrides [0.02ms]
+1450 | 
+1451 | describe("buildModelList", () => {
+1452 |   it("honors the SDK 1M disable switch for both included and native windows", () => {
+1453 |     for (const extended of [false, true]) {
+1454 |       const models = buildModelList(extended, 123, true)
+1455 |       expect(models.every(model => model.context_window === 200_000)).toBe(true)
+                                                                             ^
+error: expect(received).toBe(expected)
+
+Expected: true
+Received: false
+
+      at <anonymous> (/Users/rynfar/repos/meridian-native-opus-catalog-1315-20261012/src/__tests__/openai.test.ts:1455:71)
+(fail) buildModelList > honors the SDK 1M disable switch for both included and native windows [0.69ms]
+(pass) buildModelList > advertises Haiku 5.5 native 1M context and adaptive-only thinking on every plan [0.06ms]
+1472 |   })
+1473 |   it("advertises Opus 5.5 adaptive thinking and native 1M context", () => {
+1474 |     for (const extended of [false, true]) {
+1475 |       const model = buildModelList(extended).find(m => m.id === "claude-opus-5-5")!
+1476 |       expect(model.display_name).toBe("Claude Opus 5.5")
+1477 |       expect(model.context_window).toBe(1_000_000)
+                                          ^
+error: expect(received).toBe(expected)
+
+Expected: 1000000
+Received: 200000
+
+      at <anonymous> (/Users/rynfar/repos/meridian-native-opus-catalog-1315-20261012/src/__tests__/openai.test.ts:1477:36)
+(fail) buildModelList > advertises Opus 5.5 adaptive thinking and native 1M context [0.09ms]
+(pass) buildModelList > advertises Sonnet 5.5 and plan-appropriate context [0.03ms]
+(pass) buildModelList > returns 12 models
+(pass) buildModelList > includes current and legacy Fable plus the supported Sonnet and Opus models for UI pickers [0.03ms]
+1509 |   it("every subscription gets the native 1M window for both Fable versions", () => {
+1510 |     for (const id of ["claude-fable-5-1", "claude-fable-5"]) {
+1511 |       const fableMax = buildModelList(true).find(m => m.id === id)!
+1512 |       const fableFree = buildModelList(false).find(m => m.id === id)!
+1513 |       expect(fableMax.context_window).toBe(1_000_000)
+1514 |       expect(fableFree.context_window).toBe(1_000_000)
+                                              ^
+error: expect(received).toBe(expected)
+
+Expected: 1000000
+Received: 200000
+
+      at <anonymous> (/Users/rynfar/repos/meridian-native-opus-catalog-1315-20261012/src/__tests__/openai.test.ts:1514:40)
+(fail) buildModelList > every subscription gets the native 1M window for both Fable versions [0.07ms]
+(pass) buildModelList > Max subscription gets 1M context for all opus variants, 200k for sonnet [0.03ms]
+1535 |     const opus5 = models.find(m => m.id === "claude-opus-5")!
+1536 |     const opus46 = models.find(m => m.id === "claude-opus-4-6")!
+1537 |     const opus47 = models.find(m => m.id === "claude-opus-4-7")!
+1538 |     const opus48 = models.find(m => m.id === "claude-opus-4-8")!
+1539 |     expect(sonnet.context_window).toBe(200_000)
+1540 |     expect(opus5.context_window).toBe(1_000_000)
+                                        ^
+error: expect(received).toBe(expected)
+
+Expected: 1000000
+Received: 200000
+
+      at <anonymous> (/Users/rynfar/repos/meridian-native-opus-catalog-1315-20261012/src/__tests__/openai.test.ts:1540:34)
+(fail) buildModelList > non-Max keeps legacy Opus 4.6 at 200k and gives newer Opus its native 1M window [0.05ms]
+(pass) buildModelList > populates capabilities on every model (image_input.supported) [0.03ms]
+(pass) buildModelList > matches the Anthropic Models API capabilities shape [0.01ms]
+(pass) buildModelList > legacy Haiku 4.5 is always 200k regardless of subscription [0.01ms]
+(pass) buildModelList > all models have correct object type [0.01ms]
+(pass) buildModelList > uses provided timestamp
+
+4 tests failed:
+(fail) buildModelList > honors the SDK 1M disable switch for both included and native windows [0.69ms]
+(fail) buildModelList > advertises Opus 5.5 adaptive thinking and native 1M context [0.09ms]
+(fail) buildModelList > every subscription gets the native 1M window for both Fable versions [0.07ms]
+(fail) buildModelList > non-Max keeps legacy Opus 4.6 at 200k and gives newer Opus its native 1M window [0.05ms]
+
+ 118 pass
+ 4 fail
+ 333 expect() calls
+Ran 122 tests across 1 file. [154.00ms]

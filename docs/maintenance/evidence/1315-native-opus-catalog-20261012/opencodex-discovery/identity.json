@@ -1,0 +1,15 @@
+{
+  "clientRepository": "https://github.com/robin-bially/opencodex",
+  "clientRevision": "6d881db206c6a74da6b64fa22b6980faf05d0122",
+  "clientPackageVersion": "2.12.0",
+  "meridianRevision": "c61fbbe058b76495121b370c44dc868b468b3e8d",
+  "platform": "Darwin ARM64",
+  "runtime": "Bun 1.3.14",
+  "sha256": {
+    "catalog-discovery-probe.ts": "eb9f0655c0fd788df2fcb273d5ba6066a3f73e90b57a7bcf6da7cd5ac36376cf",
+    "generic-http-receipt.json": "dac9e798488263af9c8d7dd72118ba80a785efe7787da73d8471e469b305d628",
+    "http-initial-policy-refusal.log": "b4300d8b7f73679591fc911fdc7e40e4b7908c309d130be27b371424d6443100",
+    "provider-fetch.ts": "3c0870a5a49e6462a127ac26753ab79ec8ed9108a4a613fd2dfe4cc881a2d644"
+  },
+  "qualification": "Reporter public fork, not confirmed installed revision. Actual imported source HTTP discovery. No actual provider, account, Codex app, compaction, or registry-installed-client claim."
+}

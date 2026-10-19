@@ -524,7 +524,7 @@ export function sonnetHasNative1mContext(sonnetModel?: string): boolean {
 }
 
 /**
- * Subscription tiers that include the Opus/Fable 1M extended context window
+ * Subscription tiers that include legacy Opus 4.6's 1M extended context window
  * at no Extra Usage cost, per Anthropic's docs
  * (https://code.claude.com/docs/en/model-config#extended-context): Max, Team,
  * and Enterprise. Pro and unknown tiers are not included.
@@ -535,7 +535,8 @@ export function sonnetHasNative1mContext(sonnetModel?: string): boolean {
 const EXTENDED_CONTEXT_SUBSCRIPTION_PREFIXES: readonly string[] = ["max", "team", "enterprise"]
 
 /**
- * Whether a subscription tier includes 1M context on the Opus/Fable tiers.
+ * Whether a subscription tier includes legacy Opus 4.6's [1m] variant.
+ * Native Opus 4.7+ and Fable windows do not use this tier restriction.
  *
  * This is the single source of truth for *advertising* the extended window
  * (e.g. `GET /v1/models`). It deliberately does NOT gate routing:

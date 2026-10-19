@@ -1,0 +1,4 @@
+
+> @rynfar/meridian@1.81.0 typecheck
+> tsc --noEmit
+

@@ -8,10 +8,11 @@
  * return to the preferred profile), exhaustion skip, and that the mode OFF
  * is byte-identical to today's behavior.
  */
-import { describe, it, expect, mock, beforeEach, afterEach } from "bun:test"
+import { describe, it, expect, mock, spyOn, beforeEach, afterEach } from "bun:test"
 import { createAdaptorServer } from "@hono/node-server"
 import type { AddressInfo } from "node:net"
 import { installSdkMock } from "./sdkMock"
+import { createOwnedCredentialStore } from "./modelsMock"
 import { installLoggerMock } from "./loggerMock"
 import { installMcpToolsMock } from "./mcpToolsMock"
 import { assistantMessage, messageStart, textBlockStart, textDelta, blockStop, messageDelta, messageStop, resolveMockSdkSessionId, streamEvent } from "./helpers"
@@ -2595,4 +2596,319 @@ describe("keyless priority affinity", () => {
     expect(fork.status).toBe(200)
     expect(capturedEnvs.every((e) => e.includes("prof-personal"))).toBe(true)
   }, 30_000)
+})
+
+describe("re-authenticated profile unbenching (#1385)", () => {
+  let storeOverride: { mockRestore(): void }
+  let tempDir = ""
+  let originalFetch: typeof globalThis.fetch
+
+  async function healthSnapshots(app: TestApp) {
+    const res = await app.fetch(new Request("http://localhost/profiles/list"))
+    const body = await res.json() as {
+      exhausted?: Array<{ id: string; until: number; reason: string }>
+      spent?: Array<{ profileId: string; until: number }>
+    }
+    return {
+      exhausted: body.exhausted ?? [],
+      spent: body.spent ?? [],
+    }
+  }
+
+  function stubOAuthEndpoints(status = 200) {
+    const syntheticFetch = Object.assign(
+      async (input: Parameters<typeof fetch>[0]) => {
+        const url = String(input)
+        if (url === "https://api.anthropic.com/api/oauth/profile") {
+          return Response.json({
+            organization: {
+              organization_type: "claude_max",
+              rate_limit_tier: "default_claude_max_5x",
+            },
+          })
+        }
+        if (url === "https://platform.claude.com/v1/oauth/token") {
+          if (status !== 200) {
+            return Response.json({ error: "invalid_grant" }, { status })
+          }
+          return Response.json({
+            access_token: "fresh-access-token",
+            refresh_token: "fresh-refresh-token",
+            expires_in: 3600,
+          })
+        }
+        throw new Error(`Unexpected fetch in #1385 test: ${url}`)
+      },
+      { preconnect: originalFetch.preconnect },
+    )
+    globalThis.fetch = syntheticFetch
+    expect(globalThis.fetch).toBe(syntheticFetch)
+  }
+
+  function createReauthTestApp(): { app: TestApp; workDir: string; personalDir: string } {
+    const { mkdirSync } = require("node:fs") as typeof import("node:fs")
+    const { join } = require("node:path") as typeof import("node:path")
+    const workDir = join(tempDir, "prof-work")
+    const personalDir = join(tempDir, "prof-personal")
+    mkdirSync(workDir, { recursive: true })
+    mkdirSync(personalDir, { recursive: true })
+    const { app } = createProxyServer({
+      port: 0,
+      host: "127.0.0.1",
+      profiles: [
+        { id: "work", claudeConfigDir: workDir },
+        { id: "personal", claudeConfigDir: personalDir },
+      ],
+      defaultProfile: "work",
+      silent: true,
+    })
+    return { app, workDir, personalDir }
+  }
+
+  beforeEach(async () => {
+    const { mkdtempSync } = await import("node:fs")
+    const { tmpdir } = await import("node:os")
+    const { join } = await import("node:path")
+    const { resetPendingLogins } = await import("../proxy/profileLogin")
+    const { resetInflightRefresh, setCredentialStorePlatformForTests, stopBackgroundRefresh } = await import("../proxy/tokenRefresh")
+
+    originalFetch = globalThis.fetch
+    // Proactive refresh can run on the first mocked HTTP turn, before the
+    // explicit login/refresh request below. Refuse all other network paths.
+    stubOAuthEndpoints(200)
+    tempDir = mkdtempSync(join(tmpdir(), "meridian-reauth-1385-"))
+    setCredentialStorePlatformForTests("linux")
+    // These four controls intentionally persist synthetic OAuth tokens in their
+    // newly owned directories. Keep the real file backend behind a path guard;
+    // all other SDK-mocked tests retain the empty default store.
+    const tokens = await import("../proxy/tokenRefresh")
+    storeOverride = spyOn(tokens, "createPlatformCredentialStore").mockImplementation(options =>
+      createOwnedCredentialStore(tempDir, options?.claudeConfigDir))
+    resetPendingLogins()
+    resetInflightRefresh()
+    stopBackgroundRefresh()
+    resetProcessSdkSemaphoreForTests()
+    capturedEnvs = []
+    failingDirs = new Set()
+    clearSessionCache()
+    resetActiveProfile()
+    rateLimitStore.clear()
+    savedEnv.MERIDIAN_ROUTING = process.env.MERIDIAN_ROUTING
+    savedEnv.MERIDIAN_PROFILE_ORDER = process.env.MERIDIAN_PROFILE_ORDER
+    savedEnv.MERIDIAN_PRIORITY_FAILBACK = process.env.MERIDIAN_PRIORITY_FAILBACK
+    savedEnv.MERIDIAN_RATE_LIMIT_BASE_DELAY_MS = process.env.MERIDIAN_RATE_LIMIT_BASE_DELAY_MS
+    savedEnv.MERIDIAN_CREDENTIALS_READONLY = process.env.MERIDIAN_CREDENTIALS_READONLY
+    savedEnv.CLAUDE_CONFIG_DIR = process.env.CLAUDE_CONFIG_DIR
+    delete process.env.CLAUDE_CONFIG_DIR
+    delete process.env.MERIDIAN_CREDENTIALS_READONLY
+    delete process.env.MERIDIAN_PRIORITY_FAILBACK
+    process.env.MERIDIAN_ROUTING = "priority"
+    process.env.MERIDIAN_PROFILE_ORDER = "work,personal"
+    process.env.MERIDIAN_RATE_LIMIT_BASE_DELAY_MS = "1"
+  })
+
+  afterEach(async () => {
+    const { rmSync } = await import("node:fs")
+    const { resetPendingLogins } = await import("../proxy/profileLogin")
+    const { resetInflightRefresh, setCredentialStorePlatformForTests, stopBackgroundRefresh } = await import("../proxy/tokenRefresh")
+
+    globalThis.fetch = originalFetch
+    storeOverride.mockRestore()
+    setCredentialStorePlatformForTests(null)
+    resetPendingLogins()
+    resetInflightRefresh()
+    stopBackgroundRefresh()
+    resetProcessSdkSemaphoreForTests()
+    rateLimitStore.clear()
+    if (tempDir) rmSync(tempDir, { recursive: true, force: true })
+    for (const [k, v] of Object.entries(savedEnv)) {
+      if (v !== undefined) process.env[k] = v
+      else delete process.env[k]
+    }
+  })
+
+  it("clears exhausted and spent state when /profiles/login/complete succeeds so the next request routes to the re-authenticated profile", async () => {
+    const resetsAt = Date.now() + 60 * 60_000
+    rateLimitStore.record("work", {
+      status: "rejected",
+      rateLimitType: "five_hour",
+      utilization: 1,
+      resetsAt,
+    })
+    failingDirs.add("prof-work")
+    const { app } = createReauthTestApp()
+
+    const first = await post(app, {}, "conv-1 before reauth")
+    expect(first.status).toBe(200)
+    expect(await healthSnapshots(app)).toEqual({
+      exhausted: [expect.objectContaining({ id: "work", reason: "rate_limit_error" })],
+      spent: [expect.objectContaining({ profileId: "work" })],
+    })
+    expect(rateLimitStore.get("work", "five_hour")).toBeDefined()
+
+    // Even if upstream would now accept work, the stale bench keeps skipping it.
+    failingDirs.delete("prof-work")
+    capturedEnvs = []
+    const stillBenched = await post(app, {}, "conv-2 while still benched")
+    expect(stillBenched.status).toBe(200)
+    expect(capturedEnvs.every((e) => e.includes("prof-personal"))).toBe(true)
+
+    // Re-authenticate work via /profiles/login/start + /profiles/login/complete.
+    const started = await app.fetch(new Request("http://localhost/profiles/login/start", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ profile: "work" }),
+    }))
+    expect(started.status).toBe(200)
+    const { loginId } = await started.json() as { loginId: string }
+
+    stubOAuthEndpoints(200)
+    const completed = await app.fetch(new Request("http://localhost/profiles/login/complete", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ loginId, code: "reauth-code-123" }),
+    }))
+    expect(completed.status).toBe(200)
+
+    expect(await healthSnapshots(app)).toEqual({ exhausted: [], spent: [] })
+    expect(rateLimitStore.get("work", "five_hour")).toBeUndefined()
+
+    capturedEnvs = []
+    const afterReauth = await post(app, {}, "conv-3 after reauth")
+    expect(afterReauth.status).toBe(200)
+    expect(capturedEnvs).toHaveLength(1)
+    expect(capturedEnvs[0]).toContain("prof-work")
+  }, 20_000)
+
+  it("clears exhausted and spent state when browser loopback /callback completes login", async () => {
+    const resetsAt = Date.now() + 60 * 60_000
+    rateLimitStore.record("work", {
+      status: "rejected",
+      rateLimitType: "five_hour",
+      utilization: 1,
+      resetsAt,
+    })
+    failingDirs.add("prof-work")
+    const { app } = createReauthTestApp()
+
+    expect((await post(app, {}, "callback conv-1")).status).toBe(200)
+    expect((await healthSnapshots(app)).exhausted.map((e) => e.id)).toEqual(["work"])
+    expect((await healthSnapshots(app)).spent.map((s) => s.profileId)).toEqual(["work"])
+
+    const started = await app.fetch(new Request("http://localhost/profiles/login/start", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", host: "127.0.0.1:3457" },
+      body: JSON.stringify({ profile: "work" }),
+    }))
+    const { authorizeUrl } = await started.json() as { authorizeUrl: string }
+    const state = new URL(authorizeUrl).searchParams.get("state") ?? ""
+
+    stubOAuthEndpoints(200)
+    const callbackRes = await app.fetch(
+      new Request(`http://localhost/callback?code=loopback-code&state=${encodeURIComponent(state)}`),
+    )
+    expect(callbackRes.status).toBe(200)
+    expect(await healthSnapshots(app)).toEqual({ exhausted: [], spent: [] })
+
+    failingDirs.delete("prof-work")
+    capturedEnvs = []
+    const afterCallback = await post(app, {}, "callback conv-2")
+    expect(afterCallback.status).toBe(200)
+    expect(capturedEnvs).toHaveLength(1)
+    expect(capturedEnvs[0]).toContain("prof-work")
+  }, 20_000)
+
+  it("clears only the refreshed profile on POST /auth/refresh and leaves other profiles benched", async () => {
+    const { writeFileSync } = await import("node:fs")
+    const { join } = await import("node:path")
+    const { app, workDir, personalDir } = createReauthTestApp()
+    for (const dir of [workDir, personalDir]) {
+      writeFileSync(join(dir, ".credentials.json"), JSON.stringify({
+        claudeAiOauth: {
+          accessToken: "old-access",
+          refreshToken: "old-refresh",
+          expiresAt: Date.now() - 1_000,
+          subscriptionType: "max",
+        },
+      }))
+    }
+
+    const resetsAt = Date.now() + 60 * 60_000
+    rateLimitStore.record("work", { status: "rejected", rateLimitType: "five_hour", utilization: 1, resetsAt })
+    rateLimitStore.record("personal", { status: "rejected", rateLimitType: "five_hour", utilization: 1, resetsAt })
+    failingDirs.add("prof-work")
+    failingDirs.add("prof-personal")
+
+    // Both accounts fail -> both get marked exhausted and spent.
+    expect((await post(app, {}, "exhaust both")).status).toBe(429)
+    const beforeRefresh = await healthSnapshots(app)
+    expect(beforeRefresh.exhausted.map((e) => e.id).sort()).toEqual(["personal", "work"])
+    expect(beforeRefresh.spent.map((s) => s.profileId).sort()).toEqual(["personal", "work"])
+
+    stubOAuthEndpoints(200)
+    const refreshRes = await app.fetch(new Request("http://localhost/auth/refresh", {
+      method: "POST",
+      headers: { "x-meridian-profile": "work" },
+    }))
+    expect(refreshRes.status).toBe(200)
+
+    const afterRefresh = await healthSnapshots(app)
+    expect(afterRefresh.exhausted.map((e) => e.id)).toEqual(["personal"])
+    expect(afterRefresh.spent.map((s) => s.profileId)).toEqual(["personal"])
+    expect(rateLimitStore.get("work", "five_hour")).toBeUndefined()
+    expect(rateLimitStore.get("personal", "five_hour")).toBeDefined()
+
+    failingDirs.delete("prof-work")
+    capturedEnvs = []
+    const afterWorkRefresh = await post(app, {}, "after work refresh")
+    expect(afterWorkRefresh.status).toBe(200)
+    expect(capturedEnvs).toHaveLength(1)
+    expect(capturedEnvs[0]).toContain("prof-work")
+  }, 20_000)
+
+  it("keeps the profile benched when login completion or token refresh fails", async () => {
+    const { writeFileSync } = await import("node:fs")
+    const { join } = await import("node:path")
+    const { app, workDir } = createReauthTestApp()
+    writeFileSync(join(workDir, ".credentials.json"), JSON.stringify({
+      claudeAiOauth: {
+        accessToken: "old-access",
+        refreshToken: "old-refresh",
+        expiresAt: Date.now() - 1_000,
+        subscriptionType: "max",
+      },
+    }))
+
+    const resetsAt = Date.now() + 60 * 60_000
+    rateLimitStore.record("work", { status: "rejected", rateLimitType: "five_hour", utilization: 1, resetsAt })
+    failingDirs.add("prof-work")
+
+    expect((await post(app, {}, "bench work")).status).toBe(200)
+    expect((await healthSnapshots(app)).exhausted.map((e) => e.id)).toEqual(["work"])
+
+    const started = await app.fetch(new Request("http://localhost/profiles/login/start", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ profile: "work" }),
+    }))
+    const { loginId } = await started.json() as { loginId: string }
+
+    stubOAuthEndpoints(400)
+    const failedLogin = await app.fetch(new Request("http://localhost/profiles/login/complete", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ loginId, code: "bad-code" }),
+    }))
+    expect(failedLogin.status).toBe(502)
+
+    const failedRefresh = await app.fetch(new Request("http://localhost/auth/refresh", {
+      method: "POST",
+      headers: { "x-meridian-profile": "work" },
+    }))
+    expect(failedRefresh.status).toBe(500)
+
+    const stillBenched = await healthSnapshots(app)
+    expect(stillBenched.exhausted.map((e) => e.id)).toEqual(["work"])
+    expect(stillBenched.spent.map((s) => s.profileId)).toEqual(["work"])
+  }, 20_000)
 })

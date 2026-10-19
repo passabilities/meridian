@@ -1,0 +1,46 @@
+bun test v1.3.14 (0d9b296a)
+
+src/__tests__/proxy-health-build.test.ts:
+(pass) cold executable readiness > leaves liveness responsive while asynchronous executable resolution is pending [9.94ms]
+(pass) cold executable readiness > retains the unready response when cold executable resolution fails [0.95ms]
+(pass) /v1/models profile auth context > uses the legacy auth context when no profiles are configured [0.81ms]
+(pass) /v1/models profile auth context > advertises 1M Opus and Fable context from the configured Max profile [1.21ms]
+157 |       profileId: "pro",
+158 |       envOverrides: { CLAUDE_CONFIG_DIR: "/profiles/pro" },
+159 |     }])
+160 |     expect(body.data.find(model => model.id === "claude-haiku-5-5")?.context_window).toBe(1_000_000)
+161 |     for (const id of ["claude-opus-5-5", "claude-opus-5", "claude-opus-4-7", "claude-opus-4-8", "claude-fable-5", "claude-fable-5-1"]) {
+162 |       expect(body.data.find(model => model.id === id)?.context_window).toBe(1_000_000)
+                                                                             ^
+error: expect(received).toBe(expected)
+
+Expected: 1000000
+Received: 200000
+
+      at <anonymous> (/Users/rynfar/repos/meridian-native-opus-catalog-1315-20261012/src/__tests__/proxy-health-build.test.ts:162:72)
+(fail) /v1/models profile auth context > keeps legacy Opus at 200k on Pro while advertising native Opus/Fable windows [0.94ms]
+174 |       const { app } = createProxyServer({ port: 0, host: "127.0.0.1" })
+175 |       const response = await app.fetch(new Request("http://localhost/v1/models"))
+176 |       const body = await response.json() as { data: Array<{ context_window: number }> }
+177 |       expect(response.status).toBe(200)
+178 |       expect(body.data.length).toBeGreaterThan(0)
+179 |       expect(body.data.every(model => model.context_window === 200_000)).toBe(true)
+                                                                               ^
+error: expect(received).toBe(expected)
+
+Expected: true
+Received: false
+
+      at <anonymous> (/Users/rynfar/repos/meridian-native-opus-catalog-1315-20261012/src/__tests__/proxy-health-build.test.ts:179:74)
+(fail) model catalog SDK context override > caps advertised windows at 200k when the SDK disables 1M [1.31ms]
+(pass) /health build provenance > refreshes local status behind the existing optional API-key gate [1.78ms]
+(pass) /health build provenance > reports source and version on a healthy response [40.83ms]
+(pass) /health build provenance > makes no update claim before the registry check has resolved [0.89ms]
+(pass) /health build provenance > keeps the loaded provenance immutable after launcher environment changes [0.99ms]
+(pass) /health build provenance > reports an available update once the check resolves [2.56ms]
+(pass) /health build provenance > attaches build to the not-logged-in response too [0.69ms]
+
+ 10 pass
+ 2 fail
+ 41 expect() calls
+Ran 12 tests across 1 file. [504.00ms]

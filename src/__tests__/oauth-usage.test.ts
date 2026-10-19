@@ -9,7 +9,7 @@
  */
 
 import { describe, expect, test, beforeEach, afterEach, setSystemTime } from "bun:test"
-import { fetchOAuthUsage, fetchOAuthUsageResult, resetOAuthUsageCache, toUsageEntry } from "../proxy/oauthUsage"
+import { clearOAuthUsageForProfile, fetchOAuthUsage, fetchOAuthUsageResult, peekOAuthUsage, resetOAuthUsageCache, toUsageEntry } from "../proxy/oauthUsage"
 import type { CredentialStore } from "../proxy/tokenRefresh"
 
 const SAMPLE_RESPONSE = {
@@ -858,5 +858,46 @@ describe("token refresh outside the 401 path", () => {
 
     expect(seen).toEqual(["old"])
     expect(result.error).toBe("upstream_error")
+  })
+
+  test("clearOAuthUsageForProfile drops cached snapshot and 429 cooldown for only the target profile", async () => {
+    const { store: workStore, refreshImpl: workRefresh } = rotatingStore()
+    const { store: personalStore, refreshImpl: personalRefresh } = rotatingStore()
+
+    await fetchOAuthUsageResult({ force: true, store: workStore, refreshImpl: workRefresh, fetchImpl: tokenFetch(ok).fetchImpl, profileId: "work" })
+    await fetchOAuthUsageResult({ force: true, store: personalStore, refreshImpl: personalRefresh, fetchImpl: tokenFetch(ok).fetchImpl, profileId: "personal" })
+    expect(peekOAuthUsage("work")).toBeDefined()
+    expect(peekOAuthUsage("personal")).toBeDefined()
+
+    const throttled = await fetchOAuthUsageResult({
+      force: true,
+      store: workStore,
+      refreshImpl: workRefresh,
+      fetchImpl: tokenFetch(limited).fetchImpl,
+      profileId: "work",
+      rateLimitBackoffMs: 60_000,
+    })
+    expect(throttled.failure?.reason).toBe("rate_limited")
+    expect(throttled.snapshot?.stale).toBe(true)
+
+    clearOAuthUsageForProfile("work")
+    expect(peekOAuthUsage("work")).toBeUndefined()
+    expect(peekOAuthUsage("personal")).toBeDefined()
+
+    let freshCalls = 0
+    const afterClear = await fetchOAuthUsageResult({
+      force: true,
+      store: workStore,
+      refreshImpl: workRefresh,
+      fetchImpl: async () => {
+        freshCalls++
+        return ok()
+      },
+      profileId: "work",
+      rateLimitBackoffMs: 60_000,
+    })
+    expect(freshCalls).toBe(1)
+    expect(afterClear.error).toBeNull()
+    expect(afterClear.failure).toBeNull()
   })
 })
