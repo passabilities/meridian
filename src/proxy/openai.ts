@@ -117,6 +117,16 @@ export interface AnthropicImageBlock {
   }
 }
 
+export interface AnthropicDocumentBlock {
+  type: "document"
+  title?: string
+  source: {
+    type: "base64"
+    media_type: "application/pdf"
+    data: string
+  }
+}
+
 export interface AnthropicMessage {
   role: "user" | "assistant"
   content: string | AnthropicContentBlock[]
@@ -205,6 +215,7 @@ export interface AnthropicThinkingBlock {
 export type AnthropicContentBlock =
   AnthropicTextBlock |
   AnthropicImageBlock |
+  AnthropicDocumentBlock |
   AnthropicThinkingBlock |
   AnthropicToolResultBlock |
   AnthropicToolUseBlock
@@ -425,6 +436,18 @@ export function parseDataUrlImage(url: string): AnthropicImageBlock | null {
       media_type: mediaType,
       data,
     },
+  }
+}
+
+/** A base64 PDF data URL as an Anthropic document block; null for anything else. */
+export function parseDataUrlPdf(url: string, title?: string): AnthropicDocumentBlock | null {
+  const match = /^data:application\/pdf;base64,(.+)$/is.exec(url)
+  const data = match?.[1]
+  if (!data) return null
+  return {
+    type: "document",
+    ...(title ? { title } : {}),
+    source: { type: "base64", media_type: "application/pdf", data },
   }
 }
 
@@ -1061,6 +1084,46 @@ export function translateAnthropicSseEvent(
   return null
 }
 
+/** OpenAI's in-band stream error frame: `data: {"error": {...}}`. */
+export interface OpenAiStreamErrorChunk {
+  error: {
+    message: string
+    type: string
+    code: string
+    [key: string]: unknown
+  }
+}
+
+/**
+ * Translate an Anthropic SSE `error` event into OpenAI's in-band stream error.
+ *
+ * A turn that fails after `message_start` is closed with
+ * `stop_reason: "max_tokens"` followed by an `error` event, so Anthropic
+ * clients can see both the partial content and the failure. The chat
+ * completions translator has no error shape, so without this the error was
+ * dropped and OpenAI clients saw only `finish_reason: "length"`: an upstream
+ * refusal (for example a safeguard rejection) looked like truncation, and
+ * clients that continue truncated turns re-sent the request that had just
+ * been refused.
+ *
+ * `code` mirrors the Anthropic error type so clients can classify the failure
+ * (rate limit, overload, auth) the same way they would an HTTP error body.
+ * Extra fields such as retry-after hints are preserved.
+ */
+export function translateAnthropicSseError(
+  event: { type?: unknown; error?: unknown },
+): OpenAiStreamErrorChunk | null {
+  if (event.type !== "error") return null
+  const upstream = event.error && typeof event.error === "object"
+    ? event.error as Record<string, unknown>
+    : {}
+  const type = typeof upstream.type === "string" && upstream.type ? upstream.type : "api_error"
+  const message = typeof upstream.message === "string" && upstream.message
+    ? upstream.message
+    : "Upstream stream error"
+  return { error: { ...upstream, message, type, code: type } }
+}
+
 // ---------------------------------------------------------------------------
 // Model list
 // ---------------------------------------------------------------------------
@@ -1094,15 +1157,16 @@ const FULL_CAPABILITIES: ModelCapabilities = Object.freeze({
 /**
  * Return the static list of available Claude models in OpenAI format.
  *
- * @param extendedContextIncluded - whether the caller's subscription includes
- *   the 1M window on the Opus/Fable tiers (Max, Team, Enterprise). Callers
- *   derive this from `subscriptionIncludesExtendedContext` in models.ts so the
- *   advertised window matches what the proxy actually routes to. Sonnet 5+
- *   runs with a native 1M window on every plan (#1212); Sonnet 4.6 stays 200k
- *   because its 1M variant is billed as Extra Usage. Haiku 5.5 has a native
- *   1M window without a [1m] suffix; legacy 4.5 is 200k.
+ * @param extendedContextIncluded - whether legacy Opus 4.6's [1m] variant is
+ *   included in the caller's subscription (Max, Team, Enterprise). Native 1M
+ *   Sonnet 5+, Opus 4.7+, Fable, and Haiku 5.5 windows do not depend on that
+ *   legacy entitlement; Sonnet 4.6 stays 200k because its 1M variant is billed
+ *   as Extra Usage.
+ * @param disable1mContext - the effective SDK opt-out caps every advertised
+ *   window at 200k, including models whose ordinary window is natively 1M.
  */
-export function buildModelList(extendedContextIncluded: boolean, now = Math.floor(Date.now() / 1000)): OpenAiModel[] {
+export function buildModelList(extendedContextIncluded: boolean, now = Math.floor(Date.now() / 1000), disable1mContext = false): OpenAiModel[] {
+  extendedContextIncluded = extendedContextIncluded && !disable1mContext
   return [
     {
       id: "claude-sonnet-5-5",
@@ -1110,7 +1174,7 @@ export function buildModelList(extendedContextIncluded: boolean, now = Math.floo
       created: now,
       owned_by: "anthropic",
       display_name: "Claude Sonnet 5.5",
-      context_window: 1_000_000,
+      context_window: disable1mContext ? 200_000 : 1_000_000,
       capabilities: FULL_CAPABILITIES,
     },
     {
@@ -1119,7 +1183,7 @@ export function buildModelList(extendedContextIncluded: boolean, now = Math.floo
       created: now,
       owned_by: "anthropic",
       display_name: "Claude Sonnet 5",
-      context_window: 1_000_000,
+      context_window: disable1mContext ? 200_000 : 1_000_000,
       capabilities: FULL_CAPABILITIES,
     },
     {
@@ -1137,7 +1201,7 @@ export function buildModelList(extendedContextIncluded: boolean, now = Math.floo
       created: now,
       owned_by: "anthropic",
       display_name: "Claude Opus 5.5",
-      context_window: extendedContextIncluded ? 1_000_000 : 200_000,
+      context_window: disable1mContext ? 200_000 : 1_000_000,
       capabilities: {
         ...FULL_CAPABILITIES,
         thinking: { supported: true, types: { adaptive: { supported: true }, enabled: { supported: false } } },
@@ -1149,7 +1213,7 @@ export function buildModelList(extendedContextIncluded: boolean, now = Math.floo
       created: now,
       owned_by: "anthropic",
       display_name: "Claude Opus 5",
-      context_window: extendedContextIncluded ? 1_000_000 : 200_000,
+      context_window: disable1mContext ? 200_000 : 1_000_000,
       capabilities: FULL_CAPABILITIES,
     },
     {
@@ -1167,7 +1231,7 @@ export function buildModelList(extendedContextIncluded: boolean, now = Math.floo
       created: now,
       owned_by: "anthropic",
       display_name: "Claude Opus 4.7",
-      context_window: extendedContextIncluded ? 1_000_000 : 200_000,
+      context_window: disable1mContext ? 200_000 : 1_000_000,
       capabilities: FULL_CAPABILITIES,
     },
     {
@@ -1176,7 +1240,7 @@ export function buildModelList(extendedContextIncluded: boolean, now = Math.floo
       created: now,
       owned_by: "anthropic",
       display_name: "Claude Opus 4.8",
-      context_window: extendedContextIncluded ? 1_000_000 : 200_000,
+      context_window: disable1mContext ? 200_000 : 1_000_000,
       capabilities: FULL_CAPABILITIES,
     },
     {
@@ -1185,7 +1249,7 @@ export function buildModelList(extendedContextIncluded: boolean, now = Math.floo
       created: now,
       owned_by: "anthropic",
       display_name: "Claude Fable 5.1",
-      context_window: extendedContextIncluded ? 1_000_000 : 200_000,
+      context_window: disable1mContext ? 200_000 : 1_000_000,
       capabilities: FULL_CAPABILITIES,
     },
     {
@@ -1194,7 +1258,7 @@ export function buildModelList(extendedContextIncluded: boolean, now = Math.floo
       created: now,
       owned_by: "anthropic",
       display_name: "Claude Fable 5",
-      context_window: extendedContextIncluded ? 1_000_000 : 200_000,
+      context_window: disable1mContext ? 200_000 : 1_000_000,
       capabilities: FULL_CAPABILITIES,
     },
     {
@@ -1203,7 +1267,7 @@ export function buildModelList(extendedContextIncluded: boolean, now = Math.floo
       created: now,
       owned_by: "anthropic",
       display_name: "Claude Haiku 5.5",
-      context_window: 1_000_000,
+      context_window: disable1mContext ? 200_000 : 1_000_000,
       capabilities: {
         ...FULL_CAPABILITIES,
         thinking: { supported: true, types: { adaptive: { supported: true }, enabled: { supported: false } } },

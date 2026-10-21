@@ -1,0 +1,1 @@
+{"kind":"actual-source-http-discovery","before":null,"positiveControl":1000000,"requests":["GET /v1/models","GET /v1/models"],"scope":"local HTTP discovery only; no auth, inference, Codex app or installed-client claim"}

@@ -8,6 +8,8 @@
  * response body — no pure-function-only assertions.
  */
 import { beforeEach, afterEach, describe, expect, it } from "bun:test"
+import { tmpdir } from "node:os"
+import { join } from "node:path"
 import { z } from "zod"
 import type { SDKMessage } from "@anthropic-ai/claude-agent-sdk"
 import { installSdkMock } from "./sdkMock"
@@ -272,14 +274,14 @@ const savedPassthrough = process.env.MERIDIAN_PASSTHROUGH
 const savedInstances = process.env.MERIDIAN_ADAPTER_INSTANCES
 const savedConfigDir = process.env.MERIDIAN_CONFIG_DIR
 
-beforeEach(() => {
+beforeEach(async () => {
   captured.length = 0
   registeredMcpServers = []
   nextToolCall = null
-  clearSessionCache()
+  await clearSessionCache()
   delete process.env.MERIDIAN_PASSTHROUGH
   delete process.env.MERIDIAN_ADAPTER_INSTANCES
-  process.env.MERIDIAN_CONFIG_DIR = `/tmp/meridian-polytoken-http-${Date.now()}-${Math.random().toString(36).slice(2)}`
+  process.env.MERIDIAN_CONFIG_DIR = join(tmpdir(), `meridian-polytoken-http-${Date.now()}-${Math.random().toString(36).slice(2)}`)
 })
 
 afterEach(() => {

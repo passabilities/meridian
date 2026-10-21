@@ -8,6 +8,7 @@
  * before publication". Automatic account switchers fire while turns are live,
  * which made this routine rather than a corner case.
  */
+import { installModelsMock } from "./modelsMock"
 import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test"
 import { mkdtempSync, rmSync } from "node:fs"
 import { tmpdir } from "node:os"
@@ -67,12 +68,11 @@ installMcpToolsMock(() => ({
   createOpencodeMcpServer: () => ({ type: "sdk", name: "opencode", instance: {} }),
 }))
 
-import { resolveSdkModelDefaults } from "../proxy/models"
+// Unspecified model exports retain their real implementation.
 
-mock.module("../proxy/models", () => ({
+installModelsMock(() => ({
   mapModelToClaudeModel: () => "sonnet",
   resolveClaudeExecutableAsync: async () => "claude",
-  resolveSdkModelDefaults,
   getClaudeAuthStatusAsync: async () => ({ loggedIn: true, email: "test@test.com", subscriptionType: "max" }),
   getAuthCacheInfo: () => ({ lastCheckedAt: 0, lastSuccessAt: 0, isFailure: false }),
   hasExtendedContext: () => false,
@@ -131,11 +131,11 @@ function switchTo(profile: string): Request {
 describe("profile switch during an in-flight turn", () => {
   let sessionDir = ""
 
-  beforeEach(() => {
+  beforeEach(async () => {
     sessionDir = mkdtempSync(join(tmpdir(), "meridian-switch-inflight-"))
     setSessionStoreDir(sessionDir)
     resetActiveProfile()
-    clearSessionCache()
+    await clearSessionCache()
     queryCalls = 0
     armTurn()
   })

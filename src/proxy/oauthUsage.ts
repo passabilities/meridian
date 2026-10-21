@@ -638,6 +638,17 @@ export function peekOAuthUsage(profileId?: string | null): OAuthUsageSnapshot | 
   return cacheByProfile.get(profileId ?? DEFAULT_KEY)
 }
 
+/** Clear cached OAuth usage snapshot, failure state, and 429 cooldowns for one profile. */
+export function clearOAuthUsageForProfile(profileId?: string | null): void {
+  const key = profileId ?? DEFAULT_KEY
+  cacheByProfile.delete(key)
+  inflightByProfile.delete(key)
+  rateLimitedUntilByProfile.delete(key)
+  failureByProfile.delete(key)
+  rateLimitRunByProfile.delete(key)
+  lastRateLimitRefreshAtByProfile.delete(key)
+}
+
 /** Test-only / shutdown helper — clears all cached snapshots and pending fetches. */
 export function resetOAuthUsageCache(): void {
   cacheByProfile.clear()

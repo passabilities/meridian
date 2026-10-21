@@ -2,6 +2,12 @@
  * Tests for the SDK query options builder.
  */
 import { describe, it, expect } from "bun:test"
+import { installSdkMock } from "./sdkMock"
+installSdkMock(() => ({
+  query: () => { throw new Error("Options builder must not query a model") },
+  createSdkMcpServer: () => ({ type: "sdk", name: "passthrough", instance: {} }),
+  tool: () => ({}),
+}), "query.test.ts")
 import { buildQueryOptions, GIT_STATUS_PROVENANCE_NOTE, REPLAY_PROVENANCE_NOTE, SCRATCHPAD_COUNTER_INSTRUCTION, resolveQueryConfigDir, singleTurnCapLiftRaisesBudget, type QueryContext } from "../proxy/query"
 import { BLOCKED_BUILTIN_TOOLS, CLAUDE_CODE_ONLY_TOOLS, MCP_SERVER_NAME, ALLOWED_MCP_TOOLS } from "../proxy/tools"
 import { CHERRY_BLOCKED_BUILTIN_TOOLS, CHERRY_INCOMPATIBLE_TOOLS, CHERRY_WEB_TOOLS } from "../proxy/adapters/cherry"
@@ -524,17 +530,14 @@ describe("buildQueryOptions", () => {
     expect((result.options as any).settingSources).toEqual([])
   })
 
-  it("settingSources from caller still wins in passthrough when claudeMd is project/full", () => {
-    // server.ts resolves claudeMd="project" → settingSources=["project"];
-    // the later spread block in buildQueryOptions overwrites the
-    // passthrough default of `[]` because object spread keeps the last
-    // assignment. This preserves the user's explicit opt-in to load
-    // their project CLAUDE.md.
+  it("keeps passthrough isolated even when the profile selects project/full context", () => {
+    // Loading these files also loads executable hooks and plugin MCP tools.
+    // In passthrough, context and tools must come from the client instead.
     const result = buildQueryOptions(makeContext({
       passthrough: true,
-      settingSources: ["project"] as any,
+      settingSources: ["project"],
     }))
-    expect((result.options as any).settingSources).toEqual(["project"])
+    expect(result.options.settingSources).toEqual([])
   })
 
   // ─── resolveSystemPrompt defensive empty-string ───────────────────────
@@ -971,7 +974,7 @@ describe("buildQueryOptions", () => {
     expect(result.options.systemPrompt).toBe("Agent instructions" + REPLAY_PROVENANCE_NOTE + SCRATCHPAD_COUNTER_INSTRUCTION)
   })
 
-  it("all three controls work together: preset + client + settingSources", () => {
+  it("retains preset and client context while isolating passthrough filesystem settings", () => {
     const result = buildQueryOptions(makeContext({
       passthrough: true,
       systemContext: "Agent instructions",
@@ -985,7 +988,7 @@ describe("buildQueryOptions", () => {
     // Every preset request also carries the gitStatus provenance note (#694).
     expect(sp.append).toContain(GIT_STATUS_PROVENANCE_NOTE)
     const opts = result.options as any
-    expect(opts.settingSources).toEqual(["user", "project"])
+    expect(opts.settingSources).toEqual([])
   })
 
   it("disabling both prompts keeps only transport provenance", () => {

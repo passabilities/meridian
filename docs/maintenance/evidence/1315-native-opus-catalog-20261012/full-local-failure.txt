@@ -1,0 +1,5 @@
+Original82223: exit1; frozen9229c1359f7105466eca44337e0d205206d7a9e2
+5310 pass;35 skip;1 fail in first group.
+error: EISDIR reading file: /Users/rynfar/repos/meridian-sonnet-context-1213-20261012/node_modules/zod/index.js
+(fail) Node bundled worker resolves alongside the bundled observer
+Standalone same-dependency-tree rerun:4 pass/0 fail. Cause unresolved.

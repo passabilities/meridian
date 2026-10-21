@@ -120,7 +120,9 @@ function guardCredentialWrites(store: CredentialStore): CredentialStore {
       if (isCredentialsReadOnly()) {
         return refuseCredentialWrite("credential-store", store.refreshKey ?? "unknown-store")
       }
-      return store.write(credentials)
+      const written = await store.write(credentials)
+      if (written && store.refreshKey) credentialFactsCache.delete(store.refreshKey)
+      return written
     },
   }
 }
@@ -261,14 +263,22 @@ const fileStore: CredentialStore = buildFileStore(CREDENTIALS_FILE)
  * (Linux). Default behaviour (no opts) is unchanged — reads from the
  * standard `~/.claude` location.
  */
+let credentialStorePlatformOverrideForTests: NodeJS.Platform | null = null
+
+/** Test-only override so file-backed credential routes can run on macOS without touching the login Keychain. */
+export function setCredentialStorePlatformForTests(override: NodeJS.Platform | null): void {
+  credentialStorePlatformOverrideForTests = override
+}
+
 export function createPlatformCredentialStore(opts?: { claudeConfigDir?: string }): CredentialStore {
+  const currentPlatform = credentialStorePlatformOverrideForTests ?? platform()
   if (opts?.claudeConfigDir) {
-    if (platform() === "darwin") {
+    if (currentPlatform === "darwin") {
       return buildMacosStore(configDirToKeychainService(opts.claudeConfigDir))
     }
     return buildFileStore(configDirToCredentialsFile(opts.claudeConfigDir))
   }
-  return platform() === "darwin" ? macosStore : fileStore
+  return currentPlatform === "darwin" ? macosStore : fileStore
 }
 
 /** Look up the appropriate file path for a profile (Linux convention even on macOS for inspection). */
@@ -466,18 +476,20 @@ async function doRefresh(store: CredentialStore): Promise<boolean> {
   //
   // Gated on the fields being absent, so this costs one extra GET once per
   // profile rather than on every ~8h refresh: the next refresh reads the value
-  // this one wrote and skips. Merged before the write so the whole thing is
-  // still a single store write, and spread UNDER the existing fields so a
-  // value already on disk always wins over a freshly fetched one.
+  // this one wrote and skips. Fill absent, null or empty plan values before
+  // the single store write; populated values already on disk keep precedence.
   const backfilled = planFieldsMissing(credentials.claudeAiOauth)
     ? await fetchOAuthPlanFields(tokenData.access_token)
     : {}
-  if (backfilled.subscriptionType || backfilled.rateLimitTier) {
-    credentials.claudeAiOauth = { ...backfilled, ...credentials.claudeAiOauth }
+  for (const key of ["subscriptionType", "rateLimitTier", "seatTier"] as const) {
+    const value = backfilled[key]
+    if (value && !credentials.claudeAiOauth[key]) credentials.claudeAiOauth[key] = value
   }
 
   const written = await store.write(credentials)
   if (!written) return false
+  // Profile/health polling may have cached the incomplete plan before refresh.
+  if (store.refreshKey) credentialFactsCache.delete(store.refreshKey)
 
   // Logged so it is observable whether Anthropic ever rolls the refresh-token
   // window — undefined here means the renewal countdown stays anchored to the

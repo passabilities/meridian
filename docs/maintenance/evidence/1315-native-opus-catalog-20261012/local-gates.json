@@ -1,0 +1,17 @@
+{
+  "revision": "c61fbbe058b76495121b370c44dc868b468b3e8d",
+  "originalProcess": 99093,
+  "exitCode": 0,
+  "commands": [
+    "npm test",
+    "npm run typecheck",
+    "npm run build"
+  ],
+  "pass": 5754,
+  "skip": 35,
+  "fail": 0,
+  "isolatedGroups": 23,
+  "dependencyInstall": "independent npm ci --ignore-scripts --no-audit --no-fund",
+  "logSha256": "b5eacf465637d664e2a5aa59a57a4b8ea1ec2d3809cf7229c95ad417e58a5690",
+  "previousFailure": "Original82223 exited1; same shared-tree worker test passed alone. Root cause remains unexplained. No product fix attributed to replacement dependency install or green rerun."
+}

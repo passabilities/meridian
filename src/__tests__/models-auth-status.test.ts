@@ -81,7 +81,7 @@ function resolverFixture(done: (error: Error | null, stdout: string, stderr: str
   return child
 }
 // These are unspawned EventEmitter/pipe fixtures, not native processes.
-mock.module("child_process", () => ({
+const syntheticChildProcess = {
   ...realChildProcess,
   exec: (_command: string, _options: realChildProcess.ExecOptions,
     done: (error: Error | null, stdout: string, stderr: string) => void) => {
@@ -136,7 +136,11 @@ mock.module("child_process", () => ({
     })
     return child
   },
-}))
+}
+mock.module("child_process", () => syntheticChildProcess)
+const interceptedChildProcess = await import("child_process")
+expect<unknown>(interceptedChildProcess.exec).toBe(syntheticChildProcess.exec)
+expect<unknown>(interceptedChildProcess.execFile).toBe(syntheticChildProcess.execFile)
 
 mock.module("../proxy/setup", () => ({
   checkPluginConfigured: () => false,
@@ -166,7 +170,7 @@ mock.module("../proxy/tokenRefresh", () => ({
   configDirToCredentialsFile: (dir: string) => join(dir, ".credentials.json"),
 }))
 installSdkMock(() => ({ query: () => { throw new Error("Auth fixtures must not query a model") },
-  createSdkMcpServer: () => ({}), tool: () => ({}) }), "models-auth-status.test.ts")
+  createSdkMcpServer: () => ({}), tool: () => ({}) }), "models-auth-status.test.ts", { nativeClaude: true })
 installLoggerMock(() => ({ claudeLog: () => undefined,
   withClaudeLogContext: (_ctx: unknown, callback: () => unknown) => callback() }))
 const savedAuthFixtureEnv = { ...process.env }
@@ -628,21 +632,37 @@ describe("auth refresh process ownership", () => {
     const { startProxyServer } = await import("../proxy/server")
     const instance = await startProxyServer({ port: 0, host: "127.0.0.1", silent: true,
       profiles: [{ id: "owned-close-api", type: "api", apiKey: "fixture-key" }], defaultProfile: "owned-close-api" })
+    let restoreKill: (() => void) | undefined
     try {
       const address = instance.server.address()
       expect(address && typeof address === "object").toBe(true)
       if (!address || typeof address !== "object") throw new Error("Owned fixture listener missing")
       const response = await fetch(`http://127.0.0.1:${address.port}/health`)
       expect((await response.json() as { status: string }).status).toBe("degraded")
-      const closing = instance.close()
-      await tick()
       const fake = fakeAuthChildren[0]!
+      const signalled = Promise.withResolvers<Parameters<typeof fake.child.kill>[0]>()
+      const kill = fake.child.kill.bind(fake.child)
+      const observer = spyOn(fake.child, "kill").mockImplementation(signal => {
+        const result = kill(signal)
+        signalled.resolve(signal)
+        return result
+      })
+      restoreKill = () => observer.mockRestore()
+      const closing = instance.close()
+      // HTTP and GC shutdown precede auth cancellation. Observe that actual
+      // producer instead of assuming one timer tick reaches this phase.
+      const cancellation = await settledWithin(
+        Promise.race([signalled.promise, closing.then(() => "closed-before-signal")]), 1_000,
+      )
+      expect(cancellation).toBe("SIGTERM")
       expect(fake.signals).toEqual(["SIGTERM"])
+      expect(await settledWithin(closing, 20)).toBe(NOT_SETTLED)
       fake.callback(timeoutError(), { stdout: "", stderr: "" }); fake.witnesses(null, "SIGTERM")
       await closing
       expect(instance.server.listening).toBe(false)
       hungSpawns = []
     } finally {
+      restoreKill?.()
       releaseHungSpawns()
       await instance.close()
     }
@@ -1145,6 +1165,31 @@ describe('auth refresh owns the actual asynchronous resolver path', () => {
     resolverChildren[0]!.callback(null, { stdout: ownedExecutable, stderr: '' }); resolverChildren[0]!.witnesses()
     await tick(); expect(pendingAuthStatusRefresh(profile)).toBeNull()
   })
+  it('an omitted lookup pipe quarantines even an explicit path until that exact late close', async () => {
+    const pending = resolveClaudeExecutableAsync()
+    void pending.catch(() => undefined)
+    await tick()
+    const lookup = resolverChildren[0]!
+    lookup.callback(null, { stdout: ownedExecutable + '\n', stderr: '' })
+    lookup.child.emit('exit', 0, null)
+    lookup.child.stdout?.emit('close')
+    lookup.child.emit('close', 0, null)
+    await expect(pending).rejects.toThrow('cleanup is unconfirmed')
+    expect(resolverLookups).toBe(1)
+    expect(resolverVersions).toBe(0)
+    expect(execFileCalls).toBe(0)
+    expect(lookup.signals).toEqual([])
+    // The explicit existing file does not supersede uncertain older custody.
+    process.env.MERIDIAN_CLAUDE_PATH = ownedExecutable
+    await expect(resolveClaudeExecutableAsync()).rejects.toThrow('cleanup is unconfirmed')
+    expect(resolverLookups).toBe(1)
+    lookup.child.stderr?.emit('close')
+    await tick()
+    // No cache/owner reset between refusal and recovery.
+    expect(await resolveClaudeExecutableAsync()).toBe(ownedExecutable)
+    expect(resolverLookups).toBe(1)
+    expect(lookup.signals).toEqual([])
+  }, 10_000)
   it('a preference change cannot bypass an older resolver with unconfirmed custody', async () => {
     const { getSetting, setSetting } = await import('../settings')
     const saved = getSetting('claudeExecutable')
@@ -1173,4 +1218,65 @@ describe('auth refresh owns the actual asynchronous resolver path', () => {
     resolverChildren[0]!.callback(null, { stdout: '2.1.999 (Claude Code)', stderr: '' })
     resolverChildren[0]!.witnesses(); await tick()
   })
+})
+
+
+// Direct leaf matrix: callback, exit, child-close and each pipe are independent
+// custody facts. Uses the same identity-checked synthetic exec transport above.
+describe('owned resolver leaf witness matrix', () => {
+  const witnesses = ['callback', 'exit', 'child-close', 'stdout-close', 'stderr-close'] as const
+  type Witness = typeof witnesses[number]
+  const emit = (fixture: FakeAuthChild, event: Witness) => {
+    if (event === 'callback') fixture.callback(null, { stdout: 'fixed-output', stderr: '' })
+    else if (event === 'exit') fixture.child.emit('exit', 0, null)
+    else if (event === 'child-close') fixture.child.emit('close', 0, null)
+    else if (event === 'stdout-close') fixture.child.stdout?.emit('close')
+    else fixture.child.stderr?.emit('close')
+  }
+  const start = async () => {
+    const { startOwnedClaudeProcess } = await import('../proxy/authStatusProcess')
+    const handle = startOwnedClaudeProcess({ shell: 'synthetic-lookup-not-executed' }, {
+      timeoutMs: 10_000, killGraceMs: 5, joinGraceMs: 10,
+    })
+    const fixture = resolverChildren.at(-1)!
+    let result: 'pending' | 'fulfilled' | 'rejected' = 'pending'
+    let joined = false
+    void handle.result.then(() => { result = 'fulfilled' }, () => { result = 'rejected' })
+    void handle.joined.then(() => { joined = true })
+    return { handle, fixture, result: () => result, joined: () => joined }
+  }
+  it('delays a successful answer until the last independent witness', async () => {
+    const owned = await start()
+    for (const event of witnesses.slice(0, -1)) {
+      emit(owned.fixture, event); await tick()
+      expect(owned.handle.isJoined()).toBe(false)
+      expect(owned.result()).toBe('pending')
+    }
+    emit(owned.fixture, 'stderr-close')
+    expect(await owned.handle.result).toBe('fixed-output')
+    await owned.handle.joined
+    expect(owned.handle.isJoined()).toBe(true)
+    expect(owned.fixture.signals).toEqual([])
+  })
+  for (const omitted of witnesses) {
+    it(`retains uncertain custody without ${omitted}, then joins the exact late witness`, async () => {
+      const owned = await start()
+      try {
+        for (const event of witnesses) if (event !== omitted) emit(owned.fixture, event)
+        await tick()
+        expect(owned.handle.isJoined()).toBe(false)
+        expect(owned.result()).toBe('pending')
+        await expect(owned.handle.cancel()).rejects.toThrow('cleanup is unconfirmed')
+        await expect(owned.handle.result).rejects.toThrow('cleanup is unconfirmed')
+        expect(owned.joined()).toBe(false)
+        expect(owned.fixture.signals).toEqual([])
+      } finally {
+        emit(owned.fixture, omitted)
+        await owned.handle.joined
+      }
+      expect(owned.handle.isJoined()).toBe(true)
+      expect(owned.result()).toBe('rejected')
+      await owned.handle.cancel()
+    })
+  }
 })
