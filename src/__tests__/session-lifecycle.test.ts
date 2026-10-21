@@ -639,6 +639,22 @@ describe("session transcript lifecycle", () => {
     expect(readSidecar(storeDir).resources[getTranscriptResourceKey(fork)]?.state).toBe("retired")
   })
 
+  for (const allowance of [-1, 0.5, NaN, Infinity, Number.MAX_SAFE_INTEGER + 1]) {
+    it(`rejects an invalid remaining allowance (${allowance}) before claiming a deletion`, async () => {
+      const fork = locator("invalid-remaining-budget")
+      await prepareFork(fork, options)
+      await abandonFork(fork, options)
+      let calls = 0
+      await expect(runGc([], {
+        ...options,
+        maxRemainingDeletes: () => allowance,
+        deleter: async () => { calls++ },
+      })).rejects.toThrow("maxRemainingDeletes must be a non-negative integer")
+      expect(calls).toBe(0)
+      expect(readSidecar(storeDir).resources[getTranscriptResourceKey(fork)]?.state).toBe("retired")
+    })
+  }
+
   it("treats not-found as idempotent success and tombstones the resource", async () => {
     const fork = locator("already-gone")
     await prepareFork(fork, options)
