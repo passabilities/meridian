@@ -101,8 +101,8 @@ const TASK_TOOL = {
 }
 
 describe("Subagent model selection", () => {
-  beforeEach(() => {
-    clearSessionCache()
+  beforeEach(async () => {
+    await clearSessionCache()
     capturedModel = null
     capturedOptions = null
   })

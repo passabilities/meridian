@@ -489,14 +489,14 @@ afterEach(() => {
 })
 
 describe("priority routing", () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     resetProcessSdkSemaphoreForTests()
     capturedEnvs = []
     failingDirs = new Set()
     // failureMessage resets in the file-level beforeEach, which runs first and
     // covers the later describes too — this one only ever saw the leak because
     // its own tests happened to run last.
-    clearSessionCache()
+    await clearSessionCache()
     // The active profile is process-global module state; other test files
     // (profile-switch integration) set it. This suite's expectations are
     // relative to defaultProfile, so reset it explicitly.
@@ -2130,10 +2130,10 @@ describe("priority cooldown resolution", () => {
   const WORK_RESET = Date.now() + 4 * 60 * 60_000      // 4h out
   const PERSONAL_RESET = Date.now() + 30 * 60_000      // 30m out
 
-  beforeEach(() => {
+  beforeEach(async () => {
     capturedEnvs = []
     failingDirs = new Set()
-    clearSessionCache()
+    await clearSessionCache()
     resetActiveProfile()
     savedEnv.MERIDIAN_ROUTING = process.env.MERIDIAN_ROUTING
     savedEnv.MERIDIAN_PROFILE_ORDER = process.env.MERIDIAN_PROFILE_ORDER
@@ -2481,10 +2481,10 @@ describe("priority cooldown resolution", () => {
 })
 
 describe("keyless priority affinity", () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     capturedEnvs = []
     failingDirs = new Set()
-    clearSessionCache()
+    await clearSessionCache()
     resetActiveProfile()
     rateLimitStore.clear()
     // Mirror the existing blocks exactly — MERIDIAN_PROFILE_ORDER matters,
@@ -2690,7 +2690,7 @@ describe("re-authenticated profile unbenching (#1385)", () => {
     resetProcessSdkSemaphoreForTests()
     capturedEnvs = []
     failingDirs = new Set()
-    clearSessionCache()
+    await clearSessionCache()
     resetActiveProfile()
     rateLimitStore.clear()
     savedEnv.MERIDIAN_ROUTING = process.env.MERIDIAN_ROUTING

@@ -1,5 +1,41 @@
 # Changelog
 
+## [1.85.0](https://github.com/rynfar/meridian/compare/meridian-v1.84.0...meridian-v1.85.0) (2026-10-21)
+
+
+### Features
+
+* **session:** add opt-in SQLite bookkeeping with offline recovery ([91df1ba](https://github.com/rynfar/meridian/commit/91df1ba233593e53118c2e9184f5a13d1d0f8902))
+
+
+### Bug Fixes
+
+* **docker:** include the session bookkeeping maintenance CLI and verify migration, awaited cleanup and export in the runtime image.
+* run native Claude Code backend sessions in the client working directory ([#1395](https://github.com/rynfar/meridian/pull/1395))
+* probe SDK wrapper identity asynchronously with a bounded deadline ([#1394](https://github.com/rynfar/meridian/pull/1394))
+* stop priority-routed generation when its parent client cancels or shuts down ([#1397](https://github.com/rynfar/meridian/pull/1397))
+* apply OpenCode instructions after a primary-agent switch ([#1423](https://github.com/rynfar/meridian/issues/1423)) ([5187ee2](https://github.com/rynfar/meridian/commit/5187ee293917896d90bf9829ee90daf3d9680b9a))
+* deliver Responses input_file PDFs as document blocks ([acb8d39](https://github.com/rynfar/meridian/commit/acb8d390e4d764e5d2e7a9b7c60fb17df47c25dd))
+* isolate client-owned passthrough from proxy-host settings and MCP discovery ([#1406](https://github.com/rynfar/meridian/issues/1406)) ([90e9349](https://github.com/rynfar/meridian/commit/90e934976d760e9c3af68c2c0eccffdb8a6fd061))
+* keep consecutive user messages in the current turn ([a2c19df](https://github.com/rynfar/meridian/commit/a2c19dfa23d9d8586a1d9f286c5467a381052595))
+* **opencode:** skip the Claude Code preset for one-shot title and summary requests ([#1428](https://github.com/rynfar/meridian/issues/1428)) ([19ff3bc](https://github.com/rynfar/meridian/commit/19ff3bcac167cdcbbd91a6f79f7af07605a0ad99))
+* reject unreadable account session copies before resume ([3248387](https://github.com/rynfar/meridian/commit/32483870992ce3f953322cf6c1bf9bbdaede2469))
+* **session:** await ordered cache cleanup with immediate memory reset ([#1433](https://github.com/rynfar/meridian/issues/1433)) ([dcc1b8c](https://github.com/rynfar/meridian/commit/dcc1b8c9d78738217aaf4633659704db9b06bd11))
+* stop client reminder discovery at non-text content ([ea4c6a6](https://github.com/rynfar/meridian/commit/ea4c6a6f494b5a8897f31f76033bd60a8ec343a6))
+
+## [1.84.0](https://github.com/rynfar/meridian/compare/meridian-v1.83.1...meridian-v1.84.0) (2026-10-19)
+
+
+### Features
+
+* **profiles:** ?provider= links open / and /profiles on given provider chips ([#1411](https://github.com/rynfar/meridian/issues/1411)) ([58d9dd8](https://github.com/rynfar/meridian/commit/58d9dd8c002cc9f63e966a92770c66bd908f27b5))
+
+
+### Bug Fixes
+
+* warn at startup that Bun-hosted requests may continue after client cancellation; identify the tested Bun versions and Node launch alternatives ([#1398](https://github.com/rynfar/meridian/pull/1398)) ([70b5af1](https://github.com/rynfar/meridian/commit/70b5af12a7ab72840d023206e310f931afd5635a))
+* forward mid-stream errors on OpenAI chat completions streams ([#1407](https://github.com/rynfar/meridian/issues/1407)) ([6c241a8](https://github.com/rynfar/meridian/commit/6c241a897bdc7ffe4c233d32270a17402b3528a0))
+
 ## [1.83.1](https://github.com/rynfar/meridian/compare/meridian-v1.83.0...meridian-v1.83.1) (2026-10-16)
 
 

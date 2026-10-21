@@ -47,6 +47,8 @@ export interface SessionState {
   /** Raw client ancestry when the SDK transcript does not contain that prefix.
    * Empty lineageHash deliberately withholds SDK reuse proof from old readers. */
   clientLineageHash?: string
+  /** Adapter-owned proof of the stable context used to create this SDK session. */
+  resumeContextHash?: string
   /** Per-message content hashes from the last stored request.
    *  Used for precise diff-based mutation classification when the aggregate
    *  lineageHash mismatches. */
@@ -181,6 +183,9 @@ export type LineageDivergenceReason =
   | "not-found"
   | "independent-request"
   | "priority-failback"
+  /** Another account's copy, used since this one, holds more of the history:
+   *  resuming this one would drop the replies given there. */
+  | "moved-on-elsewhere"
   | "missing-session-header"
   | "concurrent-race"
   | "compaction"

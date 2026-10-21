@@ -117,12 +117,12 @@ async function server() {
   return { app: proxy.app, inflight }
 }
 
-beforeEach(() => {
+beforeEach(async () => {
   dir = mkdtempSync(join(tmpdir(), "chatgpt-drain-"))
   mkdirSync(join(dir, "opencode"))
   streams = []
   globalThis.fetch = mockFetch as typeof fetch
-  clearSessionCache()
+  await clearSessionCache()
   __setFetchOAuthUsageOverride(async () => null)
   resetOAuthUsageCache()
   saveSettings({ integrations: undefined })

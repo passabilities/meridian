@@ -8,6 +8,8 @@ External plugins depend on these interfaces. **Changes require project owner app
 |-----------|----------|---------|
 | `startProxyServer(config)` → `ProxyInstance` | `server.ts` | Plugins that spawn proxy instances |
 | `ProxyInstance.close()` | `types.ts` | Plugins for graceful shutdown |
+| `initializeProxyBookkeeping()` → opaque `ProxyBookkeepingHandle` with `close(): Promise<void>` | `session/bookkeeping/embedding.ts`, exported by `server.ts` | Owner-approved #1277 opt-in SQL embedding; JSON returns undefined, native SQL/path/readers stay private, successful close joins admitted durable work |
+| `clearSessionCache(): Promise<void>` | `session/cache.ts`, exported by `server.ts` | Owner-approved #1244/#1277 cleanup: reset memory immediately; await ordered durable cleanup, retaining its best-effort error policy |
 | `ProxyConfig` type | `types.ts` | Plugin configuration |
 | `x-opencode-session` header | `adapters/opencode.ts` | Session tracking from agent plugins |
 | `x-meridian-profile` header | `server.ts`, `profiles.ts` | Per-request profile selection |
